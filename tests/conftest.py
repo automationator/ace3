@@ -3,6 +3,7 @@ import os
 import os.path
 import shutil
 import socket
+import sys
 
 from requests import HTTPError
 
@@ -42,6 +43,9 @@ def test_context() -> AnalysisModuleContext:
 
 @pytest.fixture(autouse=True, scope="function")
 def global_setup(request, tmpdir, datadir):
+
+    # remember the original sys.path
+    original_sys_path = sys.path[:]
 
     # reset emitter to default state
     reset_emitter()
@@ -202,6 +206,9 @@ def global_setup(request, tmpdir, datadir):
 
     from sqlalchemy.orm.session import close_all_sessions
     close_all_sessions()
+
+    # restore the original sys.path
+    sys.path = original_sys_path
 
 @pytest.fixture
 def test_client():

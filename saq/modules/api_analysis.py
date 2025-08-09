@@ -289,16 +289,16 @@ class BaseAPIAnalyzer(AnalysisModule):
                                                    fallback=get_config()['query_hunter']['max_result_count'])
 
         if 'query_timeout' in self.config:
-            self.query_timeout = create_timedelta(self.config['query_timeout']).total_seconds()
+            self.query_timeout = self.config.getint('query_timeout')
         elif 'query_timeout' in get_config()[self.api]:
-            self.query_timeout = create_timedelta(get_config()[self.api]['query_timeout']).total_seconds()
+            self.query_timeout = get_config()[self.api].getint('query_timeout')
         else:
-            self.query_timeout = create_timedelta(get_config()['query_hunter']['query_timeout']).total_seconds()
+            self.query_timeout = get_config()['query_hunter'].getint('query_timeout')
 
         if 'async_delay' in self.config:
-            self.async_delay_seconds = create_timedelta(self.config['async_delay']).total_seconds()
+            self.async_delay_seconds = self.config.getint('async_delay')
         else:
-            self.async_delay_seconds = create_timedelta(get_config()[self.api].get('async_delay', fallback='1')).total_seconds()
+            self.async_delay_seconds = get_config()[self.api].getint('async_delay', fallback=1)
 
     def build_target_query(self, observable: Observable, **kwargs) -> None:
         """Fills in the target_query attribute with observable value and time specification for correlation, using the target_query_base

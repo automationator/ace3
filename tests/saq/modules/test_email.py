@@ -146,7 +146,7 @@ def test_mailbox_submission(test_client, root_analysis, datadir):
     uuid = result['uuid']
 
     # make sure we don't clean up the anaysis so we can check it
-    get_config()['analysis_mode_email']['cleanup'] = 'no'
+    get_config()['analysis_mode_email']['cleanup'] = False
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['email']))
     engine.configuration_manager.enable_module('analysis_module_file_type', 'email')
@@ -562,7 +562,7 @@ def test_email_pivot_excessive_emails(root_analysis, datadir):
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # force this to exceed the limit
-    get_config()['analysis_module_url_email_pivot_analyzer']['result_limit'] = '0'
+    get_config()['analysis_module_url_email_pivot_analyzer']['result_limit'] = 0
     new_root = create_root_analysis(analysis_mode="test_groups")
     new_root.initialize_storage()
 

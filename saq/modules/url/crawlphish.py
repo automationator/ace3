@@ -529,7 +529,7 @@ class CrawlphishAnalyzer(AnalysisModule):
         ]:
             self.verify_config_exists(config_item)
         
-        for name in self.config['proxies'].split(','):
+        for name in self.config['proxies']:
             if name == 'GLOBAL':
                 continue
 

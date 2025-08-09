@@ -47,7 +47,7 @@ def test_accepts(monkeypatch, test_context):
     }
 
     # requires detection path
-    get_config()["analysis_module_mock"]["requires_detection_path"] = "yes"
+    get_config()["analysis_module_mock"]["requires_detection_path"] = True
     module = MockAnalysisModule(context=test_context)
     assert not module.accepts(obs)
     obs.add_detection_point("test")

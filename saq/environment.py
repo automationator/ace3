@@ -486,10 +486,9 @@ def initialize_environment(
 
     if g_boolean(G_UNIT_TESTING):
         # unit testing loads different configurations
-        g_list(G_CONFIG_PATHS).append(os.path.join(get_base_dir(), "etc", "saq.unittest.default.ini"))
-        #CONFIG_PATHS.append(os.path.join(SAQ_HOME, 'etc', 'saq.unittest.ini'))
+        g_list(G_CONFIG_PATHS).append(os.path.join(get_base_dir(), "etc", "saq.unittest.default.yaml"))
     else:
-        g_list(G_CONFIG_PATHS).append(os.path.join(get_base_dir(), "etc", "saq.ini"))
+        g_list(G_CONFIG_PATHS).append(os.path.join(get_base_dir(), "etc", "saq.yaml"))
 
     initialize_configuration()
 

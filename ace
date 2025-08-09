@@ -14,6 +14,7 @@ import os.path
 import pwd
 import re
 from subprocess import PIPE, Popen
+from typing import Optional
 import redis
 import shutil
 import signal
@@ -25,6 +26,7 @@ import traceback
 import uuid
 
 import requests
+import yaml
 
 from saq.analysis.root import RootAnalysis
 from saq.configuration import get_config
@@ -3255,46 +3257,46 @@ list_available_modules_parser.set_defaults(func=list_available_modules)
 
 def config(args):
 
-    def matches_param(s, k=None):
+    def matches_param(section_name: str, key_name: Optional[str]=None) -> bool:
         if not args.settings:
             return True
 
         for spec in args.settings:
-            section_spec, key_spec = spec.split('.')
-            #print("testing {} == {} {} == {}".format(section_spec, s, key_spec, k))
-            if ( section_spec == '*' or section_spec == s ) and ( k is None or key_spec == '*' or key_spec == k ):
-                return True
+            if "." in spec:
+                section_spec, key_spec = spec.split('.')
+            else:
+                section_spec = spec
+                key_spec = None
+
+            if key_spec:
+                if fnmatch.fnmatch(section_name, section_spec) and ( key_name is None or fnmatch.fnmatch(key_name, key_spec) ):
+                    return True
+            else:
+                if fnmatch.fnmatch(section_name, section_spec):
+                    return True
 
         return False
 
-    for section in list(get_config().keys()):
-        if section == 'DEFAULT':
+    raw_config = get_config()._data.copy()
+
+    for section in list(raw_config.keys()):
+        if section == 'DEFAULT': # XXX what is this?
             continue
 
         if not matches_param(section):
+            del raw_config[section]
             continue
 
-        if not args.value_only:
-            print('[{}]'.format(section))
-        
-        for key in get_config()[section].keys():
+        for key in list(get_config()[section].keys()):
             if not matches_param(section, key):
+                del raw_config[section][key]
                 continue
 
-            if args.value_only:
-                print(get_config()[section][key])
-            else:
-                print('{} = {}'.format(key, get_config()[section][key]))
-
-        if not args.value_only:
-            print()
-
-    sys.exit(0)
+    print(yaml.dump(raw_config, indent=2, default_flow_style=False))
+    return 0
 
 config_parser = subparsers.add_parser('config',
     help="Queries the ACE configuration.")
-config_parser.add_argument('-v', '--value', action='store_true', default=False, dest='value_only',
-    help="Just print the values of the selected configuration items.")
 config_parser.add_argument('settings', nargs="*",
     help="Zero or more configuration items to display in the format section.key.")
 config_parser.set_defaults(func=config)

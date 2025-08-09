@@ -12,6 +12,8 @@ import re
 import shutil
 import string
 
+import yaml
+
 def generate_password() -> str:
     return "".join(random.choices(string.ascii_letters, k=random.randint(23, 32))) 
 
@@ -59,21 +61,15 @@ password={admin_password}""")
 
     print(f"created {target_path}")
 
-    target_path = os.path.join(target_dir, "saq.database.passwords.ini")
+    target_path = os.path.join(target_dir, "saq.database.passwords.yaml")
+    database_passwords = {
+        "database_ace": { "password": user_password },
+        "database_collection": { "password": user_password },
+        "database_email_archive": { "password": user_password },
+        "database_brocess": { "password": user_password },
+    }
     with open(target_path, "w") as fp:
-        fp.write(f"""
-[database_ace]
-password = {user_password}
-
-[database_collection]
-password = {user_password}
-
-[database_email_archive]
-password = {user_password}
-
-[database_brocess]
-password = {user_password}
-""")
+        yaml.dump(database_passwords, fp, indent=2)
 
     print(f"created {target_path}")
 

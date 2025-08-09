@@ -1,18 +1,16 @@
 import os
 import signal
-import uuid
 import pytest
 
-from saq.analysis.root import RootAnalysis, load_root
+from saq.analysis.root import load_root
 from saq.configuration.config import get_config
 from saq.constants import ANALYSIS_MODE_CORRELATION, ANALYSIS_MODE_DISPOSITIONED, CONFIG_ENGINE, CONFIG_ENGINE_ALERT_DISPOSITION_CHECK_FREQUENCY, DISPOSITION_DELIVERY, DISPOSITION_FALSE_POSITIVE, F_TEST
 from saq.database.model import Alert, load_alert
-from saq.database.pool import get_db, get_db_connection
+from saq.database.pool import get_db
 from saq.database.util.alert import ALERT
 from saq.engine.core import Engine
 from saq.engine.engine_configuration import EngineConfiguration
 from saq.engine.enums import EngineExecutionMode
-from saq.util.uuid import storage_dir_from_uuid
 from tests.saq.helpers import create_root_analysis, log_count, wait_for_log_count, wait_for_process
 
 @pytest.mark.integration
@@ -107,7 +105,7 @@ def test_alert_dispositioned():
     # 4) ace detects the disposition and stops analyzing the alert
     # 5) ace picks up the alert in ANALYSIS_MODE_DISPOSITIONED mode
 
-    get_config()[CONFIG_ENGINE][CONFIG_ENGINE_ALERT_DISPOSITION_CHECK_FREQUENCY] = '0' # check every time
+    get_config()[CONFIG_ENGINE][CONFIG_ENGINE_ALERT_DISPOSITION_CHECK_FREQUENCY] = 0 # check every time
     
     # create an analysis that turns into an alert
     root = create_root_analysis(analysis_mode='test_single')
@@ -200,9 +198,9 @@ def test_alert_continue_specific_disposition():
     # 4) ace detects the disposition and continues analyzing the alert until finished
     # 5) ace picks up the alert in ANALYSIS_MODE_DISPOSITIONED mode
 
-    get_config()['service_engine']['alert_disposition_check_frequency'] = '0'  # check every time
-    get_config()['service_engine']['stop_analysis_on_any_alert_disposition'] = 'no'
-    get_config()['service_engine']['stop_analysis_on_dispositions'] = 'FALSE_POSITIVE,IGNORE'
+    get_config()['service_engine']['alert_disposition_check_frequency'] = 0  # check every time
+    get_config()['service_engine']['stop_analysis_on_any_alert_disposition'] = False
+    get_config()['service_engine']['stop_analysis_on_dispositions'] = ['FALSE_POSITIVE', 'IGNORE']
 
     # create an analysis that turns into an alert
     root = create_root_analysis(analysis_mode='test_single')

@@ -3,7 +3,6 @@ from functools import cached_property
 import logging
 from typing import Optional, Union
 
-from saq.configuration.config import get_config, get_config_value, get_config_value_as_int
 from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_MAXIMUM_ANALYSIS_TIME, CONFIG_OBSERVABLE_EXCLUSIONS
 from saq.modules.config_backend import ConfigBackend, ConfigSection, INIConfigBackend
 from saq.util.time import create_timedelta

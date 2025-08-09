@@ -1,13 +1,11 @@
 import datetime
 import pytest
 
-from saq.configuration import get_config
 from saq.constants import F_EMAIL_SUBJECT
 from saq.splunk import SplunkQueryObject
 from saq.analysis import RootAnalysis
 from saq.modules.api_analysis import AnalysisDelay
 from saq.modules.splunk import SplunkAPIAnalyzer, SplunkAPIAnalysis
-from saq.modules.adapter import AnalysisModuleAdapter
 from tests.saq.mock_datetime import MOCK_NOW
 
 class MockSplunk(SplunkQueryObject):

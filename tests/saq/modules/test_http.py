@@ -1,13 +1,11 @@
 from datetime import datetime
 import json
-import os
 import pytest
 import pytz
 
 from saq.analysis.root import load_root
 from saq.configuration.config import get_config, get_config_value
 from saq.constants import ANALYSIS_MODE_HTTP, ANALYSIS_TYPE_BRO_HTTP, CONFIG_API, CONFIG_API_KEY, EVENT_TIME_FORMAT_JSON_TZ, F_FILE, F_FQDN, F_IPV4, F_IPV4_CONVERSATION, F_URL
-from saq.database.model import load_alert
 from saq.engine.core import Engine
 from saq.engine.engine_configuration import EngineConfiguration
 from saq.engine.enums import EngineExecutionMode
@@ -18,7 +16,7 @@ from flask import url_for
 
 from saq.json_encoding import _JSONEncoder
 from saq.util.hashing import sha256_file
-from saq.util.uuid import storage_dir_from_uuid, workload_storage_dir
+from saq.util.uuid import workload_storage_dir
 
 @pytest.fixture(autouse=True, scope="function")
 def check_integration():
@@ -48,7 +46,7 @@ def verify(root):
 
 @pytest.mark.integration
 def test_bro_http_analyzer(root_analysis, datadir):
-    get_config()['analysis_mode_http']['cleanup'] = 'no'
+    get_config()['analysis_mode_http']['cleanup'] = False
 
     root_analysis.alert_type = ANALYSIS_TYPE_BRO_HTTP
     root_analysis.analysis_mode = ANALYSIS_MODE_HTTP
@@ -72,7 +70,7 @@ def test_bro_http_analyzer(root_analysis, datadir):
 
 @pytest.mark.integration
 def test_bro_http_submission(test_client, datadir):
-    get_config()['analysis_mode_http']['cleanup'] = 'no'
+    get_config()['analysis_mode_http']['cleanup'] = False
 
     event_time = get_local_timezone().localize(datetime.now()).astimezone(pytz.UTC).strftime(EVENT_TIME_FORMAT_JSON_TZ)
 

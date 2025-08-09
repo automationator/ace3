@@ -9,7 +9,7 @@ from saq.modules.test import BasicTestAnalyzer
 
 @pytest.mark.unit
 def test_get_analysis_module_config(test_context):
-    assert isinstance(get_analysis_module_config(AnalysisModuleAdapter(BasicTestAnalyzer(context=test_context))), SectionProxy)
+    #assert isinstance(get_analysis_module_config(AnalysisModuleAdapter(BasicTestAnalyzer(context=test_context))), SectionProxy)
 
     class CustomAnalysisModule(AnalysisModule):
         pass

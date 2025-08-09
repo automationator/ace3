@@ -79,7 +79,7 @@ class OCRAnalyzer(AnalysisModule):
         logging.info(f"processing {local_file_path} with OCR")
 
         if self.omp_thread_limit:
-            os.environ["OMP_THREAD_LIMIT"] = self.omp_thread_limit
+            os.environ["OMP_THREAD_LIMIT"] = str(self.omp_thread_limit)
 
         # Read the image
         try:

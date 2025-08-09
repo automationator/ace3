@@ -19,7 +19,7 @@ def test_g(monkeypatch):
     assert g_int("test") == 1
 
     set_g("test", True)
-    assert g_boolean("test") == True
+    assert g_boolean("test") is True
 
     set_g("test", [1])
     assert g_list("test") == [1]

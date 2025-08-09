@@ -148,7 +148,7 @@ def test_load_groups():
 @pytest.mark.integration
 def test_load_disabled_groups(monkeypatch):
 
-    monkeypatch.setitem(get_config()["collection_group_unittest"], "enabled", "no")
+    monkeypatch.setitem(get_config()["collection_group_unittest"], "enabled", False)
 
     collector_service = CollectorService(collector=TestCollector(), config=CollectorServiceConfiguration.from_config(get_config()['service_test_collector']))
     collector_service.load_groups()
@@ -255,7 +255,7 @@ def test_submit(engine):
 @pytest.mark.integration
 def test_submit_api(mock_api_call, engine):
     # same as test_submit except we force the use of the api
-    get_config()['collection']['force_api'] = 'yes'
+    get_config()['collection']['force_api'] = True
 
     class _custom_collector(TestCollector):
         def __init__(self, *args, **kwargs):
@@ -292,7 +292,7 @@ def test_submit_api(mock_api_call, engine):
 
 @pytest.mark.system
 def test_threaded_remote_node_single_submission(mock_api_call, engine):
-    get_config()['collection']['force_api'] = 'yes'
+    get_config()['collection']['force_api'] = True
 
     # test a single submissions against a remote node group that is
     # configured with two submission threads 
@@ -336,7 +336,7 @@ def test_threaded_remote_node_single_submission(mock_api_call, engine):
 
 @pytest.mark.system
 def test_threaded_remote_node_multi_submissions(mock_api_call, engine):
-    get_config()['collection']['force_api'] = 'yes'
+    get_config()['collection']['force_api'] = True
 
     # test two submissions against a remote node group that is
     # configured with two submission threads and a batch size of one
@@ -381,7 +381,7 @@ def test_threaded_remote_node_multi_submissions(mock_api_call, engine):
 
 @pytest.mark.system
 def test_threaded_remote_node_multi_submissions_with_large_batch(engine):
-    get_config()['collection']['force_api'] = 'yes'
+    get_config()['collection']['force_api'] = True
 
     # test two submissions against a remote node group that is
     # configured with two submission threads and a batch size of 2
@@ -550,7 +550,7 @@ def test_coverage(engine):
 
 @pytest.mark.integration
 def test_fail_submit_full_coverage(engine): # NOTE we do not start the api server
-    get_config()['collection']['force_api'] = 'yes'
+    get_config()['collection']['force_api'] = True
 
     class _custom_collector(TestCollector):
         def __init__(self, *args, **kwargs):
@@ -590,7 +590,7 @@ def test_fail_submit_full_coverage(engine): # NOTE we do not start the api serve
 
 @pytest.mark.integration
 def test_fail_submit_no_coverage(engine):
-    get_config()['collection']['force_api'] = 'yes'
+    get_config()['collection']['force_api'] = True
 
     class _custom_collector(TestCollector):
         def __init__(self, *args, **kwargs):
@@ -761,7 +761,7 @@ def test_cleanup_files(tmpdir, engine):
 
 @pytest.mark.integration
 def test_recovery(mock_api_call, engine, monkeypatch):
-    get_config()['collection']['force_api'] = 'yes'
+    get_config()['collection']['force_api'] = True
 
     class _custom_collector(TestCollector):
         def __init__(self, *args, **kwargs):

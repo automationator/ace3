@@ -98,7 +98,7 @@ class URLExtractionAnalyzer(AnalysisModule):
     def filter_excluded_domains(self, url):
 
         # filter out the stuff that is excluded via configuration
-        fqdns = [_.strip() for _ in self.config['excluded_domains'].split(',')]
+        fqdns = [_.strip() for _ in self.config['excluded_domains']]
 
         if not fqdns:
             return True

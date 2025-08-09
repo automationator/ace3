@@ -48,7 +48,7 @@ def test_schedule_submission_interface_error_no_recovery(root_analysis, monkeypa
     # configure the collector
     get_config()['service_generic_collector'] = { 
         "workload_type": "generic",
-        "delete_files": "yes",
+        "delete_files": True,
     }
 
     collector = CollectorService(

@@ -3,7 +3,7 @@ x-common-env: &common-env
     ACE_VERSION:
     ACE_DISABLE_AUTOSTART:
     SAQ_ENC:
-    SAQ_CONFIG_PATHS: "etc/saq.dev.ini"
+    SAQ_CONFIG_PATHS: "etc/saq.dev.yaml"
 
 x-common-volumes: &common-volumes
     - .:/opt/ace

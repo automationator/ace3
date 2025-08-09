@@ -190,7 +190,7 @@ class FileObservable(Observable):
 
         except Exception as e:
             # this will happen if a F_FILE observable refers to a file that no longer (or never did) exists
-            logging.debug(f"unable to compute hashes of {self.value}: {e}")
+            logging.debug(f"unable to compute hashes of {self.file_path}: {e}")
             return False
         
         self._md5_hash = md5_hasher.hexdigest()

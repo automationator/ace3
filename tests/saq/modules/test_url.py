@@ -118,7 +118,7 @@ def test_url_download_conditions_manual_alert(root_analysis, monkeypatch, datadi
 @pytest.mark.integration
 def test_url_download_conditions_auto_crawl(root_analysis, monkeypatch, datadir):
 
-    get_config()['analysis_module_crawlphish']['auto_crawl_all_alert_urls'] = 'yes'
+    get_config()['analysis_module_crawlphish']['auto_crawl_all_alert_urls'] = True
     root_analysis.analysis_mode = "test_groups"
     root_analysis.analysis_mode = ANALYSIS_MODE_CORRELATION
     url = root_analysis.add_observable_by_spec(F_URL, 'http://example.com/test_file')

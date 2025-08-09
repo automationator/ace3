@@ -77,12 +77,8 @@ class De4dotAnalyzer(AnalysisModule):
     def generated_analysis_type(self):
         return De4dotAnalysis
     
-    @property
-    def de4dot_path(self):
-        return self.config['de4dot_path']
-
     def verify_environment(self):
-        self.verify_path_exists(self.de4dot_path)
+        self.verify_program_exists("de4dot")
     
     @property
     def valid_observable_types(self):

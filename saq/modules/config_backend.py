@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 
 class ConfigSection(ABC):
@@ -270,3 +270,121 @@ class INIConfigBackend(ConfigBackend):
         if not self._config_parser.has_section(section_name):
             self._config_parser.add_section(section_name)
         return INIConfigSection(self._config_parser[section_name]) 
+
+
+class YAMLConfigSection(ConfigSection):
+    """Wrapper around YAMLConfig's section proxy to implement ConfigSection interface."""
+
+    def __init__(self, section_proxy):
+        self._section_proxy = section_proxy
+
+    @property
+    def name(self) -> str:
+        # YAMLConfig does not store the name on the proxy; infer by attribute if present
+        # Fallback: unknown
+        return getattr(self._section_proxy, "_name", "unknown")
+
+    def get(self, key: str, fallback: Optional[str] = None) -> Optional[str]:
+        try:
+            value = self._section_proxy.get(key, fallback)
+            if value is None:
+                return None
+            if isinstance(value, list):
+                # Preserve INI-like expectations for callers that split by comma
+                return ",".join(str(v) for v in value)
+            return str(value)
+        except KeyError:
+            return fallback
+
+    def getint(self, key: str, fallback: Optional[int] = None) -> Optional[int]:
+        value = self._section_proxy.get(key, fallback)
+        if value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        try:
+            return int(str(value))
+        except (ValueError, TypeError):
+            return fallback
+
+    def getboolean(self, key: str, fallback: Optional[bool] = None) -> Optional[bool]:
+        value = self._section_proxy.get(key, fallback)
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            s = value.strip().lower()
+            if s in ("true", "yes", "1", "on"):
+                return True
+            if s in ("false", "no", "0", "off"):
+                return False
+        return bool(value)
+
+    def keys(self) -> List[str]:
+        return list(self._section_proxy.keys())
+
+    def items(self) -> List[tuple[str, str]]:
+        # Return stringified values for parity with INI
+        return [(k, str(v)) for k, v in self._section_proxy.items()]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._section_proxy
+
+    def __getitem__(self, key: str) -> str:
+        value = self._section_proxy[key]
+        if isinstance(value, list):
+            return ",".join(str(v) for v in value)
+        return str(value) if value is not None else ""
+
+    def set(self, key: str, value: str) -> None:
+        # Assign raw value; callers typically pass strings
+        # YAMLConfigSection uses underlying mapping for write
+        try:
+            # Access internal mapping used by YAMLSectionProxy
+            underlying = getattr(self._section_proxy, "_mapping", None)
+            if isinstance(underlying, dict):
+                underlying[key] = value
+            else:
+                self._section_proxy[key] = value
+        except Exception:
+            self._section_proxy[key] = value
+
+
+class YAMLConfigBackend(ConfigBackend):
+    """YAML-based configuration backend using the YAML configuration system."""
+
+    def __init__(self, yaml_config=None):
+        if yaml_config is None:
+            from saq.configuration.config import get_config
+            self._yaml_config = get_config()
+        else:
+            self._yaml_config = yaml_config
+
+    def sections(self) -> List[str]:
+        return list(self._yaml_config.sections()) if hasattr(self._yaml_config, "sections") else list(self._yaml_config.keys())
+
+    def get_section(self, section_name: str) -> Optional[ConfigSection]:
+        if section_name not in self._yaml_config:
+            return None
+        return YAMLConfigSection(self._yaml_config[section_name])
+
+    def has_section(self, section_name: str) -> bool:
+        return section_name in self._yaml_config
+
+    def get_value(self, section: str, key: str, fallback: Optional[str] = None) -> Optional[str]:
+        from saq.configuration.config import get_config_value
+        return get_config_value(section, key, fallback)
+
+    def get_value_as_int(self, section: str, key: str, fallback: Optional[int] = None) -> Optional[int]:
+        from saq.configuration.config import get_config_value_as_int
+        return get_config_value_as_int(section, key, fallback)
+
+    def get_value_as_boolean(self, section: str, key: str, fallback: Optional[bool] = None) -> Optional[bool]:
+        from saq.configuration.config import get_config_value_as_boolean
+        return get_config_value_as_boolean(section, key, fallback)
+
+    def create_section(self, section_name: str) -> ConfigSection:
+        if section_name not in self._yaml_config:
+            self._yaml_config[section_name] = {}
+        return YAMLConfigSection(self._yaml_config[section_name])

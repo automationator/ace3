@@ -889,7 +889,7 @@ def test_mhtml_analysis(root_analysis):
 @pytest.mark.system
 def test_officeparser_macro_extraction(root_analysis, datadir):
 
-    get_config()['analysis_module_officeparser3']['merge_macros'] = 'no'
+    get_config()['analysis_module_officeparser3']['merge_macros'] = False
 
     root_analysis.analysis_mode = "test_groups"
     _file = root_analysis.add_file_observable(str(datadir / "doc/DOC_PO_10142020EX.doc"))
@@ -913,7 +913,7 @@ def test_officeparser_macro_extraction(root_analysis, datadir):
 @pytest.mark.integration
 def test_officeparser_macro_extraction_merged(root_analysis, datadir):
 
-    get_config()['analysis_module_officeparser3']['merge_macros'] = 'yes'
+    get_config()['analysis_module_officeparser3']['merge_macros'] = True
 
     root_analysis.analysis_mode = "test_groups"
     _file = root_analysis.add_file_observable(str(datadir / "doc/DOC_PO_10142020EX.doc"))
@@ -939,7 +939,7 @@ def test_officeparser_macro_extraction_merged(root_analysis, datadir):
 @pytest.mark.integration
 def test_olevba_macro_extraction(root_analysis, datadir):
 
-    get_config()['analysis_module_olevba_v1_2']['merge_macros'] = 'no'
+    get_config()['analysis_module_olevba_v1_2']['merge_macros'] = False
 
     root_analysis.analysis_mode = "test_groups"
     _file = root_analysis.add_file_observable(str(datadir / "doc/DOC_PO_10142020EX.doc"))
@@ -964,7 +964,7 @@ def test_olevba_macro_extraction(root_analysis, datadir):
 @pytest.mark.integration
 def test_olevba_macro_extraction_merged(root_analysis, datadir):
 
-    get_config()['analysis_module_olevba_v1_2']['merge_macros'] = 'yes'
+    get_config()['analysis_module_olevba_v1_2']['merge_macros'] = True
 
     root_analysis.analysis_mode = "test_groups"
     _file = root_analysis.add_file_observable(str(datadir / "doc/DOC_PO_10142020EX.doc"))
@@ -1062,7 +1062,7 @@ def test_xml_plain_text_analysis(root_analysis):
 @pytest.mark.integration
 def test_xml_plain_text_analysis_file_too_large(root_analysis):
 
-    get_config()['analysis_module_xml_plain_text_analyzer']['maximum_size'] = '0'
+    get_config()['analysis_module_xml_plain_text_analyzer']['maximum_size'] = 0
 
     root_analysis.analysis_mode = "test_groups"
     target_path = root_analysis.create_file_path('test.xml')
