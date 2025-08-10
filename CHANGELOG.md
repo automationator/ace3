@@ -19,6 +19,8 @@ and this project (tries to) adheres to [Semantic Versioning](https://semver.org/
 - build jtr as part of the image.
 - removed need for custom yara build.
 - updated to officeparser3.
+- fixed issues with crypto usage.
+- switched to YAML for configuration.
 
 ### Removed
 
