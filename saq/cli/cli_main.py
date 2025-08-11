@@ -36,7 +36,7 @@ parser.add_argument('-P', '--set-decryption-password', dest='set_decryption_pass
     help="Provide the decryption password on the command line. Not secure at all. Don't do it.")
 parser.add_argument('--trace', required=False, action='store_true', dest='trace', default=False,
     help="Enable execution tracing (debugging option).")
-parser.add_argument('-D', required=False, action='store_true', dest='debug_on_error', default=False,
+parser.add_argument('-D', '--debug', required=False, action='store_true', dest='debug_on_error', default=False,
     help="Break into pdb if an unhanled exception is thrown or an assertion fails.")
 parser.add_argument('--skip-initialize-automation-user', action='store_true', dest='skip_initialize_automation_user', default=True,
     help="Skip the step of initializing the automation user.")
@@ -77,18 +77,18 @@ def main():
 
     if args.debug_on_error:
         def info(type, value, tb):
-           if hasattr(sys, 'ps1') or not sys.stderr.isatty() or type != AssertionError:
+            if hasattr(sys, 'ps1') or not sys.stderr.isatty():
               # we are in interactive mode or we don't have a tty-like
               # device, so we call the default hook
-              sys.__excepthook__(type, value, tb)
-           else:
-              import traceback
-              import pdb
-              # we are NOT in interactive mode, print the exception...
-              traceback.print_exception(type, value, tb)
-              print()
-              # ...then start the debugger in post-mortem mode.
-              pdb.pm()
+                sys.__excepthook__(type, value, tb)
+            else:
+                import traceback
+                import pdb
+                # we are NOT in interactive mode, print the exception...
+                traceback.print_exception(type, value, tb)
+                print()
+                # ...then start the debugger in post-mortem mode.
+                pdb.pm()
 
         sys.excepthook = info
 

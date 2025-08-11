@@ -1139,6 +1139,10 @@ CONFIG_ENCRYPTION_ITERATIONS = "iterations"
 # proxy
 CONFIG_PROXY = "proxy"
 
+# git
+CONFIG_GIT = "git"
+CONFIG_GIT_REPOS = "repos"
+
 # engine state flag that indicates pre-analysis has been executed on a RootAnalysis
 STATE_PRE_ANALYSIS_EXECUTED = "pre_analysis_executed"
 STATE_POST_ANALYSIS_EXECUTED = "post_analysis_executed"

@@ -21,6 +21,7 @@ and this project (tries to) adheres to [Semantic Versioning](https://semver.org/
 - updated to officeparser3.
 - fixed issues with crypto usage.
 - switched to YAML for configuration.
+- added direct support for git repos with service to manage.
 
 ### Removed
 

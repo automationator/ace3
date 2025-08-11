@@ -180,6 +180,21 @@ services:
         networks: 
             - dev
 
+    git:
+        environment: 
+            <<: *common-env
+            ACE_ZIP_PASSWORD:
+        depends_on:
+            - ace
+        image: "ace-dev:${ACE_VERSION:-latest}"
+        command: /bin/bash -c "/opt/ace/docker/startup/start_git.sh"
+        volumes: *common-volumes
+        hostname: ace
+        cap_add:
+            - SYS_PTRACE
+        networks: 
+            - dev
+
     cron:
         environment: 
             <<: *common-env

@@ -2085,6 +2085,8 @@ malicious_dispositions:
   DAMAGE: true
 
 config:
+  git_repos_default: etc/saq.git_repos.default.yaml
+  signatures_default: etc/saq.signatures.default.yaml
   zeek_default: etc/saq.bro.default.yaml
   remediation_default: etc/saq.remediation.default.yaml
   shodan_default: etc/saq.shodan.default.yaml

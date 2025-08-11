@@ -1,0 +1,7 @@
+signatures:
+  signature_types:
+    - "yara"
+    - "splunk"
+    - "custom_ioa"
+
+  signature_repos: []

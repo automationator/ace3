@@ -1,0 +1,9 @@
+git:
+  repos: []
+
+service_git:
+  module: saq.git
+  class: GitManagerService
+  description: Git Manager Service - manages git repositories
+  enabled: true
+  instance_type: ANY
