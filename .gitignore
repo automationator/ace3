@@ -139,11 +139,11 @@ etc/crawlphish.unittest.regex
 etc/crawlphish.unittest.whitelist
 
 # config files
-etc/amc_client.ini
-etc/saq.docker.passwords.ini
+etc/amc_client.yaml
+etc/saq.docker.passwords.yaml
 etc/blacklist.yar
 etc/remote_assignments.yar
-etc/saq.ini.saved
+etc/saq.yaml
 etc/mysql_defaults.root
 docker/provision/ace/etc
 
