@@ -61,24 +61,25 @@ fi
 #
 
 for dir in \
-    error_reports \
-    logs \
-    var \
-    scan_failures \
-    storage \
-    stats/modules/ace \
-    archive/email \
-    archive/smtp_stream \
-    archive/office \
-    archive/ole \
-    work \
-    etc \
-    external/analyst-data
+    data/error_reports \
+    data/logs \
+    data/var \
+    data/scan_failures \
+    data/storage \
+    data/stats/modules/ace \
+    data/archive/email \
+    data/archive/smtp_stream \
+    data/archive/office \
+    data/archive/ole \
+    data/work \
+    data/etc \
+    data/ssh \
+    data/external/analyst-data
 do
-    if [ ! -d data/$dir ]
+    if [ ! -d $dir ]
     then
-        echo "creating directory data/$dir"
-        mkdir -p data/$dir
+        echo "creating directory $dir"
+        mkdir -p $dir
     fi
 done
 
@@ -86,6 +87,12 @@ for path in data/etc/site_tags.csv data/etc/ssdeep_hashes
 do
 	if [ ! -e "${path}" ]; then touch "${path}"; fi
 done
+
+if [ ! -e data/ssh/id_rsa ]
+then
+    echo "creating SSH key"
+    ssh-keygen -t rsa -b 4096 -f data/ssh/id_rsa -N ""
+fi
 
 # TODO get rid of these
 if [ ! -e data/etc/organization.json ]; then echo '{}' > data/etc/organization.json; fi

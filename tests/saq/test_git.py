@@ -22,33 +22,35 @@ from saq.git import (
 class TestGitRepo:
     def test_gitrepo_creation(self):
         repo = GitRepo(
+            name="repo",
+            description="repo",
             local_path="/path/to/repo",
             git_url="https://github.com/user/repo.git",
             update_frequency=3600,
-            enabled=True,
             branch="main"
         )
         
         assert repo.local_path == "/path/to/repo"
         assert repo.git_url == "https://github.com/user/repo.git"
         assert repo.update_frequency == 3600
-        assert repo.enabled is True
         assert repo.branch == "main"
 
     def test_gitrepo_dataclass_equality(self):
         repo1 = GitRepo(
+            name="repo1",
+            description="repo1",
             local_path="/path/to/repo",
             git_url="https://github.com/user/repo.git",
             update_frequency=3600,
-            enabled=True,
             branch="main"
         )
         
         repo2 = GitRepo(
+            name="repo1",
+            description="repo1",
             local_path="/path/to/repo",
             git_url="https://github.com/user/repo.git",
             update_frequency=3600,
-            enabled=True,
             branch="main"
         )
         
@@ -56,18 +58,20 @@ class TestGitRepo:
 
     def test_gitrepo_dataclass_inequality(self):
         repo1 = GitRepo(
+            name="repo1",
+            description="repo1",
             local_path="/path/to/repo1",
             git_url="https://github.com/user/repo1.git",
             update_frequency=3600,
-            enabled=True,
             branch="main"
         )
         
         repo2 = GitRepo(
+            name="repo2",
+            description="repo2",
             local_path="/path/to/repo2",
             git_url="https://github.com/user/repo2.git",
             update_frequency=7200,
-            enabled=False,
             branch="develop"
         )
         
@@ -338,9 +342,7 @@ class TestRepoIsUpToDate:
 
     def test_repo_is_up_to_date_invalid_repo_path(self, tmpdir):
         invalid_path = str(tmpdir.join("nonexistent"))
-        
-        with pytest.raises(RuntimeError, match="failed to check if repo"):
-            repo_is_up_to_date("dummy_url", invalid_path, "master")
+        assert not repo_is_up_to_date("dummy_url", invalid_path, "master")
 
 
 @pytest.mark.integration
@@ -414,10 +416,11 @@ class TestUpdateRepo:
         local_path = str(tmpdir.join("new_repo"))
         
         repo = GitRepo(
+            name="repo",
+            description="repo",
             local_path=local_path,
             git_url=remote_path,
             update_frequency=3600,
-            enabled=True,
             branch="master"
         )
         
@@ -433,10 +436,11 @@ class TestUpdateRepo:
         local_path = str(tmpdir.join("nested", "path", "repo"))
         
         repo = GitRepo(
+            name="repo",
+            description="repo",
             local_path=local_path,
             git_url=remote_path,
             update_frequency=3600,
-            enabled=True,
             branch="master"
         )
         
@@ -453,10 +457,11 @@ class TestUpdateRepo:
         subprocess.run(["git", "clone", remote_path, local_path], check=True)
         
         repo = GitRepo(
+            name="repo",
+            description="repo",
             local_path=local_path,
             git_url=remote_path,
             update_frequency=3600,
-            enabled=True,
             branch="master"
         )
         
@@ -483,10 +488,11 @@ class TestUpdateRepo:
         local_file.write_text("local change")
         
         repo = GitRepo(
+            name="repo",
+            description="repo",
             local_path=local_path,
             git_url=remote_path,
             update_frequency=3600,
-            enabled=True,
             branch="master"
         )
         
@@ -516,10 +522,11 @@ class TestUpdateRepo:
         assert get_repo_branch(local_path) == "master"
         
         repo = GitRepo(
+            name="repo",
+            description="repo",
             local_path=local_path,
             git_url=remote_path,
             update_frequency=3600,
-            enabled=True,
             branch="develop"
         )
         
@@ -537,14 +544,12 @@ class TestGetConfiguredRepos:
                 "local_path": "/path/to/repo1",
                 "git_url": "https://github.com/user/repo1.git",
                 "update_frequency": 3600,
-                "enabled": True,
                 "branch": "main"
             },
             {
                 "local_path": "/path/to/repo2",
                 "git_url": "https://github.com/user/repo2.git",
                 "update_frequency": 7200,
-                "enabled": False,
                 "branch": "develop"
             }
         ]
@@ -567,13 +572,11 @@ class TestGetConfiguredRepos:
         assert repos[0].local_path == "/path/to/repo1"
         assert repos[0].git_url == "https://github.com/user/repo1.git"
         assert repos[0].update_frequency == 3600
-        assert repos[0].enabled is True
         assert repos[0].branch == "main"
         
         assert repos[1].local_path == "/path/to/repo2"
         assert repos[1].git_url == "https://github.com/user/repo2.git"
         assert repos[1].update_frequency == 7200
-        assert repos[1].enabled is False
         assert repos[1].branch == "develop"
 
     def test_get_configured_repos_empty_config(self, monkeypatch):

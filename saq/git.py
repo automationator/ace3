@@ -5,6 +5,7 @@ import subprocess
 import threading
 
 from saq.constants import CONFIG_GIT, CONFIG_GIT_REPOS
+from saq.environment import get_data_dir
 from saq.service import ACEServiceInterface
 
 
@@ -16,6 +17,11 @@ class GitRepo:
     git_url: str # the git url of the repo
     update_frequency: int # the frequency to update the repo in seconds
     branch: str # the branch to use for the repo
+
+def get_ssh_env_dict() -> dict:
+    return {
+        "GIT_SSH_COMMAND": f"ssh -i {get_data_dir()}/ssh/id_rsa"
+    }
 
 def get_configured_repos() -> list[GitRepo]:
     from saq.configuration.config import get_config
@@ -50,7 +56,8 @@ def get_repo_branch(local_path: str) -> str:
 
 def clone_repo(git_url: str, local_path: str, branch: str) -> bool:
     """Clones the repo at the given URL to the given local path and branch."""
-    process = subprocess.Popen(["git", "clone", git_url, local_path, "--branch", branch], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(["git", "clone", git_url, local_path, "--branch", branch], 
+    text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=get_ssh_env_dict())
     stdout, stderr = process.communicate()
     if process.returncode != 0:
         raise RuntimeError(f"failed to clone repo {git_url} to {local_path}: {stderr}")
@@ -71,6 +78,15 @@ def change_repo_branch(local_path: str, branch: str) -> bool:
 
 def repo_is_up_to_date(git_url: str, local_path: str, branch: str) -> bool:
     """Returns True if the repo is up to date, False otherwise."""
+    if not repo_exists(local_path):
+        return False
+
+    # fetch remote first
+    process = subprocess.Popen(["git", "-C", local_path, "fetch", "--all"], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=get_ssh_env_dict())
+    stdout, stderr = process.communicate()
+    if process.returncode != 0:
+        raise RuntimeError(f"failed to fetch remote of repo {local_path}: {stderr}")
+
     process = subprocess.Popen(["git", "-C", local_path, "status", "--porcelain"], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
     if process.returncode != 0:
@@ -80,7 +96,7 @@ def repo_is_up_to_date(git_url: str, local_path: str, branch: str) -> bool:
 
 def pull_repo(git_url: str, local_path: str, branch: str) -> bool:
     """Pulls the latest changes from the given URL to the given local path and branch."""
-    process = subprocess.Popen(["git", "-C", local_path, "pull", git_url, branch], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(["git", "-C", local_path, "pull", git_url, branch], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=get_ssh_env_dict())
     stdout, stderr = process.communicate()
     if process.returncode != 0:
         raise RuntimeError(f"failed to pull latest changes from {git_url} to {local_path}: {stderr}")
