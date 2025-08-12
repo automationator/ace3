@@ -10,5 +10,5 @@ then
     rm data/var/services/remediation
 fi
 
-./ace -L etc/logging_configs/service_remediation.ini service start remediation
+./ace -L etc/logging_configs/service_remediation.yaml service start remediation
 

@@ -193,8 +193,6 @@ RUN mkdir -p /opt/ace/data/logs /opt/ace/data/error_reports /opt/ace/data/extern
     rm -rf /opt/ace/etc/collection/tuning && \
     mkdir -p /opt/ace/etc/collection/tuning && \
     touch /opt/ace/etc/collection/tuning/.empty && \
-    rm -f /opt/ace/etc/saq.ini 2> /dev/null && \
-    touch /opt/ace/etc/saq.ini && \
     find /opt/ace -type d -name __pycache__ -print0 | xargs -0 rm -rf
 
 # configure git for automation
@@ -233,6 +231,3 @@ RUN /opt/ace/bin/install_integrations.sh
 USER ace
 WORKDIR /opt/ace
 VOLUME [ "/opt/ace/data", "/opt/ace/etc/yara", "/opt/ace/hunts", "/opt/ace/etc/collection" ]
-
-# Expose necessary ports
-EXPOSE 5000

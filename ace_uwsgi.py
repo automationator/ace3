@@ -26,7 +26,7 @@ sys.path.append(os.path.join(saq_home, 'lib'))
 sys.path.append(os.path.join(saq_home))
 
 # if no logging is specified then how we log depends on what mode we're in
-logging_config_path = os.path.join(saq_home, 'etc', 'app_logging.ini')
+logging_config_path = os.path.join(saq_home, "etc", "logging_configs", "app_logging.yaml")
 
 # initialize saq
 # note that config paths are determined by the env vars we dug out above

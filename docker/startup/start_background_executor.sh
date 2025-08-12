@@ -10,5 +10,5 @@ then
     rm data/var/services/background_executor
 fi
 
-./ace -L etc/logging_configs/service_background_executor.ini service start background_executor
+./ace -L etc/logging_configs/service_background_executor.yaml service start background_executor
 

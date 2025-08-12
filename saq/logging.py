@@ -5,6 +5,7 @@ import logging.config
 import os
 import sys
 from typing import Optional
+import yaml
 
 
 class CustomFileHandler(logging.StreamHandler):
@@ -66,10 +67,20 @@ LOGGING_BASE_CONFIG = {
 }
 
 def initialize_logging(logging_config_path: str, log_sql: Optional[bool]=False):
-    assert isinstance(logging_config_path, str) and str
+    assert isinstance(logging_config_path, str) and logging_config_path
 
     try:
-        logging.config.fileConfig(logging_config_path, disable_existing_loggers=False)
+        with open(logging_config_path, "r") as config_file:
+            logging_config = yaml.safe_load(config_file)
+
+        if not isinstance(logging_config, dict):
+            raise ValueError("logging configuration YAML must parse to a dict")
+
+        if "disable_existing_loggers" not in logging_config:
+            logging_config["disable_existing_loggers"] = False
+
+        logging.config.dictConfig(logging_config)
+
     except Exception as e:
         sys.stderr.write("unable to load logging configuration from {}: {}".format(logging_config_path, e))
         raise e

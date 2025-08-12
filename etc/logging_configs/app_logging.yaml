@@ -1,0 +1,38 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  base:
+    format: '[%(asctime)s] [%(name)s] [%(pathname)s:%(funcName)s:%(lineno)d] [%(threadName)s] [%(process)d] [%(levelname)s] - %(message)s'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: base
+    stream: ext://sys.stderr
+  file:
+    class: saq.logging.CustomFileHandler
+    level: INFO
+    formatter: base
+    log_dir: data/logs
+    filename_format: 'uwsgi_app_%Y-%m-%d.log'
+  error:
+    class: logging.FileHandler
+    level: ERROR
+    formatter: base
+    filename: data/logs/uwsgi_app_error.log
+
+root:
+  level: INFO
+  handlers: [file, console, error]
+
+loggers:
+  sqlalchemy.engine:
+    level: INFO
+    handlers: [file]
+
+
+
+
+

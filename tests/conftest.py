@@ -72,7 +72,7 @@ def global_setup(request, tmpdir, datadir):
         data_dir=str(data_dir),
         temp_dir=str(temp_dir),
         config_paths=[], 
-        logging_config_path=os.path.join(get_base_dir(), 'etc', 'unittest_logging.ini'), 
+        logging_config_path=os.path.join(get_base_dir(), "etc", "logging_configs", "unittest_logging.yaml"), 
         relative_dir=None)
 
     # clear the tracking

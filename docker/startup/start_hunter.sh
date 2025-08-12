@@ -10,4 +10,4 @@ then
     rm data/var/services/hunter
 fi
 
-./ace -L etc/logging_configs/service_hunter.ini service start hunter
+./ace -L etc/logging_configs/service_hunter.yaml service start hunter

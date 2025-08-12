@@ -10,4 +10,4 @@ then
     rm data/var/services/network_semaphore
 fi
 
-./ace -L etc/logging_configs/service_network_semaphore.ini service start network_semaphore
+./ace -L etc/logging_configs/service_network_semaphore.yaml service start network_semaphore

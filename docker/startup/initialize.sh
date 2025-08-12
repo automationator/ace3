@@ -104,12 +104,6 @@ if [ ! -e data/etc/local_networks.csv ]; then echo 'Indicator,Indicator_Type' > 
 #if [ ! -e /home/ace/.vscode-server/extensions ]; then mkdir -p /home/ace/.vscode-server/extensions; fi
 #if [ ! -e /home/ace/.vscode-server/extensionsCache ]; then mkdir -p /home/ace/.vscode-server/extensionsCache; fi
 
-# target integration configuration
-#if [ -e etc/saq.integrations.$ACE_TARGET.ini ]
-#then
-    #cp etc/saq.integrations.$ACE_TARGET.ini data/etc/saq.integrations.ini
-#fi
-
 # make sure we've got our SSH creds for github
 #if [ ! -e ~/.ssh/id_rsa ]
 #then

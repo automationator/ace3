@@ -10,5 +10,5 @@ then
     rm data/var/services/email_collector
 fi
 
-./ace -L etc/logging_configs/service_email_collector.ini service start email_collector
+./ace -L etc/logging_configs/service_email_collector.yaml service start email_collector
 

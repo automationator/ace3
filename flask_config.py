@@ -106,7 +106,7 @@ class UnitTestConfig(Config):
 
 @lru_cache
 def get_flask_config(name: str) -> Config:
-    # the keys for this dict match the instance_type config setting in global section of etc/saq.ini
+    # the keys for this dict match the instance_type config setting in global section of etc/saq.yaml
     if name == INSTANCE_TYPE_DEV:
         return DevelopmentConfig()
     elif name == INSTANCE_TYPE_PRODUCTION:

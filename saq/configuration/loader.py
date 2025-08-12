@@ -13,11 +13,11 @@ def load_configuration():
     """Unified configuration loader preferring YAML.
 
     Load order:
-      1) etc/saq.default.yaml if present, else etc/saq.default.ini
-      2) Overrides from G_CONFIG_PATHS (supports .yaml/.yml and .ini)
-      3) Optional credential/config files (YAML first, then INI):
-           - /docker-entrypoint-initdb.d/saq.database.passwords.{yaml,ini}
-           - data/etc/saq.api-keys.{yaml,ini}
+      1) etc/saq.default.yaml
+      2) Overrides from G_CONFIG_PATHS (supports .yaml/.yml)
+      3) Optional credential/config files
+           - /docker-entrypoint-initdb.d/saq.database.passwords.{yaml,yml}
+           - data/etc/saq.api-keys.{yaml,yml}
       4) verify() and apply_path_references()
     """
 

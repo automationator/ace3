@@ -10,4 +10,4 @@ then
     rm data/var/services/bro_smtp_collector
 fi
 
-./ace -L etc/logging_configs/service_bro_smtp_collector.ini service start bro_smtp_collector
+./ace -L etc/logging_configs/service_bro_smtp_collector.yaml service start bro_smtp_collector

@@ -10,19 +10,12 @@ from saq.engine.core import Engine
 from saq.engine.engine_configuration import EngineConfiguration
 from saq.engine.enums import EngineExecutionMode
 from saq.environment import get_local_timezone
-from saq.integration.legacy import integration_enabled
 
 from flask import url_for
 
 from saq.json_encoding import _JSONEncoder
 from saq.util.hashing import sha256_file
 from saq.util.uuid import workload_storage_dir
-
-@pytest.fixture(autouse=True, scope="function")
-def check_integration():
-    return
-    if not integration_enabled('bro'):
-        pytest.skip("skipping bro tests (bro integration not enabled)")
 
 def verify(root):
     from saq.modules.http import HTTP_DETAILS_READY, HTTP_DETAILS_REQUEST, HTTP_DETAILS_REPLY

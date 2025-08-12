@@ -5,4 +5,4 @@ source /venv/bin/activate
 source load_environment
 source docker/startup/start.sh
 
-ace -L etc/logging_configs/service_git.ini service start git
+ace -L etc/logging_configs/service_git.yaml service start git

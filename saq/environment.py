@@ -559,7 +559,7 @@ def initialize_environment(
 
     # by default we log to the console
     if logging_config_path is None:
-        logging_config_path = os.path.join(get_base_dir(), "etc", "console_logging.ini")
+        logging_config_path = os.path.join(get_base_dir(), "etc", "logging_configs", "console_logging.yaml")
 
     from saq.logging import initialize_logging
 

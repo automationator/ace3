@@ -10,4 +10,4 @@ then
     rm data/var/services/engine
 fi
 
-ace -L etc/logging_configs/service_engine.ini service start engine
+ace -L etc/logging_configs/service_engine.yaml service start engine

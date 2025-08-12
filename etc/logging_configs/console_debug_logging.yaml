@@ -1,0 +1,22 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  base:
+    format: '[%(asctime)s] [%(name)s] [%(filename)s:%(lineno)d] [%(threadName)s] [%(process)d] [%(levelname)s] - %(message)s'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: base
+    stream: ext://sys.stderr
+
+root:
+  level: DEBUG
+  handlers: [console]
+
+
+
+
+

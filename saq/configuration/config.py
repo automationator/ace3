@@ -105,7 +105,6 @@ def initialize_configuration(config_paths: Optional[list[str]]=None):
     global CONFIG
 
     # load configuration files
-    # defaults to $SAQ_HOME/etc/saq.ini
     if config_paths is None:
         config_paths = []
     

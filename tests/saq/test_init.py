@@ -34,11 +34,11 @@ def test_custom_file_handler(tmpdir, monkeypatch):
 @pytest.mark.unit
 def test_initialize_logging(datadir, monkeypatch):
     # valid configuration
-    initialize_logging(str(datadir / "debug_logging.ini"))
+    initialize_logging(str(datadir / "debug_logging.yaml"))
 
     # invalid configuration
     with pytest.raises(Exception):
-        initialize_logging(str(datadir / "invalid_file.ini"))
+        initialize_logging(str(datadir / "invalid_file.yaml"))
 
     # logging sql commands
     config = configparser.ConfigParser()
@@ -48,7 +48,7 @@ def test_initialize_logging(datadir, monkeypatch):
 
     import saq.configuration
     monkeypatch.setattr(saq.configuration, "get_config", lambda: config)
-    initialize_logging(str(datadir / "debug_logging.ini"))
+    initialize_logging(str(datadir / "debug_logging.yaml"))
 
     # TODO not sure what to check for here
 

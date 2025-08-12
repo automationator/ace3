@@ -5,4 +5,4 @@ source /venv/bin/activate
 source load_environment
 source docker/startup/start.sh
 
-uwsgi --ini etc/uwsgi_api.ini 
+uwsgi --yaml etc/uwsgi_api.yaml 

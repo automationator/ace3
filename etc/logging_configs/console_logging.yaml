@@ -1,0 +1,28 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  base:
+    format: ' [%(levelname)s] %(message)s'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: base
+    stream: ext://sys.stderr
+  file:
+    class: logging.FileHandler
+    level: INFO
+    formatter: base
+    filename: data/logs/console.log
+    mode: a
+
+root:
+  level: INFO
+  handlers: [file, console]
+
+
+
+
+

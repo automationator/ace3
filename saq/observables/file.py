@@ -12,7 +12,6 @@ from saq.configuration.config import get_config, get_config_value_as_int
 from saq.constants import CONFIG_GUI, CONFIG_GUI_FILE_PREVIEW_BYTES, DIRECTIVE_VIEW_IN_BROWSER, EVENT_RELATIONSHIP_ADDED, F_FILE, F_FILE_LOCATION, F_FILE_NAME, F_FILE_PATH, F_MD5, F_SHA1, F_SHA256, FILE_SUBDIR, G_SAQ_RELATIVE_DIR, R_IS_HASH_OF, parse_file_location
 from saq.environment import g
 from saq.gui import ObservableActionCollectFile, ObservableActionDownloadFile, ObservableActionDownloadFileAsZip, ObservableActionFileRender, ObservableActionFileSendTo, ObservableActionSeparator, ObservableActionUploadToVt, ObservableActionViewAsHex, ObservableActionViewAsHtml, ObservableActionViewAsText, ObservableActionViewInBrowser, ObservableActionViewInVt
-from saq.integration.legacy import integration_enabled
 from saq.observables.base import CaselessObservable, ObservableValueError
 from saq.observables.generator import register_observable_type
 from saq.util.hashing import get_md5_hash_of_file, is_sha256_hex, sha256_file
@@ -286,10 +285,9 @@ class FileObservable(Observable):
             result.append(ObservableActionSeparator())
             result.append(ObservableActionViewAsHex())
             result.append(ObservableActionViewAsText())
-            if integration_enabled("vt"):
-                result.append(ObservableActionSeparator())
-                result.append(ObservableActionUploadToVt())
-                result.append(ObservableActionViewInVt())
+            result.append(ObservableActionSeparator())
+            result.append(ObservableActionUploadToVt())
+            result.append(ObservableActionViewInVt())
             
             if any([x for x in get_config().keys() if x.startswith("send_to_")]):
                 result.append(ObservableActionSeparator())

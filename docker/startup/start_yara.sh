@@ -10,4 +10,4 @@ then
     rm data/var/services/yara
 fi
 
-./ace -L etc/logging_configs/service_yara.ini service start yara
+./ace -L etc/logging_configs/service_yara.yaml service start yara

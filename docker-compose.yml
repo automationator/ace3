@@ -2,7 +2,7 @@ x-common-env: &common-env
     ACE_TARGET: "dev"
     ACE_VERSION:
     ACE_DISABLE_AUTOSTART:
-    SAQ_ENC:
+    SAQ_ENC: ${SAQ_ENC:-test}
     SAQ_CONFIG_PATHS: "etc/saq.dev.yaml"
 
 x-common-volumes: &common-volumes

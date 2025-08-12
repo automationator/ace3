@@ -112,7 +112,7 @@ def _api_command(parser):
         help="Do not perform SSL verification.")
     parser.add_argument('--disable-proxy', required=False, default=True, action='store_true',
         help="Disables proxy usage by removing the environment variables http_proxy, https_proxy and ftp_proxy.")
-    parser.add_argument('--api-key', required=False, default=os.environ.get('ICE_API_KEY', None),
+    parser.add_argument('--api-key', required=False, default=os.environ.get('ACE_API_KEY', None),
         help="Specify the api key to use.")
     return parser
 
@@ -201,7 +201,7 @@ def _execute_api_call(command,
     if api_key is None:
         api_key = default_api_key
         if api_key is None:
-            api_key = os.environ.get("ICE_API_KEY", None)
+            api_key = os.environ.get("ACE_API_KEY", None)
 
     ssl_verification = False
 
