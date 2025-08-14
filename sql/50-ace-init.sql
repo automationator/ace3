@@ -24,6 +24,10 @@ INSERT INTO `auth_permission_catalog` (`major`, `minor`, `description`) VALUES
 ('event', 'write', 'Modify events (e.g., update status, associate alerts, perform background actions).'),
 ('observable', 'read', 'Query observables via the API using flexible filters.'),
 ('observable', 'write', 'Modify observables including detection status, expiration, and metadata.');
+
+-- give the built-in users full access
+INSERT INTO `auth_user_permission` (`user_id`, `major`, `minor`) VALUES (1, '*', '*');
+INSERT INTO `auth_user_permission` (`user_id`, `major`, `minor`) VALUES (2, '*', '*');
 COMMIT;
 
 USE `ace-unittest`;
