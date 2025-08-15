@@ -54,6 +54,16 @@
 <!-- this needs to come last so we can do our CSS overrides -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/saq.css') }}" type="text/css">
 
+<style>
+.nav-separator {
+    width: 1px;
+    background-color: #dee2e6;
+    margin: 0 0.5rem;
+    height: 1.5rem;
+    align-self: center;
+}
+</style>
+
 {% block scripts %}
 {% if config.GOOGLE_ANALYTICS %}
     {% include "gtag.html" ignore missing %}
@@ -78,8 +88,19 @@
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 {% if current_user.is_authenticated %}
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('analysis.file') }}">Analyze</a></li>
+                    <li class="nav-item nav-separator"></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('analysis.manage') }}">Alerts</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('events.manage') }}">Events</a></li>
+                    <li class="nav-item nav-separator"></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Signatures</a></li>
+                    <li class="nav-item nav-separator"></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Observables</a></li>
+                    <li class="nav-item nav-separator"></li>
+                    <li class="nav-item"><a class="nav-link" href="#">DetectOps</a></li>
+                    <li class="nav-item nav-separator"></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.manage_users') }}">Users</a></li>
+                    <li class="nav-item nav-separator"></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Settings</a></li>
+                    <!--<li class="nav-item"><a class="nav-link" href="{{ url_for('events.manage') }}">Events</a></li>-->
                 {% endif %}
             </ul>
             <ul class="navbar-nav">

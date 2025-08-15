@@ -156,3 +156,8 @@ def get_group_permissions(group_id: int) -> list[GroupPermission]:
         )
 
     return results
+
+def get_user_groups(user_id: int) -> list[AuthGroup]:
+    """Return all groups for a user."""
+    session = get_db()
+    return session.query(AuthGroup).join(AuthGroupUser).filter(AuthGroupUser.user_id == user_id).all()

@@ -4,7 +4,7 @@ INSERT INTO tags ( id, name ) VALUES ( 1, 'whitelisted' );
 INSERT INTO users ( id, username, password_hash, email, omniscience, timezone, display_name )
 VALUES ( 1, 'ace', NULL, 'ace@localhost', 0, NULL, 'automation');
 INSERT INTO users ( id, username, password_hash, email, omniscience, timezone, display_name )
-VALUES ( 2, 'analyst', 'pbkdf2:sha256:150000$MeWyGorw$433cf8984d385cec417cc5081140d3ee3edba8263cd49eb979209c6fabcd56bf', 'analyst@localhost', 0, 'Etc/UTC', 'analyst');
+VALUES ( 2, 'analyst', 'pbkdf2:sha256:150000$MeWyGorw$433cf8984d385cec417cc5081140d3ee3edba8263cd49eb979209c6fabcd56bf', 'analyst@localhost', 0, 'UTC', 'analyst');
 INSERT INTO `event_status` (`value`) VALUES ('OPEN'), ('INTERNAL COLLECTION'), ('CLOSED'), ('IGNORE');
 INSERT INTO `event_remediation` (`value`) VALUES ('not remediated'), ('cleaned with antivirus'), ('cleaned manually'), ('reimaged'), ('credentials reset'), ('removed from mailbox'), ('network block'), ('domain takedown'), ('NA'), ('escalated');
 INSERT INTO `event_vector` (`value`) VALUES ('corporate email'), ('webmail'), ('usb'), ('website'), ('unknown'), ('business application'), ('compromised website'), ('sms');
@@ -23,7 +23,9 @@ INSERT INTO `auth_permission_catalog` (`major`, `minor`, `description`) VALUES
 ('event', 'read', 'View events, details, and export event data.'),
 ('event', 'write', 'Modify events (e.g., update status, associate alerts, perform background actions).'),
 ('observable', 'read', 'Query observables via the API using flexible filters.'),
-('observable', 'write', 'Modify observables including detection status, expiration, and metadata.');
+('observable', 'write', 'Modify observables including detection status, expiration, and metadata.'),
+('user', 'read', 'Read user data via API/GUI.'),
+('user', 'write', 'Modify user data via API/GUI.');
 
 -- give the built-in users full access
 INSERT INTO `auth_user_permission` (`user_id`, `major`, `minor`) VALUES (1, '*', '*');

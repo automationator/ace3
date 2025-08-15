@@ -4,7 +4,7 @@ from saq.database.model import User
 from saq.database.pool import get_db
 
 
-def add_user(username: str, email: str, display_name: str, password: str, queue: Optional[str]=QUEUE_DEFAULT, timezone: Optional[str]="Etc/UTC") -> User:
+def add_user(username: str, email: str, display_name: str, password: str, queue: Optional[str]=QUEUE_DEFAULT, timezone: Optional[str]="UTC") -> User:
     """
     Adds a new user to the database.
     """

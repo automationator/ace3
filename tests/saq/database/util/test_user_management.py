@@ -72,7 +72,7 @@ def test_add_user_with_defaults():
     assert user.email == email
     assert user.display_name == display_name
     assert user.queue == QUEUE_DEFAULT
-    assert user.timezone == "Etc/UTC"
+    assert user.timezone == "UTC"
     assert user.verify_password(password)
     
     # Cleanup

@@ -7,6 +7,10 @@ At this time this project is very much a work in progress. I'm making sweeping c
 ## Quick Setup
 
 ```bash
+docker compose build
+docker compose up
+
+# once you've built it you can do this instead
 docker compose up --build
 ```
 

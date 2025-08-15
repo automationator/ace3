@@ -15,7 +15,7 @@ def analyst(global_setup):
         display_name="john",
         password="password",
         queue=QUEUE_DEFAULT,
-        timezone="Etc/UTC"
+        timezone="UTC"
     )
 
     # grant all permissions to the analyst

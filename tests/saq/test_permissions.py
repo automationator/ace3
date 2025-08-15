@@ -230,7 +230,7 @@ class TestUserPermissionManagement:
         perm = add_user_permission(user.id, "test", "delete_by_id")
         perm_id = perm.id
         
-        deleted = delete_user_permission(user.id, perm_id)
+        deleted = delete_user_permission(perm_id)
         
         assert deleted is True
         
@@ -246,51 +246,8 @@ class TestUserPermissionManagement:
         """Test deleting user permission with non-existent permission ID."""
         user = create_test_user("permuser7", "permuser7@example.com")
         
-        deleted = delete_user_permission(user.id, 99999)
+        deleted = delete_user_permission(99999)
         
-        assert deleted is False
-
-    def test_delete_user_permission_wrong_user(self):
-        """Test deleting user permission with wrong user ID."""
-        user1 = create_test_user("permuser8a", "permuser8a@example.com")
-        user2 = create_test_user("permuser8b", "permuser8b@example.com")
-        
-        perm = add_user_permission(user1.id, "test", "wrong_user")
-        
-        # Try to delete with wrong user ID
-        deleted = delete_user_permission(user2.id, perm.id)
-        
-        assert deleted is False
-        
-        # Verify permission still exists
-        session = get_db()
-        db_perm = session.query(AuthUserPermission).filter(
-            AuthUserPermission.id == perm.id
-        ).first()
-
-        assert db_perm is not None
-
-    def test_delete_user_permission_with_correct_user(self):
-        """Test deleting user permission with correct user ID succeeds."""
-        user = create_test_user("permuser9", "permuser9@example.com")
-        perm = add_user_permission(user.id, "test", "correct_user")
-        perm_id = perm.id  # Store the ID before deletion
-        
-        deleted = delete_user_permission(user.id, perm_id)
-        
-        assert deleted is True
-        
-        # Verify permission is gone
-        session = get_db()
-        db_perm = session.query(AuthUserPermission).filter(
-            AuthUserPermission.id == perm_id
-        ).first()
-
-        assert db_perm is None
-
-    def test_delete_user_permission_nonexistent_user(self):
-        """Test deleting permission with non-existent user returns False."""
-        deleted = delete_user_permission(99999, 99999)
         assert deleted is False
 
 

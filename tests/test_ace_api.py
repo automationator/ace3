@@ -110,7 +110,7 @@ def _get_submit_time():
     return datetime(2017, 11, 11, hour=7, minute=36, second=1)
 
 def _get_localized_submit_time():
-    return ace_api.LOCAL_TIMEZONE.localize(_get_submit_time()).astimezone(pytz.timezone('Etc/UTC'))
+    return ace_api.LOCAL_TIMEZONE.localize(_get_submit_time()).astimezone(pytz.timezone('UTC'))
 
 def _submit(analysis_mode=None,
             tool=None,

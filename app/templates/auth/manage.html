@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block control_panel %}
+<div class="container-fluid">
+    <!-- control panel -->
+    <div class="row">
+        <div class="col">
+            <button type="button" id="btn_add_user" class="btn btn-outline-dark"><span class="bi bi-person-add"></span> Add User</button>
+            <button type="button" id="btn_edit_user" class="btn btn-outline-dark"><span class="bi bi-person-gear"></span> Edit User</button>
+            <button type="button" id="btn_enable_user" class="btn btn-outline-dark"><span class="bi bi-person-check"></span> Enable User</button>
+            <button type="button" id="btn_disable_user" class="btn btn-outline-dark"><span class="bi bi-person-lock"></span> Disable User</button>
+            <button type="button" id="btn_add_group" class="btn btn-outline-dark"><span class="bi bi-people"></span> Add Group</button>
+            <button type="button" id="btn_remove_group" class="btn btn-outline-dark"><span class="bi bi-people-fill"></span> Remove Group</button>
+            <button type="button" id="btn_add_permissions" class="btn btn-outline-dark"><span class="bi bi-key"></span> Add Permissions</button>
+            <button type="button" id="btn_remove_permissions" class="btn btn-outline-dark"><span class="bi bi-key-fill"></span> Remove Permissions</button>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+        <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="hide_disabled_users" {% if hide_disabled_users %}checked{% endif %}>
+            <label class="form-check-label" for="hide_disabled_users">
+                hide disabled users
+            </label>
+        </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col">
+            <h3>User Management</h3>
+            <table class="table table-hover table-condensed">
+                <thead>
+                    <tr>
+                        <th>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="master_user_checkbox"></input> User Name
+                            </div>
+                        </th>
+                        <th>Display Name</th>
+                        <th>Email</th>
+                        <th>Default Queue</th>
+                        <th>Enabled</th>
+                        <th>Timezone</th>
+                        <th>Perms</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="user_id_{{user.id}}"></input> {{ user.username }}
+                            </div>
+                        </td>
+                        <td>{{ user.display_name }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.queue }}</td>
+                        <td>{{ user.enabled }}</td>
+                        <td>{{ user.timezone }}</td>
+                        <td>
+                            <ul style="padding-left: 0; margin-left: 0;">
+                                {% for permission in permissions[user.id] %}
+                                    <li style="list-style-type: none;"><input class="form-check-input" type="checkbox" id="user_permission_{{permission.id}}" name="user_permission_{{permission.id}}"></input> {{permission.effect}} {{ permission.major }}:{{ permission.minor }} ({{ permission.source }})</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div> <!-- end column -->
+    </div> <!-- end row -->
+
+    <!-- group permission management -->
+
+    <div class="row">
+        <div class="col">
+            <h3>Group Permission Management</h3>
+            <table class="table table-hover table-condensed w-50">
+                <thead>
+                    <tr>
+                        <th>Group Name</th>
+                        <th>Permissions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for auth_group in auth_groups %}
+                    <tr>
+                        <td>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="group_id_{{auth_group.id}}" name="group_id_{{auth_group.id}}"></input> {{ auth_group.name }}
+                            </div>
+                        </td>
+                        <td>
+                            <ul style="padding-left: 0; margin-left: 0;">
+                                {% for permission in group_permissions[auth_group.id] %}
+                                    <li style="list-style-type: none;"><input class="form-check-input" type="checkbox" id="group_permission_{{permission.id}}" name="group_permission_{{permission.id}}"></input> {{permission.effect}} {{ permission.major }}:{{ permission.minor }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>   
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div> <!-- end column -->
+    </div> <!-- end row -->
+</div> <!-- end container -->
+
+<!-- add/edit user modal -->
+<div class="modal fade modal-lg" id="edit_user_modal" tabindex="-1" role="dialog" aria-labelledby="edit_user_modal_label" aria-hidden="true">
+    <form id="edit_user_form" class="form-horizontal" role="form" method="POST" action={{url_for('auth.edit_users')}}>
+        <input type="hidden" id="edit_or_add" name="edit_or_add" value="add">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="edit_user_modal_label">Add / Edit User</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="edit_user_modal_body">
+                <div class="row">
+                    <div class="col">
+                        <label for="edit_user_username">Username</label>
+                        <input type="text" class="form-control" id="edit_user_username" name="edit_user_username">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label for="edit_user_password">Password</label>
+                        <input type="password" class="form-control" id="edit_user_password" name="edit_user_password" placeholder="Leave blank to keep existing password">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label for="edit_user_display_name">Display Name</label>
+                        <input type="text" class="form-control" id="edit_user_display_name" name="edit_user_display_name">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label for="edit_user_email">Email</label>
+                        <input type="text" class="form-control" id="edit_user_email" name="edit_user_email">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label for="edit_user_queue">Default Queue</label>
+                        <input type="text" class="form-control" id="edit_user_queue" name="edit_user_queue">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label for="edit_user_timezone">Timezone</label>
+                        <select class="form-select" id="edit_user_timezone" name="edit_user_timezone">
+                            <option value="">Select a timezone</option>
+                            {% for timezone in timezones %}
+                                <option value="{{timezone}}">{{timezone}}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label for="edit_user_permissions">Permissions</label>
+                        <button type="button" class="btn-xs btn-outline-dark ms-1" id="btn_edit_user_add_permission">add</button>
+                        <ul style="padding-left: 0; margin-left: 0;" id="edit_user_permissions_list">
+                        </ul>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label for="edit_user_groups">Groups</label>
+                        <ul style="padding-left: 0; margin-left: 0;">
+                            {% for auth_group in auth_groups %}
+                                <li style="list-style-type: none;"><input class="form-check-input" type="checkbox" name="edit_user_group_{{auth_group.id}}" id="edit_user_group_{{auth_group.id}}"></input> {{auth_group.name}}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-outline-primary" id="btn_edit_user_apply">Apply</button>
+            </div>
+        </div>
+    </div>
+    </form>
+</div>
+
+<!-- add auth group modal -->
+<div class="modal fade modal-sm" id="add_auth_group_modal" tabindex="-1" role="dialog" aria-labelledby="add_auth_group_modal_label" aria-hidden="true">
+    <form id="add_auth_group_form" class="form-horizontal" role="form" method="POST" action={{url_for('auth.add_auth_group')}}>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="add_auth_group_modal_label">Add Permission Group</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="add_auth_group_modal_body">
+                <div class="row">
+                    <div class="col">
+                        <label for="edit_user_username">Name</label>
+                        <input type="text" class="form-control" id="add_auth_group_name" name="add_auth_group_name">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Nevermind</button>
+                <button type="submit" class="btn btn-outline-primary" id="btn_add_auth_group">Add</button>
+            </div>
+        </div>
+    </div>
+    </form>
+</div>
+
+<!-- add permission modal -->
+<div class="modal fade modal" id="add_permission_modal" tabindex="-1" role="dialog" aria-labelledby="add_permission_modal_label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="add_permission_modal_label">Add Permission</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="add_permission_modal_body">
+                <div class="row">
+                    <div class="col">
+                        <label for="add_permission_effect">Effect</label>
+                        <select class="form-select" id="add_permission_effect" name="add_permission_effect">
+                            <option value="ALLOW" selected>ALLOW</option>
+                            <option value="DENY">DENY</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label for="add_permission_major">Major</label>
+                        <input type="text" class="form-control" id="add_permission_major" name="add_permission_major" value="*">
+                    </div>
+                    <div class="col">
+                        <label for="add_permission_minor">Minor</label>
+                        <input type="text" class="form-control" id="add_permission_minor" name="add_permission_minor" value="*">
+                    </div>
+                </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Nevermind</button>
+                <button type="submit" class="btn btn-outline-primary" id="btn_execute_add_permission">Add</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/manage_users.js') }}?version={{ ACE_VERSION }}"></script>
+{% endblock %}

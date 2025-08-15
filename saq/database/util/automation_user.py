@@ -22,7 +22,7 @@ def initialize_automation_user():
             display_name='automation',
             password=random_password,
             queue='default',
-            timezone='Etc/UTC'
+            timezone='UTC'
         )
 
         try:

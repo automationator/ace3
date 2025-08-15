@@ -1029,7 +1029,7 @@ def add_user(args):
 
     try:
         import pytz
-        u.timezone = 'Etc/UTC'
+        u.timezone = 'UTC'
         if args.timezone:
             u.timezone = args.timezone
 
@@ -1124,7 +1124,7 @@ def modify_user(args):
     
     try:
         import pytz
-        u.timezone = 'Etc/UTC'
+        u.timezone = 'UTC'
         if args.timezone:
             u.timezone = args.timezone
 
