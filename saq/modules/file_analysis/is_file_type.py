@@ -341,6 +341,10 @@ def is_email_file(path) -> bool:
         common_headers_found = set()
         with open(path, "r", encoding="utf-8") as fp:
             for line in fp:
+                # if the line contains any non 7-bit ASCII characters, we assume it's not an email file
+                if not all(0 <= ord(c) <= 127 for c in line):
+                    return False
+
                 # ignore lines that have content but start with whitespace
                 if RE_EMAIL_HEADER_INDENTED.match(line):
                     continue

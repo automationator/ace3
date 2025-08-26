@@ -104,7 +104,7 @@
     </tr>
     {% endif %}
 
-    {% for pivot_link in alert.pivot_links %}
+    {% for pivot_link in alert.root_analysis.pivot_links %}
     <tr>
         <td class="col-md-2">External Link</td>
         <td class="col-md-10">
@@ -124,26 +124,19 @@
     </tr>
     {% endfor %}
 
-    {% for detection in alert.all_detection_points %}
+    {% for detection in alert.root_analysis.all_detection_points %}
     <tr>
         <td class="col-md-2">Detection</td>
         <td class="col-md-10"><a href="#detection_{{detection.id}}">{{detection.description}}</a></td>
     </tr>
     {% endfor %}
 
-    {% if alert.instructions %}
+    {% if alert.root_analysis.instructions %}
     <tr>
         <td class="col-md-2">Instructions</td>
         <td class="col-md-10">{{alert.instructions}}</td>
     </tr>
     {% endif %}
-    
-    {#
-    <tr>
-        <td class="col-md-2">Detections</td>
-        <td class="col-md-10">{{alert.all_detection_points | length}} detections</td>
-    </tr>
-    #}
 
 </table>
 <script type="text/javascript">
