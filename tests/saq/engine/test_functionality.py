@@ -31,13 +31,7 @@ from saq.observables.file import FileObservable
 from saq.util.maintenance import cleanup_alerts
 from saq.util.time import parse_event_time
 from saq.util.uuid import storage_dir_from_uuid, workload_storage_dir
-from tests.saq.helpers import create_root_analysis, log_count, search_log, search_log_regex, start_api_server, stop_api_server, track_io, wait_for_log_count, wait_for_process
-
-@pytest.fixture
-def api_server():
-    api_server_process = start_api_server()
-    yield
-    stop_api_server(api_server_process)
+from tests.saq.helpers import create_root_analysis, log_count, search_log, search_log_regex, track_io, wait_for_log_count, wait_for_process
 
 @pytest.mark.system
 def test_signal_TERM():

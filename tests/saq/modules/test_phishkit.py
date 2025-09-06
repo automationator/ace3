@@ -599,32 +599,3 @@ def test_phishkit_analyzer_complete_analysis_success(monkeypatch, test_context):
         assert analysis.exit_code == 0
         assert analysis.stdout == "scan completed"
         assert analysis.stderr == "no errors"
-
-
-@pytest.mark.integration
-def test_phishkit_analyzer_complete_analysis_with_existing_analysis(monkeypatch, test_context):
-    """Test executing analysis when continuing existing analysis."""
-    root = create_root_analysis(analysis_mode='test_single')
-    root.initialize_storage()
-    
-    url_observable = root.add_observable_by_spec(F_URL, "https://example.com/phish")
-    existing_analysis = PhishkitAnalysis()
-    existing_analysis.job_id = "existing-job-123"
-    existing_analysis.output_dir = "/tmp/existing-output"
-    url_observable.add_analysis(existing_analysis)
-    
-    # Mock get_async_scan_result to return success
-    def mock_get_async_scan_result(job_id, output_dir, timeout=1):
-        return ["/tmp/result.txt"]
-    
-    monkeypatch.setattr("saq.modules.phishkit.get_async_scan_result", mock_get_async_scan_result)
-    
-    analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
-    
-    # Mock complete_analysis to verify it's called
-    analyzer.complete_analysis = MagicMock(return_value=AnalysisExecutionResult.COMPLETED)
-    
-    result = analyzer.execute_analysis(url_observable)
-    
-    assert result == AnalysisExecutionResult.COMPLETED
-    analyzer.complete_analysis.assert_called_once_with(url_observable, existing_analysis)

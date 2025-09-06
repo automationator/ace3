@@ -8,9 +8,10 @@ from typing import Optional, Type
 
 from saq.analysis.analysis import Analysis
 from saq.analysis.interfaces import RootAnalysisInterface
+from saq.analysis.observable import Observable
 from saq.configuration.config import get_config, get_config_value
 from saq.constants import CONFIG_ANALYSIS_MODULE_CLASS, CONFIG_ANALYSIS_MODULE_ID, CONFIG_ANALYSIS_MODULE_INSTANCE, CONFIG_ANALYSIS_MODULE_MODULE, AnalysisExecutionResult
-from saq.engine.interfaces import EngineInterface
+from saq.engine.interface import EngineInterface
 from saq.error.reporting import report_exception
 from saq.modules.base_module import AnalysisModule
 from saq.modules.context import AnalysisModuleContext
@@ -91,12 +92,12 @@ class AnalysisModuleAdapter(AnalysisModuleInterface):
         return self._module.semaphore_name
     
     # Analysis execution methods
-    def analyze(self, obj, final_analysis=False) -> AnalysisExecutionResult:
+    def analyze(self, obj, final_analysis=False, delayed_analysis=False) -> AnalysisExecutionResult:
         """Analyze the given object.
         Return COMPLETED if analysis executed successfully.
         Return INCOMPLETE if analysis should not occur for this target.
         """
-        return self._module.analyze(obj, final_analysis)
+        return self._module.analyze(obj, final_analysis, delayed_analysis)
 
     def execute_analysis(self, observable) -> AnalysisExecutionResult:
         """Called to analyze Analysis or Observable objects. 
@@ -104,6 +105,10 @@ class AnalysisModuleAdapter(AnalysisModuleInterface):
         Return INCOMPLETE if analysis should not occur for this target.
         """
         return self._module.execute_analysis(observable)
+
+    def continue_analysis(self, observable: Observable, analysis: Analysis) -> AnalysisExecutionResult:
+        """Called to continue analysis of an Observable object."""
+        return self._module.continue_analysis(observable, analysis)
     
     def execute_final_analysis(self, analysis) -> AnalysisExecutionResult:
         """Called to analyze Analysis or Observable objects after all other analysis has completed."""
@@ -166,12 +171,6 @@ class AnalysisModuleAdapter(AnalysisModuleInterface):
     def wrapped_module(self) -> AnalysisModule:
         """Get the wrapped AnalysisModule instance."""
         return self._module
-    
-    def __getattr__(self, name):
-        """Delegate any other attribute access to the wrapped module."""
-        logging.error("AnalysisModuleAdapter does not support attribute access to {}".format(name))
-        breakpoint()
-        return getattr(self._module, name)
     
     def __str__(self) -> str:
         """String representation of the adapter."""

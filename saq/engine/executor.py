@@ -165,6 +165,11 @@ class AnalysisExecutionContext:
         self.last_analyze_time_warning = None
 
     @property
+    def is_delayed_analysis(self) -> bool:
+        """Returns True if the analysis target is a delayed analysis request."""
+        return self.delayed_analysis_request is not None
+    
+    @property
     def cancel_analysis_flag(self):
         """Return whether analysis has been cancelled."""
         return self._cancel_analysis_flag
@@ -991,7 +996,7 @@ class AnalysisExecutor:
 
     def _execute_module_analysis(
         self,
-        context,
+        context: AnalysisExecutionContext,
         root: RootAnalysis,
         work_item: WorkTarget,
         work_stack: WorkStack,
@@ -1047,8 +1052,8 @@ class AnalysisExecutor:
                 )
 
             logging.debug(
-                "analyzing {} with {} (final analysis={})".format(
-                    work_item.observable, analysis_module, context.final_analysis_mode
+                "analyzing {} with {} (final analysis={}) (delayed analysis={})".format(
+                    work_item.observable, analysis_module, context.final_analysis_mode, context.is_delayed_analysis
                 )
             )
 
@@ -1072,11 +1077,11 @@ class AnalysisExecutor:
                 if analysis_module.semaphore_name is not None:
                     with NetworkSemaphore(analysis_module.semaphore_name):
                         analysis_result = analysis_module.analyze(
-                            work_item.observable, context.final_analysis_mode
+                            work_item.observable, context.final_analysis_mode, context.is_delayed_analysis
                         )
                 else:
                     analysis_result = analysis_module.analyze(
-                        work_item.observable, context.final_analysis_mode
+                        work_item.observable, context.final_analysis_mode, context.is_delayed_analysis
                     )
 
                 logging.debug(
@@ -1250,7 +1255,7 @@ class AnalysisExecutor:
                 # then we exit final analysis mode so that everything can get a chance to execute again
                 context.final_analysis_mode = False
 
-    def _execute_recursive_analysis(self, context):
+    def _execute_recursive_analysis(self, context: AnalysisExecutionContext):
         """Implements the recursive analysis logic of ACE."""
 
         self._execute_pre_analysis(context)

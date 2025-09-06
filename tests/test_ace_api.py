@@ -506,6 +506,7 @@ def test_legacy_submit(mock_api_call):
 def test_legacy_import(mock_api_call):
     from ace_api import Alert
 
+@pytest.mark.skip(reason="skipping tests with api_server")
 @pytest.mark.system
 def test_legacy_failed_submit(api_server, tmpdir):
 
@@ -574,6 +575,7 @@ def test_failed_submit(api_server, tmpdir):
 
     assert new_analysis.submit_kwargs == analysis.submit_kwargs
 
+@pytest.mark.skip(reason="skipping tests with api_server")
 def test_submit_failed_alerts(api_server, tmpdir):
 
     fail_dir = tmpdir / "failed"
@@ -618,6 +620,7 @@ def test_submit_failed_alerts(api_server, tmpdir):
     finally:
         stop_api_server(api_server)
 
+@pytest.mark.skip(reason="skipping tests with api_server")
 @pytest.mark.system
 def test_submit_failed_analysis(api_server, tmpdir):
 

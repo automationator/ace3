@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from logging import LogRecord
 import logging
 from multiprocessing import Manager, Pipe, Process, RLock
 import os
@@ -7,16 +6,15 @@ import secrets
 
 import sys
 import time
-from typing import Callable, List, Optional, Union
+from typing import List, Union
 import uuid
 
-from pytest import LogCaptureFixture
 
 from saq.analysis.io_tracking import _disable_io_tracker, _enable_io_tracker
 from saq.analysis.root import RootAnalysis, Submission
 from saq.configuration.config import get_config
 from saq.constants import ANALYSIS_MODE_ANALYSIS, DISPOSITION_FALSE_POSITIVE, F_FILE, F_FILE_NAME, F_FQDN, F_HOSTNAME, F_URL, G_API_PREFIX
-from saq.database.model import Alert, load_alert
+from saq.database.model import load_alert
 from saq.database.util.alert import ALERT
 from saq.environment import g, get_base_dir
 from saq.modules.email import EmailAnalysis
@@ -412,7 +410,6 @@ def execute_api_server(listen_address=None, listen_port=None, ssl_cert=None, ssl
     # are configured for apache, where they are all starting with /api
     
     import aceapi
-    from saq.database import initialize_database
 
     app = aceapi.create_app(testing=True)
     from werkzeug.serving import run_simple

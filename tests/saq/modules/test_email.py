@@ -27,13 +27,7 @@ from saq.modules.email.message_id import MessageIDAnalysisV2
 from saq.modules.email.rfc822 import EmailAnalysis
 from saq.util.hashing import sha256_file
 from saq.util.uuid import workload_storage_dir
-from tests.saq.helpers import create_root_analysis, start_api_server, stop_api_server
-
-@pytest.fixture
-def api_server():
-    api_server_process = start_api_server()
-    yield
-    stop_api_server(api_server_process)
+from tests.saq.helpers import create_root_analysis
 
 
 @pytest.mark.integration

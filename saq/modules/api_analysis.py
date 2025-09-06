@@ -479,22 +479,26 @@ class BaseAPIAnalyzer(AnalysisModule):
                 AnalysisExecutionResult: success/failure of Analysis
                 Analysis: used for unit testing to check what analysis was created
         """
-        analysis = observable.get_and_load_analysis(self.generated_analysis_type, instance=self.instance)
-        if analysis is None:
-            analysis = self.create_analysis(observable)
-            analysis.query_start = time.time()
-            analysis.question = self.config['question']
-            analysis.query_summary = self.config['summary']
+        analysis = self.create_analysis(observable)
+        analysis.query_start = time.time()
+        analysis.question = self.config['question']
+        analysis.query_summary = self.config['summary']
 
-            if self.correlation_delay is not None:
-                return self.delay_analysis(observable, analysis, seconds=self.correlation_delay.total_seconds())
+        if self.correlation_delay is not None:
+            return self.delay_analysis(observable, analysis, seconds=self.correlation_delay.total_seconds())
+
+        return self.continue_analysis(observable, analysis, **kwargs)
+
+    def continue_analysis(self, observable: Observable, analysis: Analysis, **kwargs) -> AnalysisExecutionResult:
+        assert isinstance(observable, Observable)
+        assert isinstance(analysis, Analysis)
 
         # expose analysis to child class methods
         self.analysis = analysis
 
         # only build the query once
         if analysis.query is None:
-            self.build_target_query(observable, **kwargs)
+            self.build_target_query(observable)
             analysis.query = self.target_query
         else:
             self.target_query = analysis.query
@@ -521,7 +525,7 @@ class BaseAPIAnalyzer(AnalysisModule):
         if analysis.query_results is None:
             return AnalysisExecutionResult.COMPLETED
 
-        logging.debug(f'Processing query results')
+        logging.debug('Processing query results')
         self.process_query_results(analysis.query_results, analysis, observable)
         self.process_finalize(analysis, observable)
         logging.info(f'{self.name} took {analysis.query_elapsed:.2f} seconds')

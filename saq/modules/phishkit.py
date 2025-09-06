@@ -193,11 +193,6 @@ class PhishkitAnalyzer(AnalysisModule):
         return AnalysisExecutionResult.COMPLETED
 
     def execute_analysis(self, observable) -> AnalysisExecutionResult:
-        # are we continuing an existing analysis?
-        analysis = observable.get_and_load_analysis(PhishkitAnalysis)
-        if analysis:
-            return self.complete_analysis(observable, analysis)
-
         # if the observable is a file, we need to check if the file type is enabled for scanning
         if observable.type == F_FILE:
             if not observable.has_directive(DIRECTIVE_RENDER):

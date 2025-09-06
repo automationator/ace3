@@ -6,7 +6,8 @@ from typing import Optional, Protocol, Type, runtime_checkable
 
 from saq.analysis.analysis import Analysis
 from saq.analysis.interfaces import RootAnalysisInterface
-from saq.engine.interfaces import EngineInterface
+from saq.analysis.observable import Observable
+from saq.engine.interface import EngineInterface
 from saq.constants import AnalysisExecutionResult
 from saq.modules.context import AnalysisModuleContext
 
@@ -118,7 +119,7 @@ class AnalysisModuleInterface(Protocol):
     def semaphore_name(self) -> Optional[str]:
         ...
 
-    def analyze(self, obj, final_analysis=False) -> AnalysisExecutionResult:
+    def analyze(self, obj, final_analysis=False, delayed_analysis=False) -> AnalysisExecutionResult:
         """Analyze the given object.
         Return COMPLETED if analysis executed successfully.
         Return INCOMPLETE if analysis should not occur for this target.
@@ -131,6 +132,10 @@ class AnalysisModuleInterface(Protocol):
         Return COMPLETED if analysis executed successfully.
         Return INCOMPLETE if analysis should not occur for this target.
         """
+        ...
+
+    def continue_analysis(self, observable: Observable, analysis: Analysis) -> AnalysisExecutionResult:
+        """Called to continue analysis of an Observable object."""
         ...
     
     def execute_final_analysis(self, analysis) -> AnalysisExecutionResult:

@@ -13,7 +13,7 @@ from saq.constants import (
     F_FILE,
 )
 from saq.constants import AnalysisExecutionResult
-from saq.engine.interfaces import EngineInterface
+from saq.engine.interface import EngineInterface
 from saq.environment import get_base_dir, get_data_dir
 from saq.filesystem.notification import FileWatcherMixin
 from saq.modules.config import AnalysisModuleConfig
@@ -596,10 +596,11 @@ class AnalysisModule(FileWatcherMixin):
 
         return analysis
 
-    def analyze(self, obj, final_analysis=False) -> AnalysisExecutionResult:
+    def analyze(self, obj, final_analysis: bool=False, delayed_analysis: bool=False) -> AnalysisExecutionResult:
         """Called by an analysis engine to analyze a given Analysis or Observable object."""
 
         assert isinstance(obj, Analysis) or isinstance(obj, Observable)
+        logging.debug(f"analyzing {obj} with {self} (final analysis={final_analysis}, delayed analysis={delayed_analysis})")
 
         # if we're watching any files, see if they've changed and need to be reloaded
         self.check_watched_files()
@@ -614,6 +615,12 @@ class AnalysisModule(FileWatcherMixin):
         # if we are executing in "final analysis mode" then we call this function instead
         if final_analysis:
             analysis_result = self.execute_final_analysis(obj)
+        # are we continuing analysis of a delayed analysis?
+        elif delayed_analysis:
+            # get the analysis that has been completed so far
+            existing_analysis = obj.get_and_load_analysis(self.generated_analysis_type, instance=self.instance)
+            assert existing_analysis is not None
+            analysis_result = self.continue_analysis(obj, existing_analysis)
         else:
             analysis_result = self.execute_analysis(obj)
                 
@@ -630,16 +637,19 @@ class AnalysisModule(FileWatcherMixin):
 
     def delay_analysis(
         self,
-        observable,
-        analysis,
-        hours=None,
-        minutes=None,
-        seconds=None,
-        timeout_hours=None,
-        timeout_minutes=None,
-        timeout_seconds=None,
+        observable: Observable,
+        analysis: Analysis,
+        hours: Optional[int]=None,
+        minutes: Optional[int]=None,
+        seconds: Optional[int]=None,
+        timeout_hours: Optional[int]=None,
+        timeout_minutes: Optional[int]=None,
+        timeout_seconds: Optional[int]=None,
     ) -> AnalysisExecutionResult:
         """Called to delay this analysis until the specified amount of time has expired."""
+        assert isinstance(observable, Observable)
+        assert isinstance(analysis, Analysis)
+
         if hours is None and minutes is None and seconds is None:
             hours = 0
             minutes = 0

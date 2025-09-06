@@ -1,4 +1,7 @@
-class EngineAdapter:
+from saq.engine.interface import EngineInterface
+
+
+class EngineAdapter(EngineInterface):
     """Adapter that wraps an Engine to implement EngineInterface."""
 
     def __init__(self, engine):

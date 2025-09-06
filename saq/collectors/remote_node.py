@@ -116,6 +116,7 @@ class RemoteNode:
 
         except Exception as e:
             logging.warning("submission irregularity for {}: {}".format(submission, e))
+            report_exception()
             raise e
 
         finally:
@@ -477,7 +478,7 @@ ORDER BY
 
         # we should have a small list of things to submit to remote nodes for this group
         for work_id, analysis_mode, root_uuid in work_batch:
-            logging.info(f"preparing workload %s with uuid %s", work_id, root_uuid)
+            logging.info("preparing workload %s with uuid %s", work_id, root_uuid)
 
             # first make sure we can load this
             # XXX not sure we really need to do this
@@ -535,7 +536,8 @@ ORDER BY
                     # if we are in full delivery mode then we need to try this one again later
                     if self.full_delivery and (isinstance(e, urllib3.exceptions.MaxRetryError) \
                                                or isinstance(e, urllib3.exceptions.NewConnectionError) \
-                                               or isinstance(e, requests.exceptions.ConnectionError)):
+                                               or isinstance(e, requests.exceptions.ConnectionError) \
+                                               or isinstance(e, requests.exceptions.HTTPError)):
                         continue
 
                     # otherwise we consider it a failure

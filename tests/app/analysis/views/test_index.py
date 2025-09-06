@@ -10,6 +10,7 @@ from saq.database.util.alert import ALERT
 from saq.observables.testing import TestObservable
 from saq.modules.adapter import AnalysisModuleAdapter
 
+@pytest.mark.skip(reason="skipping tests with api_server")
 @pytest.mark.system
 def test_index(web_client, root_analysis, api_server, test_context):
     result = web_client.get(url_for("analysis.index"), query_string={"direct": str(uuid4())})

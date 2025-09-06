@@ -10,6 +10,7 @@ import os.path
 import time
 
 from saq.analysis import Analysis
+from saq.analysis.observable import Observable
 from saq.configuration import get_config_value_as_int
 from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_MEMORY_LIMIT_KILL, CONFIG_GLOBAL_MEMORY_LIMIT_WARNING, F_FILE, F_TEST, F_URL, F_USER, G_TEMP_DIR, R_DOWNLOADED_FROM, VALID_OBSERVABLE_TYPES, AnalysisExecutionResult
 from saq.environment import g, get_data_dir
@@ -435,15 +436,17 @@ class DelayedAnalysisTestModule(AnalysisModule):
         return F_TEST
 
     def execute_analysis(self, test) -> AnalysisExecutionResult:
-        analysis = test.get_and_load_analysis(DelayedAnalysisTestAnalysis, instance=self.instance)
-        if not analysis:
-            analysis = self.create_analysis(test)
-            # the observable value is the format M:SS|M:SS
-            delay, timeout = test.value.split('|')
-            delay_minutes, delay_seconds = map(int, delay.split(':'))
-            timeout_minutes, timeout_seconds = map(int, timeout.split(':'))
-            return self.delay_analysis(test, analysis, minutes=delay_minutes, seconds=delay_seconds, 
-                                       timeout_minutes=timeout_minutes, timeout_seconds=timeout_seconds)
+        analysis = self.create_analysis(test)
+        # the observable value is the format M:SS|M:SS
+        delay, timeout = test.value.split('|')
+        delay_minutes, delay_seconds = map(int, delay.split(':'))
+        timeout_minutes, timeout_seconds = map(int, timeout.split(':'))
+        return self.delay_analysis(test, analysis, minutes=delay_minutes, seconds=delay_seconds, 
+                                    timeout_minutes=timeout_minutes, timeout_seconds=timeout_seconds)
+
+    def continue_analysis(self, observable: Observable, analysis: Analysis) -> AnalysisExecutionResult:
+        assert isinstance(observable, Observable)
+        assert isinstance(analysis, Analysis)
 
         analysis.details[KEY_DELAYED_REQUEST] = True
         analysis.details[KEY_REQUEST_COUNT] += 1
@@ -510,13 +513,15 @@ class PostAnalysisTest(AnalysisModule):
         else:
             return self.execute_analysis_default(test)
 
-    def execute_analysis_delayed(self, test):
-        analysis = test.get_and_load_analysis(PostAnalysisTestResult)
-        if analysis is None:
-            analysis = self.create_analysis(test)
-            self.delay_analysis(test, analysis, seconds=0)
+    def continue_analysis(self, observable: Observable, analysis: Analysis) -> AnalysisExecutionResult:
+        assert isinstance(observable, Observable)
+        assert isinstance(analysis, Analysis)
 
         return AnalysisExecutionResult.COMPLETED
+
+    def execute_analysis_delayed(self, test):
+        analysis = self.create_analysis(test)
+        return self.delay_analysis(test, analysis, seconds=0)
 
     def execute_analysis_default(self, *args, **kwargs) -> AnalysisExecutionResult:
         return AnalysisExecutionResult.COMPLETED
@@ -566,15 +571,23 @@ class DelayedAnalysisTimeoutTest(AnalysisModule):
         return F_TEST
 
     def execute_analysis(self, test) -> AnalysisExecutionResult:
-        analysis = test.get_and_load_analysis(DelayedAnalysisTimeoutTestResult)
-        if not analysis:
-            analysis = self.create_analysis(test)
+        analysis = self.create_analysis(test)
 
         # the observable value is the format M:SS|M:SS
         delay, timeout = test.value.split('|')
         delay_minutes, delay_seconds = map(int, delay.split(':'))
         timeout_minutes, timeout_seconds = map(int, timeout.split(':'))
         return self.delay_analysis(test, analysis, minutes=delay_minutes, seconds=delay_seconds, 
+                                   timeout_minutes=timeout_minutes, timeout_seconds=timeout_seconds)
+
+    def continue_analysis(self, observable: Observable, analysis: Analysis) -> AnalysisExecutionResult:
+        assert isinstance(observable, Observable)
+        assert isinstance(analysis, Analysis)
+
+        delay, timeout = observable.value.split('|')
+        delay_minutes, delay_seconds = map(int, delay.split(':'))
+        timeout_minutes, timeout_seconds = map(int, timeout.split(':'))
+        return self.delay_analysis(observable, analysis, minutes=delay_minutes, seconds=delay_seconds, 
                                    timeout_minutes=timeout_minutes, timeout_seconds=timeout_seconds)
 
 class WaitAnalysis_A(Analysis):
@@ -616,6 +629,12 @@ class WaitAnalyzerModule_A(AnalysisModule):
             return self.execute_analysis_wait_for_analysis_source_delayed(test)
         elif test.value == 'test_wait_for_analysis_source_and_target_delayed':
             return self.execute_analysis_wait_for_analysis_source_and_target_delayed(test)
+
+    def continue_analysis(self, observable: Observable, analysis: Analysis) -> AnalysisExecutionResult:
+        assert isinstance(observable, Observable)
+        assert isinstance(analysis, Analysis)
+
+        return AnalysisExecutionResult.COMPLETED
         
     def execute_analysis_01(self, test) -> AnalysisExecutionResult:
         # NOTE the execution order of modules is alphabetically by the config section name of the module
@@ -679,26 +698,18 @@ class WaitAnalyzerModule_A(AnalysisModule):
     def execute_analysis_wait_for_analysis_source_delayed(self, test) -> AnalysisExecutionResult:
         # start waiting for B
         self.wait_for_analysis(test, WaitAnalysis_B)
-        analysis = test.get_and_load_analysis(self.generated_analysis_type)
-        if not analysis:
-            analysis = self.create_analysis(test)
+        analysis = self.create_analysis(test)
 
-            # and then start to delay
-            return self.delay_analysis(test, analysis, seconds=2)
-
-        return AnalysisExecutionResult.COMPLETED
+        # and then start to delay
+        return self.delay_analysis(test, analysis, seconds=2)
 
     def execute_analysis_wait_for_analysis_source_and_target_delayed(self, test) -> AnalysisExecutionResult:
         # start waiting for B
         self.wait_for_analysis(test, WaitAnalysis_B)
-        analysis = test.get_and_load_analysis(self.generated_analysis_type)
-        if not analysis:
-            analysis = self.create_analysis(test)
+        analysis = self.create_analysis(test)
 
-            # and then start to delay
-            return self.delay_analysis(test, analysis, seconds=2)
-
-        return AnalysisExecutionResult.COMPLETED
+        # and then start to delay
+        return self.delay_analysis(test, analysis, seconds=2)
 
 class WaitAnalysis_B(Analysis):
     pass
@@ -759,10 +770,6 @@ class WaitAnalyzerModule_B(AnalysisModule):
         return AnalysisExecutionResult.COMPLETED
 
     def execute_analysis_06(self, test) -> AnalysisExecutionResult:
-        analysis = test.get_and_load_analysis(WaitAnalysis_B)
-        if analysis:
-            return AnalysisExecutionResult.COMPLETED
-
         analysis = self.create_analysis(test)
         return self.delay_analysis(test, analysis, seconds=2)
 
@@ -771,10 +778,6 @@ class WaitAnalyzerModule_B(AnalysisModule):
         return AnalysisExecutionResult.COMPLETED
 
     def execute_analysis_wait_for_analysis_source_and_target_delayed(self, test):
-        analysis = test.get_and_load_analysis(WaitAnalysis_B)
-        if analysis:
-            return AnalysisExecutionResult.COMPLETED
-
         analysis = self.create_analysis(test)
         return self.delay_analysis(test, analysis, seconds=2)
 
