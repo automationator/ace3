@@ -69,19 +69,18 @@ class AnalysisOrchestrator:
         self.workload_manager = workload_manager
         self.lock_manager = lock_manager
 
-    def orchestrate_analysis(self, execution_context: EngineExecutionContext):
+    def orchestrate_analysis(self, execution_context: EngineExecutionContext) -> bool:
         """
         Orchestrate the complete analysis lifecycle for a work item.
         
         Args:
-            work_item: The work item to analyze
             execution_context: The execution context containing analysis state
             
         Returns:
             True if analysis was successful, False if there was an error
         """
         try:
-            # Process the work item and set up the root analysis
+            # process the work item and set up the root analysis
             self._process_work_item(execution_context)
             
             if execution_context.root is None:
@@ -107,16 +106,19 @@ class AnalysisOrchestrator:
             report_exception()
             return False
 
-    def _process_work_item(self, execution_context: EngineExecutionContext):
+    def _process_work_item(self, execution_context: EngineExecutionContext) -> bool:
         """Process the work item and set up the root analysis."""
         work_item = execution_context.work_item
+
+        # FUTURE: here is where we would likely request the root analysis to
+        # sync to the local system
 
         # both RootAnalysis and DelayedAnalysisRequest define storage_dir
         if not work_item.storage_dir or not os.path.isdir(work_item.storage_dir):
             logging.warning(
                 f"storage directory {work_item.storage_dir} missing - already processed?"
             )
-            return
+            return False
 
         if isinstance(work_item, DelayedAnalysisRequest):
             work_item.load(self.configuration_manager)

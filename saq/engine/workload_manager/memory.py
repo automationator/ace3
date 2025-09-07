@@ -301,7 +301,7 @@ class MemoryWorkloadManager(WorkloadManagerInterface):
         request = DelayedAnalysisRequest(
             uuid=root.uuid,
             observable_uuid=observable.id,
-            analysis_module=analysis_module.config_section_name,
+            analysis_module_str=analysis_module.config_section_name,
             next_analysis=next_analysis,
             storage_dir=root.storage_dir,
             database_id=request_id

@@ -10,7 +10,7 @@ from requests import HTTPError
 
 from saq.analysis.root import RootAnalysis
 from saq.configuration.config import get_config, get_config_value, set_config
-from saq.constants import ANALYSIS_MODE_ANALYSIS, CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR, CONFIG_GLOBAL, CONFIG_GLOBAL_NODE, G_INSTANCE_TYPE, G_SAQ_NODE, G_SAQ_NODE_ID, G_UNIT_TESTING, INSTANCE_TYPE_UNITTEST
+from saq.constants import ANALYSIS_MODE_ANALYSIS, CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR, CONFIG_GLOBAL, CONFIG_GLOBAL_NODE, G_INSTANCE_TYPE, G_SAQ_NODE, G_SAQ_NODE_ID, G_TEMP_DIR, G_UNIT_TESTING, INSTANCE_TYPE_UNITTEST
 from saq.crypto import set_encryption_password
 from saq.database import get_db
 from saq.database.pool import get_db_connection
@@ -46,6 +46,14 @@ def test_context() -> AnalysisModuleContext:
 
 @pytest.fixture(autouse=True, scope="session")
 def global_setup(request):
+    execute_global_setup()
+
+    yield
+
+    # clean up the temp dir
+    shutil.rmtree(g(G_TEMP_DIR))
+
+def execute_global_setup():
 
     # where is ACE?
     saq_home = os.getcwd()
@@ -116,10 +124,6 @@ def global_setup(request):
 
     initialize_unittest_logging()
 
-    yield
-
-    # clean up the temp dir
-    shutil.rmtree(temp_dir)
 
 @pytest.fixture(autouse=True, scope="function")
 def global_function_setup(request):
@@ -213,31 +217,7 @@ def global_function_setup(request):
             c.execute("DELETE FROM email_history")
             db.commit()
 
-        # reset data directory
-        if os.path.exists(get_data_dir()):
-            shutil.rmtree(get_data_dir())
-
-        os.makedirs(get_data_dir())
-        initialize_data_dir()
-
-        #clear_all_tracking()
-
-        # reset the automation user
-        initialize_automation_user()
-        initialize_email_archive()
-
-        # set a fake encryption password
-        set_encryption_password("test")
-
-        set_g(G_SAQ_NODE, None)
-        set_g(G_SAQ_NODE_ID, None)
-
-        # what node is this?
-        node = get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_NODE)
-        if node == "AUTO":
-            node = socket.getfqdn()
-
-        set_node(node)
+        execute_global_setup()
 
     # XXX we're initializing AND THEN we're resetting the database
 

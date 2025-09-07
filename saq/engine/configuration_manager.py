@@ -3,7 +3,7 @@ Configuration management for the analysis engine.
 """
 
 import logging
-from typing import Dict, List, Optional, Set, Union
+from typing import Optional, Set, Union
 
 from saq.configuration.config import get_config, get_config_value_as_boolean
 from saq.constants import CONFIG_DISABLED_MODULES
@@ -32,13 +32,13 @@ class ConfigurationManager:
         self.config = config
         
         # Module storage
-        self.analysis_modules: List[AnalysisModuleInterface] = []
-        self.analysis_mode_mapping: Dict[str, List[AnalysisModuleInterface]] = {}
-        self.analysis_module_name_mapping: Dict[str, AnalysisModuleInterface] = {}
+        self.analysis_modules: list[AnalysisModuleInterface] = []
+        self.analysis_mode_mapping: dict[str, list[AnalysisModuleInterface]] = {}
+        self.analysis_module_name_mapping: dict[str, AnalysisModuleInterface] = {}
         
         # Local overrides for testing
-        self.locally_enabled_modules: List[str] = []
-        self.locally_mapped_analysis_modes: Dict[str, Set[str]] = {}
+        self.locally_enabled_modules: list[str] = []
+        self.locally_mapped_analysis_modes: dict[str, Set[str]] = {}
         
         # Initialize module loader
         self.module_loader = ModuleLoader(
@@ -59,6 +59,10 @@ class ConfigurationManager:
     def is_analysis_mode_supported(self, analysis_mode: str) -> bool:
         """Check if the given analysis mode is supported by this engine."""
         return self.module_loader.is_analysis_mode_supported(analysis_mode)
+
+    def get_analysis_module_by_name(self, name: str) -> Optional[AnalysisModuleInterface]:
+        """Get an analysis module by its name (config section name)."""
+        return self.analysis_module_name_mapping.get(name)
     
     def enable_module(self, config_section_name: str, analysis_mode: Union[str, list[str], None] = None):
         """Enable a specific module for local testing.
@@ -94,12 +98,12 @@ class ConfigurationManager:
     
     def add_analysis_module(self,
                            analysis_module: AnalysisModuleInterface,
-                           analysis_modes: Optional[List[str]] = None):
+                           analysis_modes: Optional[list[str]] = None):
         """Add an analysis module to the configuration.
         
         Args:
             analysis_module: The module to add
-            analysis_modes: List of analysis modes the module should run in
+            analysis_modes: list of analysis modes the module should run in
         """
         if not analysis_modes:
             logging.debug(
@@ -151,7 +155,7 @@ class ConfigurationManager:
         for section_name, (module, analysis_modes) in loaded_modules.items():
             self.add_analysis_module(module, analysis_modes)
     
-    def get_analysis_modules_by_mode(self, analysis_mode: Optional[str]=None) -> List[AnalysisModuleInterface]:
+    def get_analysis_modules_by_mode(self, analysis_mode: Optional[str]=None) -> list[AnalysisModuleInterface]:
         """Get analysis modules for a specific analysis mode, sorted by config section name."""
         if analysis_mode is None:
             result = self.analysis_mode_mapping[self.config.default_analysis_mode]
