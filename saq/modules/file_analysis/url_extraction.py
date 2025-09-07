@@ -48,7 +48,7 @@ class URLExtractionAnalysis(Analysis):
                 if parsed.hostname:
                     domains.add(parsed.hostname)
             except Exception as e:
-                logging.debug("failed to parse url %s: %s", url, e)
+                logging.debug(f"failed to parse url {url}: {e}")
 
         return f"{self.display_name} ({format_item_list_for_summary(sorted(list(domains)))})"
 

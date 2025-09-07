@@ -386,8 +386,8 @@ def is_email_file(path) -> bool:
             return False
 
     except UnicodeDecodeError:
-        logging.debug("unable to read file %s due to unicode decode error", path)
+        logging.debug(f"unable to read file {path} due to unicode decode error")
         return False
     except Exception as e:
-        logging.debug("unable to read file %s: %s", path, e)
+        logging.debug(f"unable to read file {path}: {e}")
         return False

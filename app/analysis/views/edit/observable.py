@@ -70,7 +70,7 @@ def add_observable():
         flash("unable to modify alert: alert is currently locked")
         return redirection
 
-    logging.info("AUDIT: user %s added observable (%s,%s,%s) to alert %s", current_user, o_type, o_value, o_time, alert)
+    logging.info(f"AUDIT: user {current_user} added observable ({o_type},{o_value},{o_time}) to alert {alert}")
 
     try:
         try:

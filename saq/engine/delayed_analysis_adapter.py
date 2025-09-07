@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, Optional
+from saq.analysis.root import RootAnalysis
 from saq.engine.delayed_analysis_interface import DelayedAnalysisInterface
 from saq.analysis.interfaces import ObservableInterface, AnalysisInterface
 from saq.modules.interfaces import AnalysisModuleInterface
@@ -20,7 +21,7 @@ class DelayedAnalysisAdapter(DelayedAnalysisInterface):
     
     def delay_analysis(
         self,
-        root,
+        root: RootAnalysis,
         observable: ObservableInterface,
         analysis: AnalysisInterface,
         analysis_module: AnalysisModuleInterface,
@@ -48,22 +49,16 @@ class DelayedAnalysisAdapter(DelayedAnalysisInterface):
         Returns:
             True if delayed analysis was successfully scheduled, False otherwise
         """
-        try:
-            # Delegate the delayed analysis scheduling to the worker
-            return self.worker.delay_analysis(
-                root=root,
-                observable=observable,
-                analysis=analysis,
-                analysis_module=analysis_module,
-                hours=hours,
-                minutes=minutes,
-                seconds=seconds,
-                timeout_hours=timeout_hours,
-                timeout_minutes=timeout_minutes,
-                timeout_seconds=timeout_seconds,
-            )
-        except Exception as e:
-            # Log the error and return False to indicate failure
-            import logging
-            logging.error(f"Failed to schedule delayed analysis: {e}")
-            return False
+        # Delegate the delayed analysis scheduling to the worker
+        return self.worker.delay_analysis(
+            root=root,
+            observable=observable,
+            analysis=analysis,
+            analysis_module=analysis_module,
+            hours=hours,
+            minutes=minutes,
+            seconds=seconds,
+            timeout_hours=timeout_hours,
+            timeout_minutes=timeout_minutes,
+            timeout_seconds=timeout_seconds
+        )

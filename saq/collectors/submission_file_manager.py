@@ -59,7 +59,7 @@ class SubmissionFileManager:
                 return True
             return True  # Directory doesn't exist, consider it successful
         except Exception as e:
-            logging.error("unable to delete incoming workload directory %s: %s", target_dir, e)
+            logging.error(f"unable to delete incoming workload directory {target_dir}: {e}")
             return False
     
     def get_submission_directory_path(self, root_uuid: str) -> str:

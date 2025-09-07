@@ -210,7 +210,7 @@ class Analysis(EventSource):
     def set_details_modified(self):
         """Calling this function indicates that the details have become modified and thus need to be saved."""
         # this is called automatically when you add an Analysis object to an Observable
-        logging.debug("setting details modified for %s", self)
+        logging.debug(f"setting details modified for {self}")
         self.details_modified = True
 
     def load_details(self) -> bool:
@@ -285,7 +285,7 @@ class Analysis(EventSource):
         self._completed = value
 
         if _trigger_event:
-            logging.debug("{} has marked as completed manually (fire event)".format(self))
+            logging.debug(f"{self} has marked as completed manually (fire event)")
             self.fire_event(self, EVENT_ANALYSIS_MARKED_COMPLETED)
 
     @property
@@ -417,7 +417,7 @@ class Analysis(EventSource):
         for observable_id in self.observable_references:
             observable = self.analysis_tree_manager.get_observable_by_id(observable_id)
             if observable is None:
-                logging.warning("missing observable with uuid {} in {}".format(observable_id, self.analysis_tree_manager.root_analysis))
+                logging.warning(f"missing observable with uuid {observable_id} in {self.analysis_tree_manager.root_analysis}")
             else:
                 _buffer.append(observable)
 
@@ -504,10 +504,10 @@ class Analysis(EventSource):
                     **kwargs))
                     
         except FileNotFoundError:
-            logging.warning("add_file_observable called to non-existant file: %s", path)
+            logging.warning(f"add_file_observable called to non-existant file: {path}")
             return None
         except Exception as e:
-            logging.error("unable to add file observable %s: %s", path, e)
+            logging.error(f"unable to add file observable {path}: {e}")
             raise e
 
     # LLM context management

@@ -159,7 +159,7 @@ class FileObservable(Observable):
         try:
             self._size = os.path.getsize(self.full_path)
         except Exception as e:
-            logging.warning("unable to determine size of %s: %s", self.full_path, e)
+            logging.warning(f"unable to determine size of {self.full_path}: {e}")
             self._size = None
 
         return self._size
@@ -240,7 +240,7 @@ class FileObservable(Observable):
         try:
             return os.path.basename(self.full_path).split('.')[-1].lower()
         except Exception as e:
-            logging.error("unable to get file extension of %s: %s", self.full_path, e)
+            logging.error(f"unable to get file extension of {self.full_path}: {e}")
             return None
 
     @property
@@ -248,7 +248,7 @@ class FileObservable(Observable):
         try:
             return os.path.exists(self.full_path)
         except Exception as e:
-            logging.warning("unable to stat path: %s: %s", self.full_path, e)
+            logging.warning(f"unable to stat path: {self.full_path}: {e}")
             return False
 
     @property

@@ -17,7 +17,7 @@ def assign_ownership():
     try:
         owner_id = int(request.form['selected_user_id'])
     except ValueError:
-        logging.warning("invalid user id: %s", request.form['selected_user_id'])
+        logging.warning(f"invalid user id: {request.form['selected_user_id']}")
         flash("invalid user id: {0}".format(request.form['selected_user_id']))
         return redirect(url_for('analysis.index'))
 
@@ -44,9 +44,9 @@ def assign_ownership():
     try:
         target_user = get_db().query(User).filter(User.id == int(request.form['selected_user_id'])).first()
     except Exception as e:
-        logging.warning("unable to get target user: %s", e)
+        logging.warning(f"unable to get target user: {e}")
 
-    logging.info("AUDIT: user %s assigned ownership of alerts %s to %s", current_user, ",".join(alert_uuids), target_user)
+    logging.info(f"AUDIT: user {current_user} assigned ownership of alerts {','.join(alert_uuids)} to {target_user}")
 
     flash("assigned ownership of {0} alert{1}".format(len(alert_uuids), "" if len(alert_uuids) == 1 else "s"))
     if analysis_page:

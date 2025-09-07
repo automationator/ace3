@@ -52,7 +52,7 @@ def update_node_status(
             )
 
     except Exception as e:
-        logging.error("unable to update node %s status: %s", node_id, e)
+        logging.error(f"unable to update node {node_id} status: {e}")
         report_exception()
 
 

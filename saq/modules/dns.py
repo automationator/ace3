@@ -86,7 +86,7 @@ class FQDNAnalyzer(AnalysisModule):
 
     def execute_analysis(self, observable) -> AnalysisExecutionResult:
         try:
-            logging.info("executing dns lookup of %s", observable.value)
+            logging.info(f"executing dns lookup of {observable.value}")
             _hostname, _aliaslist, ipaddrlist = socket.gethostbyname_ex(observable.value)
             if ipaddrlist:
                 # ipaddrlist should always be a list of strings
@@ -102,5 +102,5 @@ class FQDNAnalyzer(AnalysisModule):
             return AnalysisExecutionResult.COMPLETED
 
         except Exception as e:
-            logging.warning("Problem resolving FQDN %s: %s", observable.value, e)
+            logging.warning(f"Problem resolving FQDN {observable.value}: {e}")
             return AnalysisExecutionResult.COMPLETED

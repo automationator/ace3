@@ -69,7 +69,7 @@ class MessageIDAnalyzerV2(AnalysisModule):
                 lambda x: isinstance(x, EmailAnalysis) and x.message_id == message_id.value)
 
         if email_analysis:
-            logging.debug("already have email analysis for %s", message_id.value)
+            logging.debug(f"already have email analysis for {message_id.value}")
             return AnalysisExecutionResult.COMPLETED
 
         target_path = self.get_root().create_file_path(f"{message_id.value}.rfc822")
@@ -77,14 +77,14 @@ class MessageIDAnalyzerV2(AnalysisModule):
 
         try:
             if os.path.exists(target_path):
-                logging.info("archived email %s already exists", target_path)
+                logging.info(f"archived email {target_path} already exists")
             else:
                 with open(target_path, "wb") as fp:
                     for chunk in iter_archived_email(message_id.value):
                         fp.write(chunk)
 
             if os.path.getsize(target_path) == 0:
-                logging.info("got 0 bytes for %s", message_id.value)
+                logging.info(f"got 0 bytes for {message_id.value}")
                 os.unlink(target_path)
                 return AnalysisExecutionResult.COMPLETED
             else:
@@ -97,7 +97,7 @@ class MessageIDAnalyzerV2(AnalysisModule):
                 return AnalysisExecutionResult.COMPLETED
 
         except Exception as e:
-            logging.info("unable to get archived email %s: %s", message_id.value, e)
+            logging.info(f"unable to get archived email {message_id.value}: {e}")
             report_exception()
             if analysis:
                 analysis.error = str(e)

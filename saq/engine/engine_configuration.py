@@ -8,7 +8,7 @@ configuration options needed for an Engine to operate.
 import logging
 import os
 import sys
-from typing import Optional, Dict, List
+from typing import Optional
 
 from saq.configuration.config import (
     get_config,
@@ -52,28 +52,28 @@ class EngineConfiguration:
     
     def __init__(
         self,
-        local_analysis_modes: Optional[List[str]] = None,
-        analysis_pools: Optional[Dict[str, int]] = None,
+        local_analysis_modes: Optional[list[str]] = None,
+        analysis_pools: Optional[dict[str, int]] = None,
         pool_size_limit: Optional[int] = None,
         copy_analysis_on_error: Optional[bool] = None,
         single_threaded_mode: bool = False,
-        excluded_analysis_modes: Optional[List[str]] = None,
-        target_nodes: Optional[List[str]] = None,
+        excluded_analysis_modes: Optional[list[str]] = None,
+        target_nodes: Optional[list[str]] = None,
         default_analysis_mode: Optional[str] = None,
         analysis_mode_priority: Optional[str] = None,
         engine_type: EngineType = EngineType.DISTRIBUTED,
-        service_config: Optional[Dict] = None,
+        service_config: Optional[dict] = None,
     ):
         """Initialize engine configuration.
         
         Args:
-            local_analysis_modes: List of analysis modes this engine supports
-            analysis_pools: Dict mapping analysis mode to pool size
+            local_analysis_modes: list of analysis modes this engine supports
+            analysis_pools: dict mapping analysis mode to pool size
             pool_size_limit: Maximum size of analysis pool if no pools defined
             copy_analysis_on_error: Whether to save copy of RootAnalysis on error
             single_threaded_mode: Whether to run in single-threaded mode for debugging
-            excluded_analysis_modes: List of analysis modes this engine does NOT support
-            target_nodes: List of target nodes for this engine
+            excluded_analysis_modes: list of analysis modes this engine does NOT support
+            target_nodes: list of target nodes for this engine
             default_analysis_mode: Default analysis mode for invalid analysis modes
             analysis_mode_priority: Analysis mode this worker is primary for
             lock_manager_type: Type of lock manager to use
@@ -212,7 +212,7 @@ class EngineConfiguration:
         
         return result
     
-    def _get_local_analysis_modes(self, local_analysis_modes: Optional[List[str]]) -> List[str]:
+    def _get_local_analysis_modes(self, local_analysis_modes: Optional[list[str]]) -> list[str]:
         """Get the local analysis modes."""
         if local_analysis_modes is not None:
             result = local_analysis_modes
@@ -236,7 +236,7 @@ class EngineConfiguration:
         
         return result
     
-    def _get_excluded_analysis_modes(self, excluded_analysis_modes: Optional[List[str]]) -> List[str]:
+    def _get_excluded_analysis_modes(self, excluded_analysis_modes: Optional[list[str]]) -> list[str]:
         """Get the excluded analysis modes."""
         if excluded_analysis_modes is not None:
             result = excluded_analysis_modes
@@ -254,7 +254,7 @@ class EngineConfiguration:
         
         return result
     
-    def _get_non_detectable_modes(self) -> List[str]:
+    def _get_non_detectable_modes(self) -> list[str]:
         """Get the list of non-detectable analysis modes."""
         return get_config_value_as_list(
             CONFIG_ENGINE,
@@ -270,7 +270,7 @@ class EngineConfiguration:
             logging.error("this is a misconfiguration error")
             sys.exit(1)
     
-    def _filter_valid_analysis_pools(self, analysis_pools: Dict[str, int]) -> Dict[str, int]:
+    def _filter_valid_analysis_pools(self, analysis_pools: dict[str, int]) -> dict[str, int]:
         """Filter the analysis pools to only include valid modes."""
         result = {}
         for analysis_mode, count in analysis_pools.items():
@@ -288,7 +288,7 @@ class EngineConfiguration:
 
         return result
     
-    def _get_analysis_pools(self, analysis_pools: Optional[Dict[str, int]], service_config: Optional[Dict]) -> Dict[str, int]:
+    def _get_analysis_pools(self, analysis_pools: Optional[dict[str, int]], service_config: Optional[dict]) -> dict[str, int]:
         """Get the analysis pools configuration."""
         if analysis_pools is not None:
             result = dict(analysis_pools)

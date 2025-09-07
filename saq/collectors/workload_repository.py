@@ -22,7 +22,7 @@ class WorkloadRepository:
                 return row[0]
 
         except Exception as e:
-            logging.error("unable to get workload type_id from database: %s", workload_type)
+            logging.error(f"unable to get workload type_id from database: {workload_type}")
             raise e
     
     def create_or_get_work_distribution_group(self, name: str) -> int:

@@ -4,7 +4,6 @@ import shutil
 from typing import Optional
 
 from saq.analysis.root import RootAnalysis
-from saq.configuration.config import get_config_value_as_list
 from saq.constants import G_COMPANY_ID, G_SAQ_NODE, G_SAQ_NODE_ID, G_UNIT_TESTING
 from saq.database.pool import get_db_connection
 from saq.database.retry import execute_with_retry

@@ -149,7 +149,7 @@ class AnalysisTreeManager:
         # check if the observable already exists in the analysis
         existing_observable = analysis.get_existing_observable(observable)
         if existing_observable:
-            logging.debug("observable %s already exists in analysis %s, returning existing observable", observable, analysis)
+            logging.debug(f"observable {observable} already exists in analysis {analysis}, returning existing observable")
             return existing_observable
 
         # inject managers into observable
@@ -189,8 +189,7 @@ class AnalysisTreeManager:
         # XXX: refactor
         # usually this is because you copied and pasted another AnalysisModule and didn't change the generated_analysis_type function
         if analysis.module_path in observable._analysis and observable._analysis[analysis.module_path] is not analysis:
-            logging.error("replacing analysis {} with {} for {} (are you returning the correct type from generated_analysis_type()?)".format(
-                observable._analysis[analysis.module_path], analysis, observable))
+            logging.error(f"replacing analysis {observable._analysis[analysis.module_path]} with {analysis} for {observable} (are you returning the correct type from generated_analysis_type()?)")
 
         # newly added analysis is always set to modified so it gets saved to JSON file
         analysis.set_details_modified()

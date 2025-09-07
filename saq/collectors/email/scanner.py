@@ -40,13 +40,13 @@ class EmailCollector(Collector):
 
         if self.assignment_yara_rule_path:
             if os.path.exists(self.assignment_yara_rule_path):
-                logging.debug("reading assignment rules from %s", self.assignment_yara_rule_path)
+                logging.debug(f"reading assignment rules from {self.assignment_yara_rule_path}")
                 with open(self.assignment_yara_rule_path, 'r') as fp:
                     rule += fp.read()
 
         if self.blacklist_yara_rule_path:
             if os.path.exists(self.blacklist_yara_rule_path):
-                logging.debug("reading blacklist rules from %s", self.blacklist_yara_rule_path)
+                logging.debug(f"reading blacklist rules from {self.blacklist_yara_rule_path}")
                 with open(self.blacklist_yara_rule_path, 'r') as fp:
                     rule += "\n\n" # just make it easier to read if we ever have to look at it
                     rule += fp.read()
@@ -55,7 +55,7 @@ class EmailCollector(Collector):
             try:
                 self.yara_context = yara.compile(source=rule)
             except Exception as e:
-                logging.error("unable to compile email collector assignment and blacklist yara rule: %s", e)
+                logging.error(f"unable to compile email collector assignment and blacklist yara rule: {e}")
                 report_exception()
 
     def collect(self) -> Generator[Submission, None, None]:
@@ -74,7 +74,7 @@ class EmailCollector(Collector):
             if target_dir in self.invalid_subdirs:
                 continue
 
-            logging.debug("checking for emails in %s", target_dir)
+            logging.debug(f"checking for emails in {target_dir}")
             email_count = 0
 
             for email_file in os.listdir(target_dir):
@@ -85,14 +85,14 @@ class EmailCollector(Collector):
                     continue
 
                 email_path = os.path.join(target_dir, email_file)
-                logging.info("found email %s", email_file)
+                logging.info(f"found email {email_file}")
 
                 group_assignments = []
 
                 # yara rules can control what groups the email actually gets sent to
                 yara_matches = []
                 if self.yara_context:
-                    logging.debug("matching %s against yara rules", email_path)
+                    logging.debug(f"matching {email_path} against yara rules")
                     yara_matches = self.yara_context.match(email_path)
 
                 # check for blacklisting first
@@ -100,7 +100,7 @@ class EmailCollector(Collector):
                 for match in yara_matches:
                     for tag in match.tags:
                         if tag == 'blacklist':
-                            logging.info("%s matched blacklist rule %s", email_path, match.rule)
+                            logging.info(f"{email_path} matched blacklist rule {match.rule}")
                             blacklisted = True
                             break
 
@@ -109,13 +109,13 @@ class EmailCollector(Collector):
                     try:
                         os.remove(email_path)
                     except Exception as e:
-                        logging.error("unable to delete %s: %s", email_path, e)
+                        logging.error(f"unable to delete {email_path}: {e}")
 
                     continue
 
                 for match in yara_matches:
                     group_assignments = match.tags[:]
-                    logging.info("assigning email %s to groups %s", email_path, ','.join(group_assignments))
+                    logging.info(f"assigning email {email_path} to groups {','.join(group_assignments)}")
 
                 # create a new submission request for this
                 root_uuid = str(uuid4())
@@ -148,12 +148,12 @@ class EmailCollector(Collector):
                 # does the current directory name not equal the current YYYYMMDDHH?
                 if subdir_name != datetime.now().strftime(self.subdir_format):
                     try:
-                        logging.info("deleting empty email directory %s", target_dir)
+                        logging.info(f"deleting empty email directory {target_dir}")
                         os.rmdir(target_dir)
                     except Exception as e:
                         # a race condition can lead to this failing if another process adds in between these steps
                         # in that case the other process will clean up
-                        logging.info("unable to delete %s: %s", target_dir, e)
+                        logging.info(f"unable to delete {target_dir}: {e}")
                         #self.invalid_subdirs.add(target_dir)
 
     def update(self) -> None:

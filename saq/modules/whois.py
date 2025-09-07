@@ -299,7 +299,7 @@ class WhoisAnalyzer(AnalysisModule):
         # Now check to see it's an actual datetime object...
         if not isinstance(_creation_date, datetime):
             logging.warning(
-                "whois result for %s contains unexpected creation date format/contents.", observable
+                f"whois result for {observable} contains unexpected creation date format/contents."
             )
 
         # Last updated date validation
@@ -309,7 +309,7 @@ class WhoisAnalyzer(AnalysisModule):
 
         if not isinstance(_updated_date, datetime):
             logging.warning(
-                "whois result for %s contains unexpected updated date format/contents.", observable
+                f"whois result for {observable} contains unexpected updated date format/contents."
             )
 
         _now = datetime.now()

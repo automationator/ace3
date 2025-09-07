@@ -74,22 +74,22 @@ class DHashImageAnalyzer(AnalysisModule):
     def execute_analysis(self, _file) -> AnalysisExecutionResult:
         local_file_path = _file.full_path
         if not os.path.exists(local_file_path):
-            logging.debug("local file %s does not exist", local_file_path)
+            logging.debug(f"local file {local_file_path} does not exist")
             return AnalysisExecutionResult.COMPLETED
 
         # skip analysis if file is empty
         if os.path.getsize(local_file_path) == 0:
-            logging.debug("local file %s is empty", local_file_path)
+            logging.debug(f"local file {local_file_path} is empty")
             return AnalysisExecutionResult.COMPLETED
 
         if not is_image(local_file_path):
-            logging.debug("%s is not an image", local_file_path)
+            logging.debug(f"{local_file_path} is not an image")
             return AnalysisExecutionResult.COMPLETED
 
         # the images we want to look for are stored in the analyst data repo
         source_dir = os.path.join(g(G_ANALYST_DATA_DIR), "dhash")
         if not os.path.isdir(source_dir):
-            logging.warning("missing dhash source directory %s", source_dir)
+            logging.warning(f"missing dhash source directory {source_dir}")
             return AnalysisExecutionResult.COMPLETED
 
         target_image = Image.open(local_file_path)
@@ -103,27 +103,23 @@ class DHashImageAnalyzer(AnalysisModule):
 
             source_image_file_path = os.path.join(source_dir, image_file_name)
             if not is_image(source_image_file_path):
-                logging.debug("skipping non image file %s", source_image_file_path)
+                logging.debug(f"skipping non image file {source_image_file_path}")
                 continue
 
             score_threshold_path = f"{source_image_file_path}.score"
             try:
                 with open(score_threshold_path, "r") as fp:
                     score_threshold = float(fp.read())
-                    logging.debug("loaded score threshold %s for %s", score_threshold, score_threshold_path)
+                    logging.debug(f"loaded score threshold {score_threshold} for {score_threshold_path}")
             except Exception as e:
-                logging.error("unable to load score threshold from %s: %s", score_threshold_path, e)
+                logging.error(f"unable to load score threshold from {score_threshold_path}: {e}")
                 continue
 
             source_image = Image.open(source_image_file_path)
             source_image_hash = dhash.dhash_int(source_image, size=IMAGE_SIZE)
             bits_different = dhash.get_num_bits_different(source_image_hash, target_image_hash)
             percent_similar = 100.0 - ((bits_different / 512) * 100.0)
-            logging.info("target %s source %s (%.2f) threshold (%.2f)",
-                local_file_path,
-                source_image_file_path,
-                percent_similar,
-                score_threshold)
+            logging.info(f"target {local_file_path} source {source_image_file_path} ({percent_similar:.2f}) threshold ({score_threshold:.2f})")
 
             analysis.add_score(image_file_name, percent_similar, score_threshold)
 

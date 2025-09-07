@@ -130,7 +130,7 @@ class SynchronyFileAnalyzer(AnalysisModule):
             logging.warning(f"target file {target_path} already exists")
             return AnalysisExecutionResult.COMPLETED
 
-        logging.info("running synchrony on %s", local_file_path)
+        logging.info(f"running synchrony on {local_file_path}")
         p = Popen(["synchrony", "-o", target_path, local_file_path], stdout=PIPE, stderr=PIPE)
         analysis.stdout, analysis.stderr = p.communicate()
         analysis.returncode = p.returncode

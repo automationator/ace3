@@ -43,20 +43,20 @@ def cleanup_alerts(fp_days_old: Optional[int]=None, ignore_days_old: Optional[in
     try:
         cleanup_ignored_alerts(ignore_days_old, dry_run)
     except Exception as e:
-        logging.error("error cleaning up ignored alerts: %s", e)
+        logging.error(f"error cleaning up ignored alerts: {e}")
         report_exception()
 
     try:
         archive_fp_alerts(fp_days_old, dry_run)
     except Exception as e:
-        logging.error("error archiving fp alerts: %s", e)
+        logging.error(f"error archiving fp alerts: {e}")
         report_exception()
 
     try:
         if distribute_days_old > 0:
             distribute_old_alerts(distribute_days_old, dry_run, get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_DISTRIBUTION_TARGET))
     except Exception as e:
-        logging.error("error distributing old alerts: %s", e)
+        logging.error(f"error distributing old alerts: {e}")
         report_exception()
 
 def cleanup_ignored_alerts(days: int, dry_run: bool):
@@ -143,16 +143,16 @@ def distribute_old_alerts(days: int, dry_run: bool, distribution_target: str, ma
             alert_index += 1
             if max_count > 0:
                 if alert_index > max_count:
-                    logging.warning("stopping at max count %s", max_count)
+                    logging.warning(f"stopping at max count {max_count}")
                     return success_count
 
-            logging.info("uploading alert %s to %s (dry_run = %s)", uuid, distribution_target, dry_run)
+            logging.info(f"uploading alert {uuid} to {distribution_target} (dry_run = {dry_run})")
             if dry_run:
                 success_count += 1
                 continue
 
             if not os.path.exists(storage_dir):
-                logging.warning("alert storage_dir %s does not exist", storage_dir)
+                logging.warning(f"alert storage_dir {storage_dir} does not exist")
                 failure_count += 1
                 continue
 
@@ -166,28 +166,28 @@ def distribute_old_alerts(days: int, dry_run: bool, distribution_target: str, ma
                                        api_key=get_config_value(CONFIG_API, CONFIG_API_KEY))
                 # {'result': True}
                 if isinstance(upload_result, dict) and upload_result.get("result", False):
-                    logging.info("uploaded %s to %s", uuid, distribution_target)
+                    logging.info(f"uploaded {uuid} to {distribution_target}")
                     # delete local storage
                     try:
                         shutil.rmtree(storage_dir)
-                        logging.info("deleted %s", storage_dir)
+                        logging.info(f"deleted {storage_dir}")
                         success_count += 1
                     except Exception as e:
                         failure_count += 1
-                        logging.error("unable to remove local storage_dir %s: %s", storage_dir, e)
+                        logging.error(f"unable to remove local storage_dir {storage_dir}: {e}")
                         report_exception()
                 else:
                     failure_count += 1
-                    logging.error("upload for %s returned non-success %s", uuid, upload_result)
+                    logging.error(f"upload for {uuid} returned non-success {upload_result}")
 
             except Exception as e:
                 failure_count += 1
-                logging.error("unable to upload alert %s: %s", uuid, e)
+                logging.error(f"unable to upload alert {uuid}: {e}")
                 report_exception()
 
     if dry_run:
-        logging.info("%s alerts would be distributed to %s", success_count, distribution_target)
+        logging.info(f"{success_count} alerts would be distributed to {distribution_target}")
     else:
-        logging.info("uploaded %s alerts (%s failures)", success_count, failure_count)
+        logging.info(f"uploaded {success_count} alerts ({failure_count} failures)")
 
     return success_count

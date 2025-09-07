@@ -481,7 +481,7 @@ class SplunkQueryObject:
 
         # tell splunk to delete the job
         try:
-            logging.info("deleting search job %s", sid)
+            logging.info(f"deleting search job {sid}")
             response = self.session.delete(f'/search/jobs/{sid}')
             response.raise_for_status()
             return True
@@ -613,13 +613,13 @@ class SplunkQueryObject:
 
             log_path = os.path.join(log_dir, f"{sid}.log")
             if os.path.exists(log_path):
-                logging.info("splunk log file %s already exists", log_path)
+                logging.info(f"splunk log file {log_path} already exists")
             else:
                 if self.get_search_log(sid, log_path):
-                    logging.info("saved search log for %s to %s", sid, log_path)
+                    logging.info(f"saved search log for {sid} to {log_path}")
 
         except Exception as e:
-            logging.warning("unable to acquire search.log for %s: %s", sid, e)
+            logging.warning(f"unable to acquire search.log for {sid}: {e}")
 
     def get_saved_searches(self) -> list[SavedSearch]:
         """Returns the list of all the saved searches available as a list of SavedSearch objects."""
@@ -639,7 +639,7 @@ class SplunkQueryObject:
                 "offset": offset,
             }
 
-            logging.debug("downloading saved searches @ offset %s", offset)
+            logging.debug(f"downloading saved searches @ offset {offset}")
             response = self.session.request("get", "/saved/searches", params=params)
             response.raise_for_status()
 
@@ -679,7 +679,7 @@ class SplunkQueryObject:
         Returns True if successful. Raises HTTPError on API error."""
 
         prefixed_name = SAVED_SEARCH_PREFIX + saved_search.name
-        logging.info("publishing saved search %s", prefixed_name)
+        logging.info(f"publishing saved search {prefixed_name}")
 
         try:
             response = self.session.request("post", "/saved/searches", data={
@@ -688,7 +688,7 @@ class SplunkQueryObject:
                 "search": saved_search.search,
             }, halt_statuses=[409])
             response.raise_for_status()
-            logging.info("created saved search %s", prefixed_name)
+            logging.info(f"created saved search {prefixed_name}")
             return response.status_code in range(200, 300)
         except HTTPError as e:
             if e.response.status_code == 409:
@@ -697,7 +697,7 @@ class SplunkQueryObject:
                     "search": saved_search.search,
                 })
                 response.raise_for_status()
-                logging.info("updated saved search %s", prefixed_name)
+                logging.info(f"updated saved search {prefixed_name}")
                 return response.status_code in range(200, 300)
 
         return False
@@ -707,7 +707,7 @@ class SplunkQueryObject:
         Returns True if successful. Raises HTTPError on API error."""
 
         prefixed_name = SAVED_SEARCH_PREFIX + saved_search.name
-        logging.info("deleting saved search %s", prefixed_name)
+        logging.info(f"deleting saved search {prefixed_name}")
         response = self.session.request("delete", f"/saved/searches/{prefixed_name}")
         response.raise_for_status()
         return response.status_code in range(200, 300)

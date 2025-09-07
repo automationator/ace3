@@ -259,7 +259,7 @@ class CollectorService(ACEServiceInterface):
     # ------------------------------------------------------------------------
     
     def cleanup_loop(self):
-        logging.info("starting cleanup loop for %s in %s mode", self, self.execution_mode)
+        logging.info(f"starting cleanup loop for {self} in {self.execution_mode} mode")
 
         self.cleanup_started_event.set()
         
@@ -297,7 +297,7 @@ class CollectorService(ACEServiceInterface):
     def collection_loop(self):
         """Primary loop for the collector."""
 
-        logging.info("starting collection loop for %s in %s mode", self, self.execution_mode)
+        logging.info(f"starting collection loop for {self} in {self.execution_mode} mode")
 
         self.shutdown_event.clear()
         self.collect_started_event.set()
@@ -319,7 +319,7 @@ class CollectorService(ACEServiceInterface):
                     self.sleep(self.config.collection_frequency)
 
             except Exception as e:
-                logging.error("unexpected exception thrown during loop for %s: %s", self, e)
+                logging.error(f"unexpected exception thrown during loop for {self}: {e}")
                 report_exception()
                 if self.sleep(1):
                     break
@@ -360,7 +360,7 @@ class CollectorService(ACEServiceInterface):
     
     def update_loop(self):
         """Loop for the collector update thread."""
-        logging.info("starting update loop for %s", self)
+        logging.info(f"starting update loop for {self}")
 
         self.update_started_event.set()
         

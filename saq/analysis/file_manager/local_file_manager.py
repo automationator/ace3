@@ -142,7 +142,7 @@ class LocalFileManager(FileManagerInterface):
                 try:
                     shutil.move(source_path, hardcopy_path)
                 except Exception as e:
-                    logging.error("unable to move file %s to %s: %s", source_path, hardcopy_path, e)
+                    logging.error(f"unable to move file {source_path} to {hardcopy_path}: {e}")
                     raise e
             else:
                 try:
@@ -153,7 +153,7 @@ class LocalFileManager(FileManagerInterface):
                         # Fall back to copy
                         shutil.copy(source_path, hardcopy_path)
                     except Exception as e:
-                        logging.error("unable to copy file %s to %s: %s", source_path, hardcopy_path, e)
+                        logging.error(f"unable to copy file {source_path} to {hardcopy_path}: {e}")
                         raise e
         else:
             # Hardcopy already exists
@@ -198,7 +198,7 @@ class LocalFileManager(FileManagerInterface):
             raise RuntimeError(f"Destination directory {dest_dir} already exists")
             
         shutil.copytree(self._storage_dir, dest_dir)
-        logging.debug("copied storage from %s to %s", self._storage_dir, dest_dir)
+        logging.debug(f"copied storage from {self._storage_dir} to {dest_dir}")
         
     def move_storage(self, dest_dir: str):
         """
@@ -214,7 +214,7 @@ class LocalFileManager(FileManagerInterface):
             raise RuntimeError(f"Destination directory {dest_dir} already exists")
             
         shutil.move(self._storage_dir, dest_dir)
-        logging.debug("moved storage from %s to %s", self._storage_dir, dest_dir)
+        logging.debug(f"moved storage from {self._storage_dir} to {dest_dir}")
         self._storage_dir = dest_dir
         
     def delete_storage(self):

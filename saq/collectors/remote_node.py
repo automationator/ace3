@@ -233,11 +233,11 @@ class RemoteNodeGroup:
         self.threads = []
 
     def loop(self, work_lock_uuid: str, single_shot: bool = False):
-        logging.info("starting remote node group loop (%s)", work_lock_uuid)
+        logging.info(f"starting remote node group loop ({work_lock_uuid})")
         while True:
             try:
                 result = execute_with_db_cursor(DB_COLLECTION, self.execute, work_lock_uuid)
-                logging.info("remote node group loop result (%s)", result)
+                logging.info(f"remote node group loop result ({result})")
                 if single_shot:
                     break
 
@@ -478,7 +478,7 @@ ORDER BY
 
         # we should have a small list of things to submit to remote nodes for this group
         for work_id, analysis_mode, root_uuid in work_batch:
-            logging.info("preparing workload %s with uuid %s", work_id, root_uuid)
+            logging.info(f"preparing workload {work_id} with uuid {root_uuid}")
 
             # first make sure we can load this
             # XXX not sure we really need to do this
@@ -580,4 +580,4 @@ def save_submission_for_review(submission: Submission):
     from saq.collectors.base_collector import get_collection_error_dir
     error_dir = os.path.join(get_collection_error_dir(), submission.root.uuid)
     submission.root.move(error_dir)
-    logging.warning("dumped submission to %s for review", error_dir)
+    logging.warning(f"dumped submission to {error_dir} for review")

@@ -148,14 +148,14 @@ class PhishkitAnalyzer(AnalysisModule):
     def complete_analysis(self, observable: Observable, analysis: PhishkitAnalysis) -> AnalysisExecutionResult:
         """Completes an existing analysis."""
         if not analysis.job_id:
-            logging.error("no job ID for analysis %s", analysis)
+            logging.error(f"no job ID for analysis {analysis}")
             return AnalysisExecutionResult.COMPLETED
         
         # wait for the job to complete
-        logging.info("checking for phishkit scan results for %s job ID %s", observable, analysis.job_id)
+        logging.info(f"checking for phishkit scan results for {observable} job ID {analysis.job_id}")
         scan_results = get_async_scan_result(analysis.job_id, analysis.output_dir, timeout=1)
         if scan_results is None:
-            logging.info("scan results not ready yet for %s job ID %s", observable, analysis.job_id)
+            logging.info(f"scan results not ready yet for {observable} job ID {analysis.job_id}")
             return self.delay_analysis(observable, analysis, seconds=3, timeout_seconds=60)
 
         # if we get this far then the scan results are ready
@@ -164,7 +164,7 @@ class PhishkitAnalyzer(AnalysisModule):
 
         for file_path in scan_results:
             if not os.path.exists(file_path):
-                logging.error("file %s does not exist for %s job ID %s", file_path, observable, analysis.job_id)
+                logging.error(f"file {file_path} does not exist for {observable} job ID {analysis.job_id}")
                 continue
 
             if os.path.basename(file_path) == "exit.code":
@@ -196,7 +196,7 @@ class PhishkitAnalyzer(AnalysisModule):
         # if the observable is a file, we need to check if the file type is enabled for scanning
         if observable.type == F_FILE:
             if not observable.has_directive(DIRECTIVE_RENDER):
-                logging.debug("skipping file %s - render directive not found", observable)
+                logging.debug(f"skipping file {observable} - render directive not found")
                 return AnalysisExecutionResult.COMPLETED
 
             # by default we do not accept files for phishkit analysis
@@ -206,7 +206,7 @@ class PhishkitAnalyzer(AnalysisModule):
             assert isinstance(observable, FileObservable)
             file_extension = os.path.splitext(observable.file_name)[1].lower()
             if file_extension in self.config['valid_file_extensions']:
-                logging.debug("file %s extension %s enabled for phishkit analysis", observable, file_extension)
+                logging.debug(f"file {observable} extension {file_extension} enabled for phishkit analysis")
                 file_accepted = True
 
             # then check the mime type
@@ -215,16 +215,16 @@ class PhishkitAnalyzer(AnalysisModule):
 
             if file_type_analysis is not None and file_type_analysis.mime_type in self.config['valid_mime_types']:
                 file_accepted = True
-                logging.debug("file %s mime type %s enabled for phishkit analysis", observable, file_type_analysis.mime_type)
+                logging.debug(f"file {observable} mime type {file_type_analysis.mime_type} enabled for phishkit analysis")
 
             if not file_accepted:
-                logging.debug("file %s not accepted for phishkit analysis", observable)
+                logging.debug(f"file {observable} not accepted for phishkit analysis")
                 return AnalysisExecutionResult.COMPLETED
 
         if observable.type == F_URL:
             # urls require crawl directives
             if not observable.has_directive(DIRECTIVE_CRAWL):
-                logging.debug("skipping URL %s - crawl directive not found", observable)
+                logging.debug(f"skipping URL {observable} - crawl directive not found")
                 return AnalysisExecutionResult.COMPLETED
 
         analysis = self.create_analysis(observable)

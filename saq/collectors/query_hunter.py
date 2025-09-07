@@ -194,7 +194,7 @@ class QueryHunt(Hunt):
                 #self, self.last_executed_time, self.last_end_time)
             #return True
 
-        logging.debug("hunt %s local time %s last execution time %s next execution time %s", self, local_time(), self.last_executed_time, self.next_execution_time)
+        logging.debug(f"hunt {self} local time {local_time()} last execution time {self.last_executed_time} next execution time {self.next_execution_time}")
         return local_time() >= self.next_execution_time
 
     def load_query_from_file(self, path):

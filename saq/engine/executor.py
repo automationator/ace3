@@ -105,7 +105,7 @@ class AnalysisModuleMonitor:
         monitor_target: WorkTarget,
         maximum_analysis_time: int,
     ):
-        logging.debug("starting monitor for %s (%s)", monitor_module, monitor_target)
+        logging.debug(f"starting monitor for {monitor_module} ({monitor_target})")
         monitor_start_time = datetime.now()
         timeout = min(maximum_analysis_time, monitor_module.maximum_analysis_time)
         monitor_event.wait(timeout=timeout)
@@ -123,10 +123,10 @@ class AnalysisModuleMonitor:
             # the worker manager will clean up the mess
             if monitor_elapsed_time > monitor_module.maximum_analysis_time:
                 logging.error(
-                    "analysis module %s has exceeded it's maximum analysis time of %s seconds",
+                    "analysis module {} has exceeded it's maximum analysis time of {} seconds".format(
                     monitor_module,
                     monitor_module.maximum_analysis_time,
-                )
+                ))
                 os._exit(1)
 
             # repeat warning every 5 seconds until we bail
@@ -600,17 +600,13 @@ class AnalysisExecutor:
         ):  # these are returned in the correct order
             # do we need to execute the dependency anaylysis?
             if dep.ready:
-                logging.debug("analyzing ready dependency %s", dep)
+                logging.debug(f"analyzing ready dependency {dep}")
                 # has this already been completed?
                 existing_analysis = dep.target_observable.get_analysis(
                     dep.target_analysis_type
                 )
                 if existing_analysis is False or existing_analysis is not None:
-                    logging.debug(
-                        "already analyzed obs %s target %s",
-                        dep.target_observable,
-                        dep.target_analysis_type,
-                    )
+                    logging.debug(f"already analyzed obs {dep.target_observable} target {dep.target_analysis_type}")
                     dep.increment_status()
                 else:
                     target_analysis_module = (
@@ -629,7 +625,7 @@ class AnalysisExecutor:
                         dependency=dep,
                     )
 
-            logging.debug("detected completed active dependency %s", dep)
+            logging.debug(f"detected completed active dependency {dep}")
             # re-analyze the original source observable that requested the dependency
             source_analysis_module = self._get_analysis_module_by_generated_analysis(
                 dep.source_analysis_type
@@ -689,7 +685,7 @@ class AnalysisExecutor:
 
         # has this thing been whitelisted?
         if work_item.observable.whitelisted:
-            logging.info("%s was whitelisted -- not analyzing", work_item.observable)
+            logging.info(f"{work_item.observable} was whitelisted -- not analyzing")
             if work_item.dependency:
                 work_item.dependency.set_status_failed("whitelisted")
                 work_item.dependency.increment_status()
@@ -1334,7 +1330,7 @@ class AnalysisExecutor:
 
             # if there's no observable to analyze then we're done with this work item
             if not work_item.observable:
-                logging.debug("work item %s has no observable", work_item)
+                logging.debug(f"work item {work_item} has no observable")
                 continue
 
             # check for observable exclusions
@@ -1349,9 +1345,7 @@ class AnalysisExecutor:
                 work_item, context.root.analysis_mode
             )
 
-            logging.debug(
-                "analyzing %s with %s modules", work_item, len(analysis_modules)
-            )
+            logging.debug(f"analyzing {work_item} with {len(analysis_modules)} modules")
 
             # analyze this thing with the analysis modules we've selected sorted by priority
             for analysis_module in sorted(analysis_modules, key=attrgetter("priority")):

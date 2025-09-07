@@ -38,10 +38,7 @@ def add_tag():
 
     failed_count = 0
 
-    logging.info("AUDIT: user %s added tags %s to alerts %s", 
-                 current_user,
-                 ",".join(tags),
-                 ",".join(uuids))
+    logging.info(f"AUDIT: user {current_user} added tags {tags} to alerts {uuids}")
 
     for uuid in uuids:
         logging.debug("attempting to lock alert {} for tagging".format(uuid))
@@ -127,7 +124,7 @@ def remove_tag():
                 alert.root_analysis.remove_tag(tag)
 
             alert.sync()
-            logging.info("AUDIT: user %s removed tag %s from alert %s", current_user, tag, alert)
+            logging.info(f"AUDIT: user {current_user} removed tag {tag} from alert {alert}")
 
         except Exception as e:
             logging.error(f"unable to remove tag from {alert}: {e}")

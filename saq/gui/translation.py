@@ -13,7 +13,7 @@ def node_translate_gui(node:str) -> str:
 def translate_alert_redirect(url: str, source_node: str, target_node: str) -> str:
     parsed = urlparse(url)
     if parsed.netloc != source_node:
-        logging.warning("unexpected source_node in translate_alert_direction: %s should be %s", parsed.netloc, source_node)
+        logging.warning(f"unexpected source_node in translate_alert_direction: {parsed.netloc} should be {source_node}")
 
     # <scheme>://<netloc>/<path>;<params>?<query>#<fragment>
     return urlunparse((parsed.scheme, target_node, parsed.path, parsed.params, parsed.query, parsed.fragment))

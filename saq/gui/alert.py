@@ -37,7 +37,7 @@ class GUIAlert(Alert):
             # first check backward compatible config to see if there is already a template set for this alert_type value
             backwards_compatible = get_config_value(CONFIG_CUSTOM_ALERTS_BACKWARDS_COMPAT, self.alert_type)
             if backwards_compatible:
-                logging.debug("using backwards compatible template %s for %s", backwards_compatible, self.alert_type)
+                logging.debug(f"using backwards compatible template {backwards_compatible} for {self.alert_type}")
                 return backwards_compatible
 
             base_template_dir = get_config_value(CONFIG_CUSTOM_ALERTS, CONFIG_CUSTOM_ALERTS_TEMPLATE_DIR)

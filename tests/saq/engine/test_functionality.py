@@ -468,7 +468,7 @@ def test_no_analysis_no_return(root_analysis):
 @pytest.mark.integration
 def test_delayed_analysis_single(root_analysis):
 
-    observable = root_analysis.add_observable_by_spec(F_TEST, '0:00|0:00')
+    observable = root_analysis.add_observable_by_spec(F_TEST, '0:00|0:01')
     root_analysis.analysis_mode = "test_groups"
     root_analysis.save()
     root_analysis.schedule()
@@ -491,7 +491,7 @@ def test_delayed_analysis_single_instance(root_analysis):
 
     # same as previous test test_delayed_analysis_single except this module we're testing is instanced
 
-    observable = root_analysis.add_observable_by_spec(F_TEST, '0:00|0:00')
+    observable = root_analysis.add_observable_by_spec(F_TEST, '0:00|0:01')
     root_analysis.analysis_mode = "test_groups"
     root_analysis.save()
     root_analysis.schedule()
@@ -519,7 +519,7 @@ def test_delayed_analysis_multiple():
         root_uuid = str(uuid.uuid4())
         root = create_root_analysis(uuid=root_uuid, analysis_mode='test_groups', storage_dir=storage_dir_from_uuid(root_uuid))
         root.initialize_storage()
-        observable = root.add_observable_by_spec(F_TEST, '0:00|0:00')
+        observable = root.add_observable_by_spec(F_TEST, '0:00|0:01')
         root.save()
         root.schedule()
         uuids.append((root.storage_dir, observable.id))
@@ -542,7 +542,7 @@ def test_delayed_analysis_multiple():
 def test_delayed_analysis_timing():
     root_1 = create_root_analysis(uuid=str(uuid.uuid4()), analysis_mode='test_groups')
     root_1.initialize_storage()
-    o_1 = root_1.add_observable_by_spec(F_TEST, '0:00|0:00')
+    o_1 = root_1.add_observable_by_spec(F_TEST, '0:00|0:01')
     root_1.save()
     root_1.schedule()
 
@@ -769,10 +769,10 @@ def test_delayed_analysis_timeout():
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # wait for delayed analysis to time out
-    assert log_count('has timed out') == 1
+    assert wait_for_log_count('has timed out', 1, 5)
 
     # post analysis should have executed
-    assert log_count('execute_post_analysis called') == 1
+    assert wait_for_log_count('execute_post_analysis called', 1, 5)
 
 @pytest.mark.integration
 def test_delayed_analysis_recovery():
@@ -783,7 +783,7 @@ def test_delayed_analysis_recovery():
     root_uuid = str(uuid.uuid4())
     root = create_root_analysis(uuid=root_uuid, analysis_mode='test_groups', storage_dir=storage_dir_from_uuid(root_uuid))
     root.initialize_storage()
-    observable = root.add_observable_by_spec(F_TEST, '0:00|0:00')
+    observable = root.add_observable_by_spec(F_TEST, '0:00|0:05')
     root.save()
     root.schedule()
 
@@ -1549,7 +1549,7 @@ def test_cleanup_with_delayed_analysis():
     get_config()['analysis_mode_test_groups']['cleanup'] = 'yes'
     root = create_root_analysis(uuid=str(uuid.uuid4()), analysis_mode='test_groups')
     root.initialize_storage()
-    observable = root.add_observable_by_spec(F_TEST, '00:00|00:00')
+    observable = root.add_observable_by_spec(F_TEST, '00:00|00:01')
     root.save()
     root.schedule()
 

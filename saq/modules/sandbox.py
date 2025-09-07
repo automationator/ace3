@@ -151,7 +151,7 @@ class SandboxAnalysisModule(AnalysisModule):
                 logging.debug("found RTF header in {}".format(file_path))
                 return True
 
-        logging.info("%s is not a supported file type for %s analysis".format(file_path, type(self)))
+        logging.info(f"{file_path} is not a supported file type for {type(self)} analysis")
         return False
 
     def hash_has_been_analyzed(self, target_type: str, target_value: str) -> bool:

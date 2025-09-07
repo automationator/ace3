@@ -39,7 +39,7 @@ def add_comment():
         flash("comment cannot be empty")
         return redirection
 
-    logging.info("AUDIT: user %s added comment %s to alerts %s", current_user, user_comment, ",".join(uuids))
+    logging.info(f"AUDIT: user {current_user} added comment {user_comment} to alerts {','.join(uuids)}")
 
     for uuid in uuids:
         comment = Comment(
@@ -80,7 +80,7 @@ def delete_comment():
         flash("invalid user for this comment")
         return redirect(url_for('analysis.index'))
 
-    logging.info("AUDIT: user %s deleted comment %s", current_user, comment.comment)
+    logging.info(f"AUDIT: user {current_user} deleted comment {comment.comment}")
 
     alert_uuid = comment.uuid
 

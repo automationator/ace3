@@ -84,6 +84,6 @@ def observable_action_adjust_expiration():
         flash("Error: Observable expiration date update failed", 'error')
         return redirection
 
-    logging.info("AUDIT: user %s set expiration for %s to %s", current_user, observable, new_expiration_time)
+    logging.info(f"AUDIT: user {current_user} set expiration for {observable} to {new_expiration_time}")
     flash(f"Observable expiration date set to {new_expiration_time}")
     return redirection

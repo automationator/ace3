@@ -148,7 +148,7 @@ class RootAnalysisSerializer:
     @staticmethod
     def save_to_disk(root_analysis: "RootAnalysis") -> bool:
         """Saves the RootAnalysis JSON to disk with encoding and hashing."""
-        logging.debug("SAVE JSON: %s (%s)", root_analysis, type(root_analysis))
+        logging.debug(f"SAVE JSON: {root_analysis} ({type(root_analysis)})")
         
         # Ensure storage directories exist
         if root_analysis.file_manager:

@@ -30,7 +30,7 @@ def mark_suspect():
             observable.add_detection_point(f"user {current_user} marked observable as malicious")
             alert.sync()
 
-        logging.info("AUDIT: user %s marked observable %s in alert %s as suspect", current_user, observable, alert)
+        logging.info(f"AUDIT: user {current_user} marked observable {observable} in alert {alert} as suspect")
     except Exception as e:
         flash("unable to load alert {0}: {1}".format(alert, str(e)))
         traceback.print_exc()

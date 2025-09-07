@@ -27,7 +27,7 @@ class AnalysisDetailsPersistenceManager:
         """Saves the current results of the analysis to disk."""
 
         if not analysis.details_modified:
-            logging.debug("%s was not modified so not saving", analysis)
+            logging.debug(f"{analysis} was not modified so not saving")
             return False
 
         # the only thing we actually save is the self.details object
@@ -115,12 +115,12 @@ class AnalysisDetailsPersistenceManager:
         full_file_path = os.path.join(g(G_SAQ_RELATIVE_DIR), self.file_manager.storage_dir, '.ace', analysis.external_details_path)
 
         if not os.path.exists(full_file_path):
-            logging.debug("missing file %s", full_file_path)
+            logging.debug(f"missing file {full_file_path}")
             return False
 
         json_file_size = os.path.getsize(full_file_path)
         if json_file_size == 0:
-            logging.debug("analysis details %s has no content", full_file_path)
+            logging.debug(f"analysis details {full_file_path} has no content")
             return False
 
         if analysis.details_size is not None and analysis.details_size != json_file_size:
@@ -134,12 +134,12 @@ class AnalysisDetailsPersistenceManager:
 
             _track_reads()
 
-            logging.debug("LOAD: loaded external details from %s (value type %s)", full_file_path, type(analysis.details))
+            logging.debug(f"LOAD: loaded external details from {full_file_path} (value type {type(analysis.details)})")
             return True
 
         except Exception as e:
             # this can happen now if the alert is still analyzing
             # since we are flushing as we go and they can be loaded at any time
-            logging.warning("unable to load json from %s: %s", full_file_path, e)
+            logging.warning(f"unable to load json from {full_file_path}: {e}")
             report_exception()
             return False

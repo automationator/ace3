@@ -93,7 +93,7 @@ def archive_email_file(file_path: str, message_id: str) -> str:
         # TODO metrics to record this
         return sha256_hash
 
-    logging.info("archiving email %s md5 %s to %s", message_id, sha256_hash, target_path)
+    logging.info(f"archiving email {message_id} md5 {sha256_hash} to {target_path}")
 
     # create required subdirectories
     os.makedirs(os.path.dirname(target_path), exist_ok=True)
@@ -115,7 +115,7 @@ def archive_email_file(file_path: str, message_id: str) -> str:
 
     # if we can't get the lock it means it's already been written
     except LocalLockError as e: # pragma: nocover
-        logging.debug("unable to obtain local lock on archive file %s", file_path)
+        logging.debug(f"unable to obtain local lock on archive file {file_path}")
 
     return sha256_hash
 
@@ -155,10 +155,10 @@ def register_email_archive(hostname: Optional[str]=None, reset_server_id: Option
         row = cursor.fetchone()
         if row:
             server_id = row[0]
-            logging.debug("loaded email archive server_id %s for %s", server_id, hostname)
+            logging.debug(f"loaded email archive server_id {server_id} for {hostname}")
             return server_id
 
-        logging.info("creating archive server entry for %s", hostname)
+        logging.info(f"creating archive server entry for {hostname}")
         execute_with_retry(db, cursor, "INSERT IGNORE INTO archive_server ( hostname ) VALUES ( %s )", 
                         (hostname,), commit=True)
 

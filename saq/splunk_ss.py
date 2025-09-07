@@ -15,16 +15,16 @@ def load_from_ini(file_path: str) -> Optional[SavedSearch]:
     config = ConfigParser()
     config.read(file_path)
     if "rule" not in config:
-        logging.warning("%s does not contain rule section", file_path)
+        logging.warning(f"{file_path} does not contain rule section")
         return None
 
     rule = config["rule"]
     for key in "name", "description", "type", "search", "user", "app":
         if key not in rule:
-            logging.warning("%s does not contain value for %s", file_path, key)
+            logging.warning(f"{file_path} does not contain value for {key}")
             return None
 
-    logging.debug("loading saved search from %s", file_path)
+    logging.debug(f"loading saved search from {file_path}")
 
     return SavedSearch(
         name=rule["name"],
@@ -38,7 +38,7 @@ def load_from_ini(file_path: str) -> Optional[SavedSearch]:
 def load_ini_files(dir_path: str) -> list[SavedSearch]:
     """Returns a list of SavedSearch objects loaded from the ini files in the target directory."""
     result = []
-    logging.debug("loading saved searches from %s", dir_path)
+    logging.debug(f"loading saved searches from {dir_path}")
     for file_name in os.listdir(dir_path):
         if not file_name:
             continue
@@ -58,7 +58,7 @@ def load_ini_files(dir_path: str) -> list[SavedSearch]:
         if search:
             result.append(search)
 
-    logging.debug("loaded %s saved searches from %s", len(result), dir_path)
+    logging.debug(f"loaded {len(result)} saved searches from {dir_path}")
     return result
 
 def load_saved_searches(config_section_name: str, ns_user: str, ns_app: str):
@@ -100,14 +100,14 @@ def sync_saved_searches(dir_path: str, config: Optional[str]=None, ns_user: Opti
 
     # these are the saved searches we want to have
     searches = load_ini_files(dir_path)
-    logging.info("processing %s local saved searches", len(searches))
+    logging.info(f"processing {len(searches)} local saved searches")
 
     # search for duplicate names
     dupe_search = set()
     for search in searches:
         if search.name in dupe_search:
             # requires manual remediation
-            logging.error("duplicate saved search name %s", search.name)
+            logging.error(f"duplicate saved search name {search.name}")
         else:
             dupe_search.add(search.name)
 
@@ -131,12 +131,12 @@ def sync_saved_searches(dir_path: str, config: Optional[str]=None, ns_user: Opti
         for search in local_searches:
             lookup_map.add(search.name)
 
-        logging.info("querying config %s user %s app %s", config, ns_user, ns_app)
+        logging.info(f"querying config {config} user {ns_user} app {ns_app}")
         remote_searches = load_saved_searches(config, ns_user, ns_app)
         for remote_search in remote_searches:
             # does this search exist locally?
             if remote_search.name not in lookup_map:
-                logging.info("remote search %s not found locally", remote_search.name)
+                logging.info(f"remote search {remote_search.name} not found locally")
                 delete_saved_search(remote_search)
                 continue
 

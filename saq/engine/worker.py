@@ -37,6 +37,7 @@ from saq.modules.interfaces import AnalysisModuleInterface
 
 from saq.observables.file import FileObservable
 from saq.util.process import kill_process_tree
+from saq.util.time import local_time
 
 class Worker:
     """Responsible for maintaining an executing analysis process."""
@@ -83,6 +84,39 @@ class Worker:
     # DELAYED ANALYSIS
     # ------------------------------------------------------------------------
 
+    def get_delayed_analysis_timeout(self, start_time: datetime, timeout_hours: Optional[int] = None, timeout_minutes: Optional[int] = None, timeout_seconds: Optional[int] = None) -> datetime:
+        """Returns the timeout for the delayed analysis."""
+        return start_time + timedelta(
+            hours=0 if timeout_hours is None else timeout_hours,
+            minutes=0 if timeout_minutes is None else timeout_minutes,
+            seconds=0 if timeout_seconds is None else timeout_seconds,
+        )
+
+    def is_delayed_analysis_timed_out(self, root: RootAnalysis, observable: Observable, analysis_module: AnalysisModuleInterface, timeout_hours: Optional[int] = None, timeout_minutes: Optional[int] = None, timeout_seconds: Optional[int] = None) -> bool:
+        """Returns True if the delayed analysis for the given root has timed out."""
+
+        # if there's no timeout set then we don't need to check
+        if timeout_hours is None and timeout_minutes is None and timeout_seconds is None:
+            return False
+        
+        # we track the starting time in the root
+        start_time = root.initialize_delayed_analysis_start_time(observable, analysis_module)
+        assert start_time.tzinfo is not None and start_time.tzinfo.utcoffset(start_time) == timedelta(0), "start_time timezone must be UTC"
+
+        # calculate the timeout
+        timeout = self.get_delayed_analysis_timeout(start_time, timeout_hours, timeout_minutes, timeout_seconds)
+        if local_time() >= timeout:
+            return True
+
+        logging.debug(
+            "delayed analysis for {} in {} has been waiting for {} seconds".format(
+            observable,
+            analysis_module,
+            (local_time() - start_time).total_seconds(),
+        ))
+
+        return False
+
     def delay_analysis(
         self,
         root,
@@ -109,62 +143,20 @@ class Worker:
                 )
             )
 
-        # are we set to time out?
-        if (
-            timeout_hours is not None
-            or timeout_minutes is not None
-            or timeout_seconds is not None
-        ):
-            # have we timed out?
-            start_time = root.get_delayed_analysis_start_time(
-                observable, analysis_module
-            )
-            if start_time is None:
-                root.set_delayed_analysis_start_time(observable, analysis_module)
-            else:
-                timeout = start_time + timedelta(
-                    hours=0 if timeout_hours is None else timeout_hours,
-                    minutes=0 if timeout_minutes is None else timeout_minutes,
-                    seconds=0 if timeout_seconds is None else timeout_seconds,
-                )
-                if datetime.now() >= timeout:
-                    # TODO this should raise an exception
-                    logging.warning(
-                        "delayed analysis for {} in {} has timed out".format(
-                            observable, analysis_module
-                    ))
-                    return False
-
-                logging.info(
-                    "delayed analysis for {} in {} has been waiting for {} seconds".format(
-                        observable,
-                        analysis_module,
-                        (datetime.now() - start_time).total_seconds(),
-                    )
-                )
-
-        # when do we resume analysis?
-        # next_analysis = datetime.now() + timedelta(hours=hours, minutes=minutes, seconds=seconds)
+        if self.is_delayed_analysis_timed_out(root, observable, analysis_module, timeout_hours, timeout_minutes, timeout_seconds):
+            logging.warning(f"delayed analysis for {observable} in {analysis_module} has timed out")
+            return False
 
         # add the request to the workload
-        try:
-            if self.workload_manager.add_delayed_analysis_request(
-                root,
-                observable,
-                analysis_module,
-                hours,
-                minutes,
-                seconds,
-            ):
-                analysis.delayed = True
-        except Exception as e:
-            logging.error(
-                "unable to insert delayed analysis on {} by {} for {}: {}".format(
-                    root, analysis_module.config_section_name, observable, e
-                )
-            )
-            report_exception()
-            return False
+        if self.workload_manager.add_delayed_analysis_request(
+            root,
+            observable,
+            analysis_module,
+            hours,
+            minutes,
+            seconds,
+        ):
+            analysis.delayed = True
 
         return True
 

@@ -411,7 +411,7 @@ class YAMLConfig(MutableMapping[str, YAMLSectionProxy]):
                                 if decrypted is not None:
                                     value[i] = decrypted
                             except Exception as e:
-                                logging.warning("failed to decrypt value for key %s: %s", key_name, str(e))
+                                logging.warning(f"failed to decrypt value for key {key_name}: {str(e)}")
                 elif isinstance(value, str) and value.startswith("encrypted:"):
                     # Decrypt string values that start with "encrypted:"
                     key_name = value[len("encrypted:"):]
@@ -420,7 +420,7 @@ class YAMLConfig(MutableMapping[str, YAMLSectionProxy]):
                         if decrypted is not None:
                             mapping[key] = decrypted
                     except Exception as e:
-                        logging.warning("failed to decrypt value for key %s: %s", key_name, str(e))
+                        logging.warning(f"failed to decrypt value for key {key_name}: {str(e)}")
 
         # Process all sections in the configuration
         for section_name, section_data in self._data.items():

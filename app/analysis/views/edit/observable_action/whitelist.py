@@ -25,7 +25,7 @@ def observable_action_whitelist():
 
     try:
         if add_observable_tag_mapping(observable, 'whitelisted'):
-            logging.info("AUDIT: user %s whitelisted observable %s", current_user, observable)
+            logging.info(f"AUDIT: user {current_user} whitelisted observable {observable}")
             return "whitelisting added", 200
         else:
             return "operation failed", 200
@@ -51,7 +51,7 @@ def observable_action_un_whitelist():
 
     try:
         if remove_observable_tag_mapping(observable, 'whitelisted'):
-            logging.info("AUDIT: user %s removed whitelisting for observable %s", current_user, observable)
+            logging.info(f"AUDIT: user {current_user} removed whitelisting for observable {observable}")
             return "removed whitelisting", 200
         else:
             return "operation failed", 200

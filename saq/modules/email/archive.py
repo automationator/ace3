@@ -170,7 +170,7 @@ class EmailArchiveAction(AnalysisModule):
 
         email_analysis = self.wait_for_analysis(_file, EmailAnalysis)
         if not email_analysis:
-            logging.warning("unable to obtain EmailAnalysis for %s", _file)
+            logging.warning(f"unable to obtain EmailAnalysis for {_file}")
             return AnalysisExecutionResult.COMPLETED
 
         analysis = self.create_analysis(_file)

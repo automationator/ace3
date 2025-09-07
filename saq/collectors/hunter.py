@@ -180,7 +180,7 @@ class Hunt:
 
         self._last_executed_time = value
         write_persistence_data(self.type, self.name, 'last_executed_time', value)
-        logging.debug("last executed time for %s set to %s", self, self._last_executed_time)
+        logging.debug(f"last executed time for {self} set to {self._last_executed_time}")
 
     @property
     def last_alert_time(self):
@@ -694,8 +694,7 @@ class HuntManager:
             else:
                 idle_count += 1
 
-        logging.info("hunt status: %s disabled %s suppressed %s running %s ready %s idle", 
-            disabled_count, suppressed_count, running_count, ready_count, idle_count)
+        logging.info(f"hunt status: {disabled_count} disabled {suppressed_count} suppressed {running_count} running {ready_count} ready {idle_count} idle")
 
 
     def execute_hunt(self, hunt):

@@ -484,8 +484,9 @@ class MemoryLogHandler(logging.Handler):
     def emit(self, record):
         try:
             test_log_messages.append(record)
-        except:
-            sys.stderr.write(str(record) + "\n")
+        except Exception as e:
+            with open("logging_issues.log", "a") as fp:
+                fp.write(f"*** ERROR: unable to append record {record}: {e}\n")
 
     def clear(self):
         with test_log_sync:
@@ -568,8 +569,7 @@ def reset_unittest_logging():
     global test_log_messages
     global memory_log_handler
 
-    with test_log_sync:
-        test_log_messages[:] = []
+    memory_log_handler.clear()
 
 def stop_unittest_logging():
 

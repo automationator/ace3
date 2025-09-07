@@ -16,6 +16,7 @@ from saq.analysis.serialize.root_serializer import RootAnalysisSerializer
 from saq.constants import F_FILE, G_COMPANY_ID, G_COMPANY_NAME, G_NODE_COMPANIES, G_SAQ_NODE, G_TEMP_DIR, QUEUE_DEFAULT
 from saq.environment import g, g_int, g_list, get_local_timezone, get_temp_dir
 from saq.util import parse_event_time
+from saq.util.time import local_time
 
 # supported extension keys
 KEY_PLAYBOOK_URL = 'playbook_url'
@@ -291,7 +292,7 @@ class RootAnalysis(Analysis):
         assert observable_type is None or isinstance(observable_type, str)
         assert observable_value is None or isinstance(observable_value, str)
 
-        logging.debug("setting analysis failed for %s %s %s %s", module, observable_type, observable_value, error_message)
+        logging.debug(f"setting analysis failed for {module} {observable_type} {observable_value} {error_message}")
 
         module = MODULE_PATH(module)
 
@@ -548,21 +549,36 @@ class RootAnalysis(Analysis):
         # this will (attempt to be) set when the object is loaded from JSON
         pass
 
-    def get_delayed_analysis_start_time(self, observable, analysis_module):
-        """Returns the time of the first attempt to delay analysis for this analysis module and observable, or None otherwise."""
-        key = '{}:{}'.format(analysis_module.config_section_name, observable.id)
-        try:
-            return self.delayed_analysis_tracking[key]
-        except KeyError:
-            return None
+    def get_delayed_analysis_start_time_key(self, observable, analysis_module) -> str:
+        """Returns the key for the delayed analysis start time."""
+        return '{}:{}'.format(analysis_module.config_section_name, observable.id)
 
-    def set_delayed_analysis_start_time(self, observable, analysis_module):
+    def initialize_delayed_analysis_start_time(self, observable, analysis_module) -> datetime:
+        """Sets the start time for the delayed analysis to the current time if not already set.
+        Returns the start time."""
+        start_time = self.get_delayed_analysis_start_time(observable, analysis_module)
+        if start_time is None:
+            start_time = self.set_delayed_analysis_start_time(observable, analysis_module)
+        
+        return start_time
+
+    def get_delayed_analysis_start_time(self, observable, analysis_module) -> Optional[datetime]:
+        """Returns the time of the first attempt to delay analysis for this analysis module and observable, or None otherwise."""
+        key = self.get_delayed_analysis_start_time_key(observable, analysis_module)
+        return self.delayed_analysis_tracking.get(key)
+
+    def set_delayed_analysis_start_time(self, observable, analysis_module) -> datetime:
         """Called by the engine when we need to start tracking delayed analysis for a given observable."""
         # if this is the first time we've delayed analysis (for this analysis module and observable)
         # then we want to remember when we started so we can eventually time out
-        key = '{}:{}'.format(analysis_module.config_section_name, observable.id)
-        if key not in self.delayed_analysis_tracking:
-            self.delayed_analysis_tracking[key] = datetime.now()
+        key = self.get_delayed_analysis_start_time_key(observable, analysis_module)
+        start_time = self.get_delayed_analysis_start_time(observable, analysis_module)
+        if start_time is None:
+            start_time = local_time()
+            self.delayed_analysis_tracking[key] = start_time
+            return start_time
+        else:
+            return start_time
 
     def add_dependency(self, source_observable, source_analysis, source_analysis_instance, target_observable, target_analysis, target_analysis_instance):
         """Add a dependency between analysis objects. Delegates to the dependency manager."""
@@ -738,7 +754,7 @@ class RootAnalysis(Analysis):
         # use temp space to store this
         target_dir = os.path.join(g(G_TEMP_DIR), new_uuid)
 
-        logging.debug("duplicating root %s @ %s to %s @ %s", self.uuid, self.storage_dir, new_uuid, target_dir)
+        logging.debug(f"duplicating root {self.uuid} @ {self.storage_dir} to {new_uuid} @ {target_dir}")
         
         # use file manager to copy storage
         if self.file_manager:
@@ -769,7 +785,7 @@ class RootAnalysis(Analysis):
         if self.file_manager:
             self.file_manager.move_storage(dest_dir)
 
-        logging.debug("moved %s from %s to %s", self, self.storage_dir, dest_dir)
+        logging.debug(f"moved {self} from {self.storage_dir} to {dest_dir}")
         #self.storage_dir = dest_dir
         self.save() # save with the new storage_dir set
         return True
