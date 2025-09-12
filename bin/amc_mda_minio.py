@@ -17,6 +17,7 @@ class S3Credentials:
     access_key: str
     secret_key: str
     session_token: Optional[str] = None
+    region: Optional[str] = None
 
 def get_ec2_metadata() -> S3Credentials:
     """Get the EC2 metadata for the current instance."""
@@ -30,10 +31,17 @@ def get_ec2_metadata() -> S3Credentials:
     response.raise_for_status()
     credentials = response.json()
 
+    # get the region from the EC2 metadata
+    region_url = "http://169.254.169.254/latest/meta-data/placement/region"
+    region_response = requests.get(region_url)
+    region_response.raise_for_status()
+    region = region_response.text.strip()
+
     return S3Credentials(
         access_key=credentials["AccessKeyId"],
         secret_key=credentials["SecretAccessKey"],
-        session_token=credentials["Token"])
+        session_token=credentials["Token"],
+        region=region)
 
 def get_s3_credentials_from_args(args) -> S3Credentials:
     """Get the S3 credentials from the arguments."""
