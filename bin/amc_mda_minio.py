@@ -2,6 +2,8 @@
 
 import argparse
 from dataclasses import dataclass
+import logging
+import logging.handlers
 import os
 import shutil
 import sys
@@ -11,6 +13,7 @@ import uuid
 
 from minio import Minio
 import requests
+
 
 @dataclass
 class S3Credentials:
@@ -81,12 +84,14 @@ def main(args) -> int:
         minio_client.put_object(args.bucket, unique_key, fp, length=length)
 
         # print the unique key to standard output
-        print(unique_key)
+        logger.info(f"uploaded file to {unique_key}")
 
     return os.EX_OK
 
 
 if __name__ == "__main__":
+    global logger
+
     parser = argparse.ArgumentParser()
     # bucket parameters
     parser.add_argument("--bucket", required=True, help="The bucket to upload the file to.")
@@ -100,6 +105,31 @@ if __name__ == "__main__":
     parser.add_argument("--secure", action="store_true", default=False, help="Whether to use SSL.")
     parser.add_argument("--use-ec2-metadata", action="store_true", default=False, help="Whether to use EC2 metadata to get the access key and secret key.")
     parser.add_argument("--region", help="Optional region to use. If not provided, the region will be inferred.")
+    parser.add_argument("--syslog", action="store_true", default=False, help="Whether to use syslog.")
     args = parser.parse_args()
 
-    sys.exit(main(args))
+    # Configure logging to syslog
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+
+    if args.syslog and os.path.exists("/dev/log"):
+        # Create syslog handler
+        handler = logging.handlers.SysLogHandler(address="/dev/log")
+        handler.setLevel(logging.INFO)
+    else:
+        # just log to stdout
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.INFO)
+
+    # Create formatter
+    formatter = logging.Formatter('%(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+
+    # Add handler to logger
+    logger.addHandler(handler)
+
+    try:
+        sys.exit(main(args))
+    except Exception as e:
+        logger.error(f"minio upload failed: {e}")
+        sys.exit(1)
