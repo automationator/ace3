@@ -1,3 +1,9 @@
+
+# set these in your .env file to point to the container registry you want to use
+# ACE3_IMAGE_URL
+# ACE3_HTTP_IMAGE_URL
+# ACE3_PHISHKIT_MANAGER_IMAGE_URL
+
 x-common-env: &common-env
   ACE_TARGET: "dev"
   ACE_VERSION: "3.0.0"
@@ -25,7 +31,7 @@ services:
       args:
         SAQ_USER_ID: ${UID:-1000}
         SAQ_GROUP_ID: ${GID:-1000}
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     command: /bin/bash -c "/opt/ace/docker/startup/initialize_volumes.sh"
     volumes:
       - ace-data:/opt/ace/data
@@ -43,7 +49,7 @@ services:
       <<: *common-env
       ACE_DB_USER_PASSWORD:
       ACE_SUPERUSER_DB_USER_PASSWORD:
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     command: /bin/bash -c "/opt/ace/docker/startup/initialize.sh"
     depends_on:
       ace-root-volume-initialize:
@@ -85,7 +91,7 @@ services:
   # performs all first-time initialization routines that require the db
   ace-setup:
     environment: *common-env
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     command: /bin/bash -c "/opt/ace/docker/startup/setup.sh"
     depends_on:
       ace-db:
@@ -101,7 +107,7 @@ services:
     build: 
       context: .
       dockerfile: Dockerfile.ace-http
-    image: "ace3-http:${ACE_VERSION:-latest}"
+    image: ${ACE3_HTTP_IMAGE_URL:-ace3-http:latest}
     restart: always
     depends_on:
       - ace
@@ -114,7 +120,7 @@ services:
 
   http-app:
     environment: *common-env
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       - ace
     command: /bin/bash -c "/opt/ace/docker/startup/start_uwsgi_app.sh"
@@ -130,7 +136,7 @@ services:
 
   http-api:
     environment: *common-env
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       - ace
     command: /bin/bash -c "/opt/ace/docker/startup/start_uwsgi_api.sh"
@@ -184,7 +190,7 @@ services:
 
   network-semaphore:
     environment: *common-env
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace-setup:
         condition: service_completed_successfully
@@ -205,7 +211,7 @@ services:
       ACE_ZIP_PASSWORD:
     depends_on:
       - ace
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     command: /bin/bash -c "/opt/ace/docker/startup/start_git.sh"
     volumes: *common-volumes
     hostname: ace
@@ -220,7 +226,7 @@ services:
       ACE_ZIP_PASSWORD:
     depends_on:
       - ace
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     command: /bin/bash -c "/opt/ace/docker/startup/start_yacron.sh"
     volumes: *common-volumes
     hostname: ace
@@ -231,7 +237,7 @@ services:
 
   yara:
     environment: *common-env
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace-setup:
         condition: service_completed_successfully
@@ -246,7 +252,7 @@ services:
 
   background-executor:
     environment: *common-env
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace:
         condition: service_started
@@ -263,7 +269,7 @@ services:
 
   embedding-service:
     environment: *common-env
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace:
         condition: service_started
@@ -290,7 +296,7 @@ services:
       AWS_ACCESS_KEY_ID:
       AWS_SECRET_ACCESS_KEY:
       AWS_DEFAULT_REGION:
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace-setup:
         condition: service_completed_successfully
@@ -317,7 +323,7 @@ services:
       AWS_ACCESS_KEY_ID:
       AWS_SECRET_ACCESS_KEY:
       AWS_DEFAULT_REGION:
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace-setup:
         condition: service_completed_successfully
@@ -350,7 +356,7 @@ services:
       AWS_ACCESS_KEY_ID:
       AWS_SECRET_ACCESS_KEY:
       AWS_DEFAULT_REGION:
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace:
         condition: service_started
@@ -446,7 +452,7 @@ services:
       MINIO_ACCESS_KEY: ace3api
     build:
       context: ./phishkit
-    image: phishkit-manager:latest
+    image: ${ACE3_PHISHKIT_MANAGER_IMAGE_URL:-phishkit-manager:latest}
     depends_on:
       phishkit-init:
         condition: service_completed_successfully
