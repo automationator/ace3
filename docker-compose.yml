@@ -3,6 +3,7 @@
 # ACE3_IMAGE_URL
 # ACE3_HTTP_IMAGE_URL
 # ACE3_PHISHKIT_MANAGER_IMAGE_URL
+# ACE3_PHISHKIT_IMAGE_URL
 
 x-common-env: &common-env
   ACE_TARGET: "dev"
@@ -441,7 +442,7 @@ services:
     build:
       context: ./phishkit
       dockerfile: Dockerfile.phishkit
-    image: phishkit:latest
+    image: ${ACE3_PHISHKIT_IMAGE_URL:-phishkit:latest}
     # this is here just to build the image
     entrypoint: /bin/true
 
