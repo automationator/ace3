@@ -2715,6 +2715,10 @@ set_encryption_password_parser.set_defaults(func=set_encryption_password)
 
 def test_encryption_password(args):
     import saq.crypto
+    if not saq.crypto.encryption_key_set():
+        logging.warning("encryption key is not set yet")
+        sys.exit(2)
+
     if args.password is None:
         password = getpass.getpass("Enter the decryption password:")
     else:

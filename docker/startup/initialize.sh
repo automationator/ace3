@@ -91,6 +91,10 @@ then
     ssh-keygen -t rsa -b 4096 -f data/ssh/id_rsa -N ""
 fi
 
+# if we're missing any of the required authentication credentials then we create them here
+# this is for someone just standing up a quick dev environment to test this out
+# production systems should have these values defined
+
 bin/initialize_auth.sh
 
 # TODO get rid of these

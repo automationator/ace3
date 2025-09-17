@@ -11,10 +11,17 @@ then
     export SAQ_ENC="test"
 fi
 
-if ! ace enc test -p "$SAQ_ENC" &> /dev/null
+ace enc test -p "$SAQ_ENC" &> /dev/null
+TEST_RESULT="$?"
+
+if [ "$TEST_RESULT" -eq 2 ]
 then
     echo "setting encryption password"
     ace enc set -o --password="$SAQ_ENC"
+elif [ "$TEST_RESULT" -ne 0 ]
+then
+    echo "encryption verification failed: is SAQ_ENC env var correct?"
+    exit 1
 else
     echo "encryption password verified"
 fi

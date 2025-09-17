@@ -10,7 +10,12 @@ x-common-env: &common-env
   ACE_VERSION: "3.0.0"
   ACE_DISABLE_AUTOSTART:
   SAQ_ENC: ${SAQ_ENC:-test}
-  SAQ_CONFIG_PATHS: "etc/saq.dev.yaml"
+  SAQ_CONFIG_PATHS:
+  ACE_DB_USER_PASSWORD:
+  ACE_SUPERUSER_DB_USER_PASSWORD:
+  REDIS_PASSWORD:
+  MINIO_PASSWORD:
+  RABBITMQ_PASSWORD:
 
 x-common-volumes: &common-volumes
   - .:/opt/ace
@@ -46,10 +51,7 @@ services:
 
   # performs all first-time initialization routines that do not require the db
   ace-initialize:
-    environment:
-      <<: *common-env
-      ACE_DB_USER_PASSWORD:
-      ACE_SUPERUSER_DB_USER_PASSWORD:
+    environment: *common-env
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     command: /bin/bash -c "/opt/ace/docker/startup/initialize.sh"
     depends_on:
