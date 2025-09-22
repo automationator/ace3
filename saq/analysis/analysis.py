@@ -1,71 +1,16 @@
 import logging
 from typing import TYPE_CHECKING, Any, Callable, Optional
-import uuid
 
 from saq.analysis.base_node import BaseNode
-from saq.analysis.file_manager.file_manager_interface import FileManagerInterface
 from saq.analysis.module_path import MODULE_PATH
 from saq.analysis.pivot_link import PivotLink
 from saq.analysis.search import search_down
 from saq.analysis.serialize.analysis_serializer import AnalysisSerializer
+from saq.analysis.summary_detail import SummaryDetail
 from saq.constants import EVENT_ANALYSIS_MARKED_COMPLETED, EVENT_OBSERVABLE_ADDED
 
 if TYPE_CHECKING:
     from saq.analysis.observable import Observable
-    from saq.analysis.analysis_tree.analysis_tree_manager import AnalysisTreeManager
-
-class SummaryDetail():
-    """Represents a summary detail to present to the analyst.
-
-    Details added to Analysis objects are displayed inline with the analysis
-    tree. Details added to RootAnalysis are displayed at the top of the
-    display."""
-
-    ID = 'id'
-    HEADER = 'header'
-    CONTENT = 'content'
-    FORMAT = 'format'
-
-    def __init__(self, header=None, content=None, format=None, id=None):
-        # generic uuid
-        self.id = str(uuid.uuid4()) if id is None else id
-        # the visual header displayed above the summary
-        self.header = header
-        # the actual content of the summary
-        self.content = content
-        # the format of the content (see saq/constants.py for SUMMARY_DETAIL_FORMAT_* values)
-        self.format = format
-
-    def to_dict(self):
-        return {
-            SummaryDetail.ID: self.id,
-            SummaryDetail.HEADER: self.header,
-            SummaryDetail.CONTENT: self.content,
-            SummaryDetail.FORMAT: self.format,
-        }
-
-    @staticmethod
-    def from_dict(d):
-        result = SummaryDetail()
-        if SummaryDetail.ID in d:
-            result.id = d[SummaryDetail.ID]
-        if SummaryDetail.HEADER in d:
-            result.header = d[SummaryDetail.HEADER]
-        if SummaryDetail.CONTENT in d:
-            result.content = d[SummaryDetail.CONTENT]
-        if SummaryDetail.FORMAT in d:
-            result.format = d[SummaryDetail.FORMAT]
-        return result
-
-    @property
-    def json(self):
-        return self.to_dict()
-
-    def __eq__(self, other):
-        if not isinstance(other, SummaryDetail):
-            return False
-
-        return self.id == other.id
 
 class Analysis(BaseNode):
     """Represents an output of analysis work."""
