@@ -1,11 +1,15 @@
 
 from uuid import uuid4
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from saq.analysis.detectable import DetectionManager
 from saq.analysis.event_source import EventSource
 from saq.analysis.sortable import SortManager
 from saq.analysis.taggable import TagManager
+
+if TYPE_CHECKING:
+    from saq.analysis.analysis_tree.analysis_tree_manager import AnalysisTreeManager
+    from saq.analysis.file_manager.file_manager_interface import FileManagerInterface
 
 
 class BaseNode(EventSource):
@@ -20,6 +24,52 @@ class BaseNode(EventSource):
         self._tag_manager = TagManager(event_source=self)
         self._detection_manager = DetectionManager(event_source=self)
         self._sort_manager = SortManager(sort_order)
+
+        # a reference to the RootAnalysis object this analysis belongs to (injected)
+        self._analysis_tree_manager: Optional["AnalysisTreeManager"] = None
+
+        # file I/O manager (injected)
+        self._file_manager: Optional["FileManagerInterface"] = None
+
+    @property
+    def analysis_tree_manager(self) -> "AnalysisTreeManager":
+        if self._analysis_tree_manager is None:
+            raise RuntimeError("analysis_tree_manager is not set")
+
+        return self._analysis_tree_manager
+    
+    @analysis_tree_manager.setter
+    def analysis_tree_manager(self, value: "AnalysisTreeManager"):
+        from saq.analysis.analysis_tree.analysis_tree_manager import AnalysisTreeManager
+        assert isinstance(value, AnalysisTreeManager)
+        self._analysis_tree_manager = value
+
+    @property
+    def file_manager(self) -> "FileManagerInterface":
+        if self._file_manager is None:
+            raise RuntimeError("file_manager is not set")
+
+        return self._file_manager
+
+    @file_manager.setter
+    def file_manager(self, value: "FileManagerInterface"):
+        from saq.analysis.file_manager.file_manager_interface import FileManagerInterface
+        assert isinstance(value, FileManagerInterface)
+        self._file_manager = value
+    
+
+    # injection methods
+    # ------------------------------------------------------------------------
+
+    def inject_analysis_tree_manager(self, analysis_tree_manager: "AnalysisTreeManager"):
+        from saq.analysis.analysis_tree.analysis_tree_manager import AnalysisTreeManager
+        assert isinstance(analysis_tree_manager, AnalysisTreeManager)
+        self.analysis_tree_manager = analysis_tree_manager
+
+    def inject_file_manager(self, file_manager: "FileManagerInterface"):
+        from saq.analysis.file_manager.file_manager_interface import FileManagerInterface
+        assert isinstance(file_manager, FileManagerInterface)
+        self.file_manager = file_manager
 
     # tag management
     # ------------------------------------------------------------------------

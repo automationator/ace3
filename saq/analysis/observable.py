@@ -50,10 +50,6 @@ class Observable(BaseNode):
         self._grouping_target = False
         self._volatile = volatile
 
-        # reference to the AnalysisTreeManager object
-        self._analysis_tree_manager: Optional["AnalysisTreeManager"] = None # injected
-        self._file_manager: Optional[FileManagerInterface] = None # injected
-
         self._cache_id = None
         self._faqueue_hits = None
         self._faqueue_search_url = None
@@ -72,38 +68,6 @@ class Observable(BaseNode):
     def disposition_history(self):
         from saq.database.database_observable import get_observable_disposition_history
         return get_observable_disposition_history(self)
-
-    # injection methods
-    # ------------------------------------------------------------------------
-
-    def inject_analysis_tree_manager(self, analysis_tree_manager: "AnalysisTreeManager"):
-        self.analysis_tree_manager = analysis_tree_manager
-
-    def inject_file_manager(self, file_manager: FileManagerInterface):
-        self.file_manager = file_manager
-
-    @property
-    def analysis_tree_manager(self) -> "AnalysisTreeManager":
-        if self._analysis_tree_manager is None:
-            raise RuntimeError("analysis_tree_manager is not set")
-
-        return self._analysis_tree_manager
-
-    @analysis_tree_manager.setter
-    def analysis_tree_manager(self, value: "AnalysisTreeManager"):
-        self._analysis_tree_manager = value
-
-    @property
-    def file_manager(self) -> FileManagerInterface:
-        if self._file_manager is None:
-            raise RuntimeError("file_manager is not set")
-
-        return self._file_manager
-    
-    @file_manager.setter
-    def file_manager(self, value: FileManagerInterface):
-        assert isinstance(value, FileManagerInterface)
-        self._file_manager = value
 
     # JSON serialization methods
     # ------------------------------------------------------------------------
