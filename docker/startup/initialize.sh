@@ -60,7 +60,7 @@ fi
 
 if [ ! -f /ace-sql-readonly/done ]
 then
-    bin/initialize_database.py /ace-sql-readonly --replica
+    bin/initialize_database.py /ace-sql-readonly --type replica --primary-database ${ACE_DB_HOST:-ace-db}
 fi
 
 # TOOD

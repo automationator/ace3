@@ -43,14 +43,14 @@ def get_admin_password() -> str:
 
     return admin_password
 
-def initialize_replica(target_dir: str):
+def initialize_replica(target_dir: str, primary_database: str):
     admin_password = get_admin_password()
 
     target_path = os.path.join(target_dir, "98-configure-and-start-replica.sql")
     with open(target_path, "w") as fp:
         fp.write(f"""
         CHANGE REPLICATION SOURCE TO
-        SOURCE_HOST = 'ace-db',
+        SOURCE_HOST = '{primary_database}',
         SOURCE_PORT = 3306,
         SOURCE_USER = 'ace-superuser',
         SOURCE_PASSWORD = '{admin_password}',
@@ -62,7 +62,7 @@ def initialize_replica(target_dir: str):
 
     print(f"created {target_path}")
 
-def initialize_sql(target_dir: str, replica: bool=False):
+def initialize_sql(target_dir: str):
     source_dir = "sql"
     #target_dir = "/docker-entrypoint-initdb.d"
     print(f"copying {source_dir} to {target_dir}")
@@ -216,9 +216,10 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("target_dir", help="Ends up as /docker-entrypoint-initdb.d in the mysql container")
-    parser.add_argument("--replica", action="store_true", help="Initialize for a replica")
+    parser.add_argument("--type", help="Type of database to initialize", choices=["primary", "replica"])
+    parser.add_argument("--primary-database", help="The hostname of the primary database", default="ace-db")
     args = parser.parse_args()
-    if args.replica:
-        initialize_replica(args.target_dir)
+    if args.type == "replica":
+        initialize_replica(args.target_dir, args.primary_database)
     else:
-        initialize_sql(args.target_dir, args.replica)
+        initialize_sql(args.target_dir)
