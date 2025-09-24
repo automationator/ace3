@@ -71,7 +71,7 @@ services:
 
   ace-db:
     image: mysql:9.2
-    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_520_ci --max-allowed-packet=1073741824 --log-error=/dev/stderr --general-log=1 --general-log-file=/dev/stdout
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_520_ci --max-allowed-packet=1073741824
     healthcheck:
       test: ["CMD", "mysql", "--defaults-file=/docker-entrypoint-initdb.d/mysql_defaults", "-e", "use ace;"]
       interval: 3s
@@ -98,7 +98,7 @@ services:
 
   ace-db-readonly:
     image: mysql:9.2
-    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_520_ci --max-allowed-packet=1073741824 --log-error=/dev/stderr --general-log=1 --general-log-file=/dev/stdout
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_520_ci --max-allowed-packet=1073741824
     healthcheck:
       test: ["CMD", "mysql", "--defaults-file=/docker-entrypoint-initdb.d/mysql_defaults", "-h", "ace-db-readonly", "-e", "use ace;"]
       interval: 3s
