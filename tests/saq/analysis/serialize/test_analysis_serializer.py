@@ -35,9 +35,9 @@ class TestAnalysis(Analysis):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Initialize component managers with real instances
-        self._tag_manager = TagManager(self)
-        self._detection_manager = DetectionManager(self)
-        self._sort_manager = SortManager(self)
+        #self._tag_manager = TagManager(self)
+        #self._detection_manager = DetectionManager(self)
+        #self._sort_manager = SortManager(self)
 
 
 @pytest.fixture
@@ -54,14 +54,14 @@ def sample_analysis():
     analysis.llm_context_documents = ["doc1", "doc2"]
     
     # Add some tags via the tag manager
-    analysis._tag_manager.add_tag("test-tag1")
-    analysis._tag_manager.add_tag("test-tag2")
+    analysis.add_tag("test-tag1")
+    analysis.add_tag("test-tag2")
     
     # Add some detections via the detection manager
     analysis.add_detection_point("test-detection")
     
     # Set sort order via the sort manager
-    analysis._sort_manager.sort_order = 50
+    analysis.sort_order = 50
     
     # Add some observables
     analysis._observables = [MockObservable("obs-1"), MockObservable("obs-2")]
@@ -223,7 +223,7 @@ def test_deserialize_full_data():
     AnalysisSerializer.deserialize(analysis, data)
     
     # Verify component manager data was set
-    assert analysis._sort_manager.sort_order == 75
+    assert analysis.sort_order == 75
     
     # Verify analysis properties were set
     assert analysis.uuid == "test-uuid-67890"
@@ -331,7 +331,7 @@ def test_round_trip_serialization(sample_analysis):
     assert new_analysis.observable_references == ["obs-1", "obs-2"]
     
     # Verify component manager data is preserved
-    assert new_analysis._sort_manager.sort_order == sample_analysis._sort_manager.sort_order
+    assert new_analysis.sort_order == sample_analysis.sort_order
     
     # Verify summary details are preserved
     assert len(new_analysis.summary_details) == len(sample_analysis.summary_details)

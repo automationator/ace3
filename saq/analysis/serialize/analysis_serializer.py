@@ -24,12 +24,13 @@ class AnalysisSerializer:
     @staticmethod
     def serialize(analysis: "Analysis") -> dict:
         """Serialize an Analysis object to a dictionary for JSON storage."""
-        result = {}
+        from saq.analysis.base_node import BaseNode
+        result = BaseNode.get_json_data(analysis)
         
         # Include data from component managers
-        result.update(analysis._tag_manager.get_json_data())
-        result.update(analysis._detection_manager.get_json_data())
-        result.update(analysis._sort_manager.get_json_data())
+        #result.update(analysis._tag_manager.get_json_data())
+        #result.update(analysis._detection_manager.get_json_data())
+        #result.update(analysis._sort_manager.get_json_data())
 
         # Include analysis-specific data
         result.update({
@@ -52,11 +53,14 @@ class AnalysisSerializer:
     def deserialize(analysis: "Analysis", data: dict):
         """Deserialize a dictionary into an Analysis object."""
         assert isinstance(data, dict)
+
+        from saq.analysis.base_node import BaseNode
+        BaseNode.set_json_data(analysis, data)
         
         # Set component manager data
-        analysis._tag_manager.set_json_data(data)
-        analysis._detection_manager.set_json_data(data)
-        analysis._sort_manager.set_json_data(data)
+        #analysis._tag_manager.set_json_data(data)
+        #analysis._detection_manager.set_json_data(data)
+        #analysis._sort_manager.set_json_data(data)
 
         # set uuid
         if KEY_UUID in data:

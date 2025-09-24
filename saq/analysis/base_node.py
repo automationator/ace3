@@ -2,29 +2,33 @@
 from uuid import uuid4
 from typing import TYPE_CHECKING, Optional
 
-from saq.analysis.detectable import DetectionManager
+from saq.analysis.detection_point import DetectionPoint
 from saq.analysis.event_source import EventSource
-from saq.analysis.sortable import SortManager
-from saq.analysis.taggable import TagManager
+from saq.analysis.tag import Tag
 
 if TYPE_CHECKING:
     from saq.analysis.analysis_tree.analysis_tree_manager import AnalysisTreeManager
     from saq.analysis.file_manager.file_manager_interface import FileManagerInterface
 
+KEY_TAGS = 'tags'
+KEY_DETECTIONS = 'detections'
+KEY_SORT_ORDER = 'sort_order'
 
 class BaseNode():
     """The base class of a node in the analysis tree."""
 
     def __init__(self, *args, uuid: Optional[str]=None, sort_order: int=100, **kwargs):
-        super().__init__(*args, **kwargs)
+        self.uuid:str = uuid or str(uuid4())
 
-        self.uuid = uuid or str(uuid4())
+        self.tags:list[Tag] = []
+        self.detections:list[DetectionPoint] = []
+        self.sort_order:int = sort_order
 
         # composition-based component managers
-        self._tag_manager = TagManager(event_source=self)
-        self._detection_manager = DetectionManager(event_source=self)
-        self._sort_manager = SortManager(sort_order)
         self._event_source = EventSource()
+        #self._tag_manager = TagManager(tags=self._tags)
+        #self._detection_manager = DetectionManager(detections=self._detections)
+        #self._sort_manager = SortManager(sort_order)
 
         # a reference to the RootAnalysis object this analysis belongs to (injected)
         self._analysis_tree_manager: Optional["AnalysisTreeManager"] = None
@@ -75,59 +79,64 @@ class BaseNode():
     # tag management
     # ------------------------------------------------------------------------
 
-    @property
-    def tags(self):
-        return self._tag_manager.tags
+    def add_tag(self, tag: str):
+        assert isinstance(tag, str)
+        if tag in [t.name for t in self.tags]:
+            return
 
-    @tags.setter
-    def tags(self, value):
-        self._tag_manager.tags = value
-
-    def add_tag(self, tag):
-        self._tag_manager.add_tag(tag)
-
-    def remove_tag(self, tag):
-        self._tag_manager.remove_tag(tag)
+        t = Tag(name=tag)
+        self.tags.append(t)
+        
+    def remove_tag(self, tag: str):
+        assert isinstance(tag, str)
+        targets = [t for t in self.tags if t.name == tag]
+        for target in targets:
+            self.tags.remove(target)
 
     def clear_tags(self):
-        self._tag_manager.clear_tags()
+        self.tags.clear()
 
     def has_tag(self, tag_value):
         """Returns True if this object has this tag."""
-        return self._tag_manager.has_tag(tag_value)
+        return tag_value in [x.name for x in self.tags]
 
     # detection management
     # ------------------------------------------------------------------------
 
-    @property
-    def detections(self):
-        return self._detection_manager.detections
-
-    @detections.setter
-    def detections(self, value):
-        self._detection_manager.detections = value
-
-    def has_detection_points(self):
+    def has_detection_points(self) -> bool:
         """Returns True if this object has at least one detection point, False otherwise."""
-        return self._detection_manager.has_detection_points()
+        return len(self.detections) != 0
 
-    def add_detection_point(self, description, details=None):
+    def add_detection_point(self, description: str, details=None) -> DetectionPoint:
         """Adds the given detection point to this object."""
-        self._detection_manager.add_detection_point(description, details)
+        assert isinstance(description, str)
+        assert description
+
+        detection = DetectionPoint(description, details)
+
+        if detection in self.detections:
+            return detection
+
+        self.detections.append(detection)
+        return detection
 
     def clear_detection_points(self):
-        self._detection_manager.clear_detection_points()
+        self.detections.clear()
 
-    # sort management
-    # ------------------------------------------------------------------------
+    def get_json_data(self) -> dict:
+        return {
+            KEY_TAGS: self.tags,
+            KEY_DETECTIONS: self.detections,
+            KEY_SORT_ORDER: self.sort_order,
+        }
 
-    @property
-    def sort_order(self):
-        return self._sort_manager.sort_order
-
-    @sort_order.setter
-    def sort_order(self, value):
-        self._sort_manager.sort_order = value
+    def set_json_data(self, data: dict):
+        if KEY_TAGS in data:
+            self.tags = data[KEY_TAGS]
+        if KEY_DETECTIONS in data:
+            self.detections = data[KEY_DETECTIONS]
+        if KEY_SORT_ORDER in data:
+            self.sort_order = data[KEY_SORT_ORDER]
 
     # event management
     # ------------------------------------------------------------------------
@@ -136,7 +145,7 @@ class BaseNode():
         self._event_source.add_event_listener(event, callback)
 
     def fire_event(self, event, *args, **kwargs):
-        self._event_source.fire_event(event, *args, **kwargs)
+        self._event_source.fire_event(self, event, *args, **kwargs)
 
     def clear_event_listeners(self):
         self._event_source.clear_event_listeners()

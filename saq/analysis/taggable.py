@@ -1,46 +1,46 @@
 import logging
-from saq.analysis.event_source import EventSource
 from saq.analysis.tag import Tag
-from saq.constants import DIRECTIVE_WHITELISTED, EVENT_TAG_ADDED
 
 KEY_TAGS = 'tags'
 
 class TagManager:
     """Manages tag-related functionality for any object through composition."""
 
-    def __init__(self, event_source=None):
-        self._tags = []
-        self._event_source = event_source
+    def __init__(self, tags: list[Tag]):
+        self._tags = tags
 
     @property
-    def tags(self):
+    def tags(self) -> list[Tag]:
         return self._tags
 
     @tags.setter
-    def tags(self, value):
+    def tags(self, value: list[Tag]):
         assert isinstance(value, list)
         assert all([isinstance(i, str) or isinstance(i, Tag) for i in value])
-        self._tags = value
+        # we manage a reference to the list so we can't just set it to the new value
+        self._tags.clear()
+        self._tags.extend(value)
 
-    def add_tag(self, tag):
+    #
+    # XXX for some reason we work with strings but store Tag objects
+    #
+
+    def add_tag(self, tag: str):
         assert isinstance(tag, str)
-        if tag in [t.name for t in self.tags]:
+        if tag in [t.name for t in self._tags]:
             return
 
         t = Tag(name=tag)
         self.tags.append(t)
-        logging.debug("added {} to {}".format(t, self._event_source or self))
         
-        # Fire event if we have an event source
-        if self._event_source and hasattr(self._event_source, 'fire_event'):
-            self._event_source.fire_event(self._event_source, EVENT_TAG_ADDED, t)
-
-    def remove_tag(self, tag):
+    def remove_tag(self, tag: str):
         assert isinstance(tag, str)
-        self.tags = [t for t in self.tags if t.name != tag]
+        targets = [t for t in self.tags if t.name == tag]
+        for target in targets:
+            self.tags.remove(target)
 
     def clear_tags(self):
-        self._tags = []
+        self.tags.clear()
 
     def has_tag(self, tag_value):
         """Returns True if this object has this tag."""

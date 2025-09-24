@@ -72,14 +72,14 @@ def sample_observable():
     observable.llm_context_documents = ["doc1", "doc2", "doc3"]
     
     # Add some tags via the tag manager
-    observable._tag_manager.add_tag("test-tag1")
-    observable._tag_manager.add_tag("test-tag2")
+    observable.add_tag("test-tag1")
+    observable.add_tag("test-tag2")
     
     # Add some detections via the detection manager
     observable.add_detection_point("test-detection")
     
     # Set sort order via the sort manager
-    observable._sort_manager.sort_order = 75
+    observable.sort_order = 75
     
     return observable
 
@@ -240,7 +240,7 @@ def test_deserialize_full_data():
     ObservableSerializer.deserialize(observable, data)
     
     # Verify component manager data was set
-    assert observable._sort_manager.sort_order == 150
+    assert observable.sort_order == 150
     
     # Verify observable properties were set
     assert observable.uuid == "deserialized-id-67890"
@@ -375,7 +375,7 @@ def test_round_trip_serialization(sample_observable):
         assert rel.r_type == sample_observable._relationships[i].r_type
     
     # Verify component manager data is preserved
-    assert new_observable._sort_manager.sort_order == sample_observable._sort_manager.sort_order
+    assert new_observable.sort_order == sample_observable.sort_order
 
 
 @pytest.mark.unit

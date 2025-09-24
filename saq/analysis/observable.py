@@ -201,7 +201,7 @@ class Observable(BaseNode):
         if directive not in self.directives:
             self.directives.append(directive)
             logging.debug("added directive {} to {}".format(directive, self))
-            self.fire_event(self, EVENT_DIRECTIVE_ADDED, directive)
+            self.fire_event(EVENT_DIRECTIVE_ADDED, directive)
 
     def has_directive(self, directive):
         """Returns True if this Observable has this directive."""
@@ -394,7 +394,7 @@ class Observable(BaseNode):
 
         r = Relationship(r_type, target)
         self.relationships.append(r)
-        self.fire_event(self, EVENT_RELATIONSHIP_ADDED, target, relationship=r)
+        self.fire_event(EVENT_RELATIONSHIP_ADDED, target, relationship=r)
         return r
 
     def get_relationships_by_type(self, r_type):
@@ -486,7 +486,7 @@ class Observable(BaseNode):
         assert isinstance(parent, Observable)
 
         self._analysis[analysis.module_path] = analysis
-        self.fire_event(self, EVENT_ANALYSIS_ADDED, analysis)
+        self.fire_event(EVENT_ANALYSIS_ADDED, analysis)
 
         return analysis
 

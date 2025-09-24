@@ -170,7 +170,7 @@ class Analysis(BaseNode):
 
         if _trigger_event:
             logging.debug(f"{self} has marked as completed manually (fire event)")
-            self.fire_event(self, EVENT_ANALYSIS_MARKED_COMPLETED)
+            self.fire_event(EVENT_ANALYSIS_MARKED_COMPLETED)
 
     @property
     def module_path(self) -> str:
@@ -354,7 +354,7 @@ class Analysis(BaseNode):
         from saq.analysis.observable import Observable
         assert isinstance(observable, Observable)
         self._observables.append(observable)
-        self.fire_event(self, EVENT_OBSERVABLE_ADDED, observable)
+        self.fire_event(EVENT_OBSERVABLE_ADDED, observable)
 
     # special methods
     # ------------------------------------------------------------------------

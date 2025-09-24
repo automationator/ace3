@@ -26,12 +26,13 @@ class ObservableSerializer:
     @staticmethod
     def serialize(observable: "Observable") -> dict:
         """Serialize an Observable object to a dictionary for JSON storage."""
-        result = {}
+        from saq.analysis.base_node import BaseNode
+        result = BaseNode.get_json_data(observable)
         
         # Include data from component managers
-        result.update(observable._tag_manager.get_json_data())
-        result.update(observable._detection_manager.get_json_data())
-        result.update(observable._sort_manager.get_json_data())
+        #result.update(observable._tag_manager.get_json_data())
+        #result.update(observable._detection_manager.get_json_data())
+        #result.update(observable._sort_manager.get_json_data())
         
         # Include observable-specific data
         result.update({
@@ -57,11 +58,14 @@ class ObservableSerializer:
     def deserialize(observable: "Observable", data: dict):
         """Deserialize a dictionary into an Observable object."""
         assert isinstance(data, dict)
+
+        from saq.analysis.base_node import BaseNode
+        BaseNode.set_json_data(observable, data)
         
         # Set component manager data
-        observable._tag_manager.set_json_data(data)
-        observable._detection_manager.set_json_data(data)
-        observable._sort_manager.set_json_data(data)
+        #observable._tag_manager.set_json_data(data)
+        #observable._detection_manager.set_json_data(data)
+        #observable._sort_manager.set_json_data(data)
 
         # Set observable properties
         if KEY_ID in data:
