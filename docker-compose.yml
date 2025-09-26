@@ -209,7 +209,7 @@ services:
 
   http-debug:
     environment: *common-env
-    image: "ace3:${ACE_VERSION:-latest}"
+    image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       - ace
     command: /bin/bash -c "/opt/ace/docker/startup/start_debug_gui.sh"

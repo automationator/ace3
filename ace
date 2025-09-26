@@ -1325,7 +1325,8 @@ def test_database_connections(args):
                 continue
 
             db_name = key[len('database_'):]
-            print("trying {}...".format(db_name), end='', flush=True)
+            hostname = get_config()[key]['hostname']
+            print("trying {} @ hostname {} ...".format(db_name, hostname), end='', flush=True)
             try:
                 with get_db_connection(db_name) as db:
                     c = db.cursor()

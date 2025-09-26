@@ -446,7 +446,7 @@ def initialize_environment(
     data_dir=None,
     temp_dir=None,
     log_level=logging.INFO,
-    config_paths=[],
+    config_paths=None,
     logging_config_path=None,
     relative_dir=None,
     encryption_password_plaintext=None,
@@ -484,13 +484,7 @@ def initialize_environment(
     else:
         set_g(G_SAQ_RELATIVE_DIR, os.path.relpath(os.getcwd(), start=get_base_dir()))
 
-    if g_boolean(G_UNIT_TESTING):
-        # unit testing loads different configurations
-        g_list(G_CONFIG_PATHS).append(os.path.join(get_base_dir(), "etc", "saq.unittest.default.yaml"))
-    else:
-        g_list(G_CONFIG_PATHS).append(os.path.join(get_base_dir(), "etc", "saq.yaml"))
-
-    initialize_configuration()
+    initialize_configuration(config_paths=config_paths)
 
     from saq.integration.integration_loader import load_integrations
     load_integrations()

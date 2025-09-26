@@ -103,29 +103,8 @@ def initialize_configuration(config_paths: Optional[list[str]]=None):
     if config_paths is None:
         config_paths = []
     
-    CONFIG_PATHS = []
-
-    # add any config files specified in SAQ_CONFIG_PATHS env var (command separated)
-    if "SAQ_CONFIG_PATHS" in os.environ:
-        for config_path in os.environ["SAQ_CONFIG_PATHS"].split(","):
-            config_path = config_path.strip()
-            if not os.path.exists(config_path):
-                sys.stderr.write(f"WARNING: config path {config_path} specified in SAQ_CONFIG_PATHS env var does not exist\n")
-            else:
-                if config_path not in CONFIG_PATHS:
-                    CONFIG_PATHS.append(config_path)
-
-    # and then add any specified on the command line
-    for config_path in config_paths:
-        if not os.path.isabs(config_path):
-            if not os.path.exists(config_path):
-                sys.stderr.write(f"WARNING: config path {config_path} specified on the command line does not exist\n")
-            else:
-                if config_path not in CONFIG_PATHS:
-                    CONFIG_PATHS.append(config_path)
-
     try:
-        CONFIG = load_configuration()
+        CONFIG = load_configuration(config_paths=config_paths)
     except Exception as e:
         sys.stderr.write(f"ERROR: unable to load configuration: {e}")
         raise
