@@ -1,4 +1,5 @@
-FROM docker:dind
+ARG DOCKER_IN_DOCKER_IMAGE=docker:dind
+FROM ${DOCKER_IN_DOCKER_IMAGE}
 
 RUN apk update && apk add --no-cache python3
 

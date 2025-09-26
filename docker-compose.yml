@@ -39,6 +39,7 @@ services:
     build:
       context: .
       args:
+        PYTHON_DOCKER_IMAGE: ${PYTHON_DOCKER_IMAGE:-python3.12-bookworm}
         SAQ_USER_ID: ${SAQ_USER_ID:-1000}
         SAQ_GROUP_ID: ${SAQ_GROUP_ID:-1000}
     image: ${ACE3_IMAGE_URL:-ace3:latest}
@@ -70,7 +71,7 @@ services:
       - ace
 
   ace-db:
-    image: mysql:9.2
+    image: ${MYSQL_DOCKER_IMAGE:-mysql:9.2}
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_520_ci --max-allowed-packet=1073741824
     healthcheck:
       test: ["CMD", "mysql", "--defaults-file=/docker-entrypoint-initdb.d/mysql_defaults", "-e", "use ace;"]
@@ -97,7 +98,7 @@ services:
       - ace
 
   ace-db-readonly:
-    image: mysql:9.2
+    image: ${MYSQL_DOCKER_IMAGE:-mysql:9.2}
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_520_ci --max-allowed-packet=1073741824
     healthcheck:
       test: ["CMD", "mysql", "--defaults-file=/docker-entrypoint-initdb.d/mysql_defaults", "-h", "ace-db-readonly", "-e", "use ace;"]
@@ -140,8 +141,10 @@ services:
 
   ace-http:
     build: 
-      context: .
       dockerfile: Dockerfile.ace-http
+      context: .
+      args:
+        NGINX_DOCKER_IMAGE: ${NGINX_DOCKER_IMAGE:-nginx:latest}
     image: ${ACE3_HTTP_IMAGE_URL:-ace3-http:latest}
     restart: always
     depends_on:
@@ -186,7 +189,7 @@ services:
       - ace
 
   redis:
-    image: redis:latest
+    image: ${REDIS_DOCKER_IMAGE:-redis:latest}
     ports:
       - "6379:6379"
     restart: always
@@ -382,7 +385,7 @@ services:
   rabbitmq:
     environment:
       RABBITMQ_DEFAULT_USER: "ace3"
-    image: rabbitmq
+    image: ${RABBITMQ_DOCKER_IMAGE:-rabbitmq}
     ports:
       - "5672:5672"
     restart: always
@@ -409,7 +412,7 @@ services:
   minio:
     environment:
       MINIO_ROOT_USER: "ace3"
-    image: minio/minio:latest
+    image: ${MINIO_DOCKER_IMAGE:-minio/minio:latest}
     restart: always
     hostname: minio
     ports:
@@ -436,7 +439,7 @@ services:
       - ace
 
   minio-init:
-    image: minio/mc:latest
+    image: ${MINIO_MC_DOCKER_IMAGE:-minio/mc:latest}
     depends_on:
       minio:
         condition: service_healthy
@@ -452,6 +455,8 @@ services:
     build:
       context: ./phishkit
       dockerfile: Dockerfile.phishkit
+      args:
+        UBUNTU_DOCKER_IMAGE: ${UBUNTU_DOCKER_IMAGE:-ubuntu:22.04}
     image: ${ACE3_PHISHKIT_IMAGE_URL:-phishkit:latest}
     # this is here just to build the image
     entrypoint: /bin/true
@@ -464,6 +469,8 @@ services:
     hostname: phishkit
     build:
       context: ./phishkit
+      args:
+        DOCKER_IN_DOCKER_IMAGE: ${DOCKER_IN_DOCKER_IMAGE:-docker:dind}
     image: ${ACE3_PHISHKIT_MANAGER_IMAGE_URL:-phishkit-manager:latest}
     depends_on:
       phishkit-init:
@@ -489,7 +496,7 @@ services:
       QDRANT__SERVICE__ENABLE_TLS: 1
       QDRANT__TLS__CERT: /ssl/ace.cert.pem
       QDRANT__TLS__KEY: /ssl/ace.key.pem
-    image: qdrant/qdrant
+    image: ${QDRANT_DOCKER_IMAGE:-qdrant/qdrant}
     hostname: qdrant
     entrypoint: >
       /bin/sh -c "
@@ -506,7 +513,6 @@ services:
       - ace-auth:/auth
     networks:
       - ace
-
 
 volumes:
   ace-data:

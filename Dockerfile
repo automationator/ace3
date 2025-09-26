@@ -1,4 +1,5 @@
-FROM python:3.12-bookworm
+ARG PYTHON_DOCKER_IMAGE=python:3.12-bookworm
+FROM ${PYTHON_DOCKER_IMAGE}
 
 # add metadata labels
 LABEL maintainer="John Davison <unixfreak0037@gmail.com>"
@@ -15,8 +16,8 @@ ENV SAQ_HOME=/opt/ace \
     PATH=$PATH:/usr/local/share/npm-global/bin
 
 # build arguments
-ARG SAQ_USER_ID=${SAQ_USER_ID}
-ARG SAQ_GROUP_ID=${SAQ_GROUP_ID}
+ARG SAQ_USER_ID=1000
+ARG SAQ_GROUP_ID=1000
 ARG http_proxy
 ARG https_proxy
 

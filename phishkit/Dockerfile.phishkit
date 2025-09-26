@@ -1,4 +1,5 @@
-FROM ubuntu:22.04
+ARG UBUNTU_DOCKER_IMAGE=ubuntu:22.04
+FROM ${UBUNTU_DOCKER_IMAGE}
 
 # env vars
 ENV DEBIAN_FRONTEND=noninteractive
