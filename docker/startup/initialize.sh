@@ -55,7 +55,7 @@ bin/initialize_auth.sh
 
 if [ ! -f /docker-entrypoint-initdb.d/done ]
 then
-    bin/initialize_database.py /docker-entrypoint-initdb.d
+    bin/initialize_database.py /docker-entrypoint-initdb.d --primary-database ${ACE_DB_HOST:-ace-db}
 fi
 
 if [ ! -f /ace-sql-readonly/done ]
