@@ -19,6 +19,8 @@ x-common-env: &common-env
 
 x-common-volumes: &common-volumes
   - .:/opt/ace
+  # NOTE your ssh keys are mounted read-only in all containers
+  - ~/.ssh:/opt/ace/ssh:ro
   - ace-data:/opt/ace/data
   - ace-sql:/docker-entrypoint-initdb.d
   - ace-sql-readonly:/ace-sql-readonly

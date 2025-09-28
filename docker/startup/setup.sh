@@ -11,7 +11,7 @@ then
     export SAQ_ENC="test"
 fi
 
-ace enc test -p "$SAQ_ENC" &> /dev/null
+ace enc test -p "$SAQ_ENC"
 TEST_RESULT="$?"
 
 if [ "$TEST_RESULT" -eq 2 ]
