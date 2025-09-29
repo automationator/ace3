@@ -42,10 +42,13 @@
 # MINIO_HOSTNAME
 # QDRANT_HOSTNAME
 #
+# configuration options
+# SAQ_CONFIG_PATHS
+#
 
 x-common-env: &common-env
   SAQ_ENC: ${SAQ_ENC:-test}
-  SAQ_CONFIG_PATHS:
+  SAQ_CONFIG_PATHS: ${SAQ_CONFIG_PATHS:-}
   # if your primary database has a different hostname, you will need to pass it in as ACE_DB_HOST
   ACE_DB_HOST: ${ACE_DB_HOST:-ace-db}
   ACE_DB_READONLY_HOST: ${ACE_DB_READONLY_HOST:-ace-db-readonly}
@@ -160,6 +163,29 @@ services:
       - "3307:3306"
     hostname: ${ACE_DB_READONLY_HOST:-ace-db-readonly}
     networks: 
+      - ace
+
+  qdrant:
+    environment:
+      QDRANT__SERVICE__ENABLE_TLS: 1
+      QDRANT__TLS__CERT: /ssl/ace.cert.pem
+      QDRANT__TLS__KEY: /ssl/ace.key.pem
+    image: ${QDRANT_DOCKER_IMAGE:-qdrant/qdrant}
+    hostname: ${QDRANT_HOSTNAME:-qdrant}
+    entrypoint: >
+      /bin/sh -c "
+      export QDRANT__SERVICE__API_KEY=$(cat /auth/passwords/qdrant) && ./entrypoint.sh
+      "
+    depends_on:
+      ace-setup:
+        condition: service_completed_successfully
+    ports:
+      - "6333"
+    volumes:
+      - ace-qdrant:/qdrant/storage
+      - ace-ssl:/ssl:ro
+      - ace-auth:/auth
+    networks:
       - ace
 
   # performs all first-time initialization routines that require the db
@@ -282,9 +308,7 @@ services:
       - ace
 
   git:
-    environment: 
-      <<: *common-env
-      ACE_ZIP_PASSWORD:
+    environment: *common-env
     depends_on:
       - ace
     image: ${ACE3_IMAGE_URL:-ace3:latest}
@@ -297,9 +321,7 @@ services:
       - ace
 
   cron:
-    environment: 
-      <<: *common-env
-      ACE_ZIP_PASSWORD:
+    environment: *common-env
     depends_on:
       - ace
     image: ${ACE3_IMAGE_URL:-ace3:latest}
@@ -445,7 +467,7 @@ services:
       - ace-minio-events:/opt/minio/events
       - ace-auth:/auth
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://minio:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://${MINIO_HOSTNAME:-minio}:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -514,28 +536,6 @@ services:
     networks:
       - ace
 
-  qdrant:
-    environment:
-      QDRANT__SERVICE__ENABLE_TLS: 1
-      QDRANT__TLS__CERT: /ssl/ace.cert.pem
-      QDRANT__TLS__KEY: /ssl/ace.key.pem
-    image: ${QDRANT_DOCKER_IMAGE:-qdrant/qdrant}
-    hostname: ${QDRANT_HOSTNAME:-qdrant}
-    entrypoint: >
-      /bin/sh -c "
-      export QDRANT__SERVICE__API_KEY=$(cat /auth/passwords/qdrant) && ./entrypoint.sh
-      "
-    depends_on:
-      ace-setup:
-        condition: service_completed_successfully
-    ports:
-      - "6333"
-    volumes:
-      - ace-qdrant:/qdrant/storage
-      - ace-ssl:/ssl:ro
-      - ace-auth:/auth
-    networks:
-      - ace
 
 volumes:
   ace-data:
