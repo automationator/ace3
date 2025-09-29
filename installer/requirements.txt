@@ -32,6 +32,7 @@ oletools
 opencv-python
 pcodedmp
 pefile
+pika
 Pillow
 plyara
 progress

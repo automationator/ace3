@@ -120,13 +120,14 @@ service_llm_embedding:
 monitor:
   use_stdout: false
   use_stderr: false
-  use_logging: true
+  use_logging: false
   use_cache: false
 
 rabbitmq:
   username: ace3
   password: encrypted:rabbitmq.password
   host: rabbitmq
+  port: 5672
 
 minio:
   # for aws use s3.amazonaws.com port 443
@@ -252,11 +253,10 @@ service_journal_email_collector:
   enabled: true
   workload_type: journal
   delete_files: true
-  collection_frequency: 5
-  # the S3 bucket to collect emails from
-  s3_bucket: journal-emails
-  # the S3 prefix to collect emails from
-  s3_prefix: 
+  # this collector can run continuously without spinning the cpu
+  collection_frequency: 0
+  # delete s3 objects after (successful) collection
+  delete_s3_objects: true
   # any email that matches these rules are ignored
   blacklist_yara_rule_path: etc/blacklist.yar
 
