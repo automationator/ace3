@@ -6,7 +6,6 @@
 # these set the default output docker image tags
 # 
 # ACE3_IMAGE_URL
-# ACE3_HTTP_IMAGE_URL
 # ACE3_PHISHKIT_MANAGER_IMAGE_URL
 # ACE3_PHISHKIT_IMAGE_URL
 #
@@ -68,7 +67,6 @@ x-common-volumes: &common-volumes
   - ace-sql-readonly:/ace-sql-readonly
   - ace-yara:/opt/ace/etc/yara
   - ace-hunt:/opt/ace/hunts
-  - ace-ssl:/opt/ace/ssl
   - ace-auth:/auth
   - ace-user-home:/home/ace
 
@@ -89,7 +87,7 @@ services:
       - ace-data:/opt/ace/data
       - ace-sql:/docker-entrypoint-initdb.d
       - ace-sql-readonly:/ace-sql-readonly
-      - ace-ssl:/opt/ace/ssl
+      - ./ssl:/opt/ace/ssl
       - ace-auth:/auth
     cap_add:
       - SYS_PTRACE
@@ -131,7 +129,7 @@ services:
       - ace-sql:/docker-entrypoint-initdb.d
       - ace-data:/opt/ace/data
       - ./etc/mysqld/conf.d:/etc/mysql/conf.d
-      - ace-ssl:/opt/ace/ssl
+      - ./ssl:/opt/ace/ssl
     ports:
       - "3306:3306"
     hostname: ${ACE_DB_HOST:-ace-db}
@@ -158,7 +156,7 @@ services:
       - ace-sql-readonly:/docker-entrypoint-initdb.d
       - ace-data:/opt/ace/data
       - ./etc/mysqld.replica/conf.d:/etc/mysql/conf.d
-      - ace-ssl:/opt/ace/ssl
+      - ./ssl:/opt/ace/ssl
     ports:
       - "3307:3306"
     hostname: ${ACE_DB_READONLY_HOST:-ace-db-readonly}
@@ -183,7 +181,7 @@ services:
       - "6333"
     volumes:
       - ace-qdrant:/qdrant/storage
-      - ace-ssl:/ssl:ro
+      - ./ssl:/ssl:ro
       - ace-auth:/auth
     networks:
       - ace
@@ -203,17 +201,32 @@ services:
     networks: 
       - ace
 
-  ace-http:
-    build: 
-      dockerfile: Dockerfile.ace-http
-      context: .
-      args:
-        NGINX_DOCKER_IMAGE: ${NGINX_DOCKER_IMAGE:-nginx:latest}
-    image: ${ACE3_HTTP_IMAGE_URL:-ace3-http:latest}
+  ace-http-external:
+    image: ${NGINX_DOCKER_IMAGE:-nginx:latest}
     restart: always
     depends_on:
+      - http-app
+      - http-api
+    volumes:
+      - ./etc/nginx/conf.d.external:/etc/nginx/conf.d:ro
+      - ./app/static:/opt/ace/app/static:ro
+      - ./ssl:/opt/ace/ssl:ro
+    hostname: ace-http-external
+    ports:
+      - "9443:443"
+    networks: 
       - ace
-    volumes: *common-volumes
+
+  ace-http:
+    image: ${NGINX_DOCKER_IMAGE:-nginx:latest}
+    restart: always
+    depends_on:
+      - http-app
+      - http-api
+    volumes: 
+      - ./etc/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./app/static:/opt/ace/app/static:ro
+      - ./ssl:/opt/ace/ssl:ro
     hostname: ace-http
     ports:
       - "8443:443"
@@ -548,8 +561,6 @@ volumes:
     name: ace-sql
   ace-sql-readonly:
     name: ace-sql-readonly
-  ace-ssl:
-    name: ace-ssl
   ace-yara:
     name: ace-yara
   ace-hunt:

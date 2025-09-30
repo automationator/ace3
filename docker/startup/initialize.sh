@@ -23,25 +23,51 @@ then
         -days 3650 \
         -nodes \
         -subj "/C=US/ST=Ohio/L=Springfield/O=CompanyName/OU=CompanySectionName/CN=ace" \
-        -addext "subjectAltName=DNS:ace,DNS:ace-db,DNS:ace-db-readonly,DNS:ace-http,DNS:minio,DNS:phishkit,DNS:qdrant,DNS:rabbitmq,DNS:redis,DNS:localhost,IP:127.0.0.1"
+        -addext "subjectAltName=DNS:ace,DNS:ace-db,DNS:ace-db-readonly,DNS:ace-http-external,DNS:ace-http,DNS:minio,DNS:phishkit,DNS:qdrant,DNS:rabbitmq,DNS:redis,DNS:localhost,IP:127.0.0.1"
 
+    # create the client certificate for testing external access
+    echo "creating client certificate and key"
+    
+    # create client private key
+    openssl genrsa -out ssl/ace.client.key.pem 2048
+    
+    # create client certificate signing request
+    openssl req -new \
+        -key ssl/ace.client.key.pem \
+        -out ssl/ace.client.csr \
+        -subj "/C=US/ST=Ohio/L=Springfield/O=CompanyName/OU=CompanySectionName/CN=ace-client"
+    
+    # sign client certificate with the self-signed certificate (acting as CA)
+    openssl x509 -req \
+        -in ssl/ace.client.csr \
+        -CA ssl/ace.cert.pem \
+        -CAkey ssl/ace.key.pem \
+        -CAcreateserial \
+        -out ssl/ace.client.cert.pem \
+        -days 3650 \
+        -sha256
+
+    # make a p12 for macos clients (no export password)
+    openssl pkcs12 -passout pass: -export -inkey ssl/ace.client.key.pem -in ssl/ace.client.cert.pem -out ssl/ace.client.p12
+    
+    # clean up
+    rm ssl/ace.client.csr
+    
     # the self-signed certificate is also the CA chain
     cp ssl/ace.cert.pem ssl/ca-chain.cert.pem
-
-    cp ssl/ace.key.pem ssl/mysql.key.pem
-    cp ssl/ace.cert.pem ssl/mysql.cert.pem
-
-    # Set proper permissions for SSL files
-    chmod 600 ssl/ace.key.pem
-    chmod 644 ssl/ace.cert.pem
-    chmod 644 ssl/ca-chain.cert.pem
 
     # these are the same as the ace certs but need looser perms for mysql user
     # insecure but this is for a local dev environment
     cp ssl/ace.key.pem ssl/mysql.key.pem
     cp ssl/ace.cert.pem ssl/mysql.cert.pem
 
-    chmod 644 ssl/mysql.key.pem
+    # Set proper permissions for SSL files
+    chmod 600 ssl/ace.client.key.pem
+    chmod 644 ssl/ace.client.cert.pem
+    chmod 600 ssl/ace.key.pem
+    chmod 644 ssl/ace.cert.pem
+    chmod 644 ssl/ca-chain.cert.pem
+    chmod 644 ssl/mysql.key.pem # <-- loose perms
     chmod 644 ssl/mysql.cert.pem
 fi
 
