@@ -154,6 +154,9 @@ sql/71-create-db-super-user.sql
 # yara signatures
 etc/yara
 
+# compiled yara rules
+*.yarc
+
 # java decompiler
 bin/procyon-decompiler*
 

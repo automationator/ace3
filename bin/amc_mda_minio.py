@@ -7,13 +7,20 @@ import logging.handlers
 import os
 import shutil
 import sys
-from tempfile import SpooledTemporaryFile
+from tempfile import NamedTemporaryFile
 from typing import Optional
 import uuid
 
 from minio import Minio
 import requests
+import yara
 
+# yara tags that control the filtering
+ALLOW = "allow"
+BLOCK = "block"
+
+# by default we allow all content
+DEFAULT_MODE = ALLOW
 
 @dataclass
 class S3Credentials:
@@ -53,30 +60,83 @@ def get_s3_credentials_from_args(args) -> S3Credentials:
         secret_key=args.secret_key,
         region=args.region)
 
-def main(args) -> int:
-    if args.use_ec2_metadata:
-        s3_credentials = get_ec2_metadata()
+def get_compiled_yara_rule_path(yara_rule_path: str) -> str:
+    return f"{yara_rule_path}c"
+
+def compile_yara_rule(yara_rule_path: str) -> yara.Rules:
+    compiled_rule_path = get_compiled_yara_rule_path(yara_rule_path)
+    # if the compiled rule doesn't exist or the source rule is newer, we need to compile it
+    if not os.path.exists(compiled_rule_path) or os.path.getmtime(yara_rule_path) > os.path.getmtime(compiled_rule_path):
+        logger.info(f"compiling yara rule {yara_rule_path}")
+        result = yara.compile(filepath=yara_rule_path)
+        result.save(compiled_rule_path)
+        return result
     else:
-        s3_credentials = get_s3_credentials_from_args(args)
+        # otherwise we just load the compiled rules
+        return yara.load(compiled_rule_path)
 
-    minio_client = Minio(
-        endpoint=args.endpoint,
-        access_key=s3_credentials.access_key,
-        secret_key=s3_credentials.secret_key,
-        session_token=s3_credentials.session_token,
-        secure=args.secure,
-        region=s3_credentials.region
-    )
+def main(args) -> int:
+    decision = ALLOW
+    if args.default_block:
+        decision = BLOCK
 
-    if args.create_bucket:
-        minio_client.make_bucket(args.bucket)
 
-    # generate a unique key for this upload
-    unique_key = str(uuid.uuid4())
-
-    # read standard input into a spooled buffer
-    with SpooledTemporaryFile(max_size=args.spool_size_mb * 1024 * 1024) as fp:
+    # read standard input a temporary file
+    with NamedTemporaryFile() as fp:
         shutil.copyfileobj(sys.stdin.buffer, fp)
+        fp.flush()
+
+        # did we specify a yara rule?
+        if args.yara_rule_path:
+            yara_rules = compile_yara_rule(args.yara_rule_path)
+            matches = yara_rules.match(fp.name)
+            for match in matches:
+                for tag in match.tags:
+                    if tag == BLOCK:
+                        logger.info(f"file {fp.name} matched block rule {match.rule}")
+                        decision = BLOCK
+                        continue
+
+                    if tag == ALLOW:
+                        logger.info(f"file {fp.name} matched allow rule {match.rule}")
+                        decision = ALLOW
+                        continue
+
+            if decision is None and args.default_block:
+                decision = BLOCK
+            elif decision is None and not args.default_block:
+                decision = ALLOW
+
+            if decision is BLOCK:
+                logger.info(f"final decision is to block {fp.name}")
+                return os.EX_OK
+
+        # generate a unique key for this upload
+        unique_key = str(uuid.uuid4())
+
+        if args.skip_s3_upload:
+            print(unique_key)
+            return os.EX_OK
+
+        if args.use_ec2_metadata:
+            s3_credentials = get_ec2_metadata()
+        else:
+            s3_credentials = get_s3_credentials_from_args(args)
+
+        minio_client = Minio(
+            endpoint=args.endpoint,
+            access_key=s3_credentials.access_key,
+            secret_key=s3_credentials.secret_key,
+            session_token=s3_credentials.session_token,
+            secure=args.secure,
+            region=s3_credentials.region
+        )
+
+        if args.create_bucket:
+            minio_client.make_bucket(args.bucket)
+
+
+        fp.seek(0, os.SEEK_END)
         length = fp.tell()
         fp.seek(0)
 
@@ -86,7 +146,7 @@ def main(args) -> int:
         # print the unique key to standard output
         logger.info(f"uploaded file to {unique_key}")
 
-    return os.EX_OK
+        return os.EX_OK
 
 
 if __name__ == "__main__":
@@ -106,6 +166,9 @@ if __name__ == "__main__":
     parser.add_argument("--use-ec2-metadata", action="store_true", default=False, help="Whether to use EC2 metadata to get the access key and secret key.")
     parser.add_argument("--region", help="Optional region to use. If not provided, the region will be inferred.")
     parser.add_argument("--syslog", action="store_true", default=False, help="Whether to use syslog.")
+    parser.add_argument("--yara-rule-path", help="The path to a yara rule to use for filtering. By default all content is allowed.")
+    parser.add_argument("--default-block", action="store_true", default=False, help="Block everything by default, only allow content matching yara rules with 'allow' tags.")
+    parser.add_argument("--skip-s3-upload", action="store_true", default=False, help="Does not upload the file to s3, just writes the unique key to stdout.")
     args = parser.parse_args()
 
     # Configure logging to syslog

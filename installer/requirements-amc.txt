@@ -1,3 +1,4 @@
 minio
 boto3
 requests
+yara-python
