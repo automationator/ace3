@@ -3,8 +3,8 @@ import sys
 from typing import Optional
 
 
-from saq.environment import g_boolean, g_list, get_base_dir
-from saq.constants import G_CONFIG_PATHS, G_UNIT_TESTING
+from saq.environment import g_boolean, get_base_dir
+from saq.constants import G_UNIT_TESTING
 from saq.configuration.yaml_parser import YAMLConfig
 
 
@@ -64,7 +64,8 @@ def load_configuration(config_paths: Optional[list[str]] = None):
 
     _load_optional(db_auto_yaml)
     _load_optional(api_auto_yaml)
-    _load_optional(local_yaml)
+    if not g_boolean(G_UNIT_TESTING):
+        _load_optional(local_yaml)
 
     config.verify()
     config.apply_path_references()
