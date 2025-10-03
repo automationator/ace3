@@ -79,12 +79,27 @@ class GitRepo:
         if process.returncode != 0:
             raise RuntimeError(f"failed to fetch remote of repo {self.local_path}: {stderr}")
 
+        # check if there are local changes (dirty working tree, staged changes, untracked files)
         process = subprocess.Popen(["git", "-C", self.local_path, "status", "--porcelain"], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env)
         stdout, stderr = process.communicate()
         if process.returncode != 0:
             raise RuntimeError(f"failed to check if repo {self.local_path} is up to date: {stderr}")
 
-        return stdout.strip() == ""
+        # if there are local changes, repo is not up to date
+        if stdout.strip() != "":
+            return False
+
+        # check if local branch is behind remote branch
+        remote_branch = f"origin/{self.branch}"
+        process = subprocess.Popen(["git", "-C", self.local_path, "rev-list", "--count", f"HEAD..{remote_branch}"], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env)
+        stdout, stderr = process.communicate()
+        if process.returncode != 0:
+            # if remote branch doesn't exist or other error, assume up to date
+            return True
+
+        # if there are commits on remote that we don't have locally, we're behind
+        commits_behind = int(stdout.strip())
+        return commits_behind == 0
 
     def pull_repo(self) -> bool:
         """Pulls the latest changes from the given URL to the given local path and branch."""
