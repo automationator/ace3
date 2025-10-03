@@ -544,6 +544,45 @@ class TestRepoIsUpToDate:
 
         assert not repo.repo_is_up_to_date()
 
+    def test_repo_is_up_to_date_remote_ahead(self, tmpdir):
+        # setup remote repo
+        remote_path = tmpdir.mkdir("remote_repo")
+        subprocess.run(["git", "init", "--bare"], cwd=str(remote_path), check=True)
+        
+        # setup initial repo and push
+        temp_setup = tmpdir.mkdir("temp_setup")
+        subprocess.run(["git", "clone", str(remote_path), str(temp_setup)], check=True)
+        
+        test_file = temp_setup.join("test.txt")
+        test_file.write("initial content")
+        subprocess.run(["git", "add", "test.txt"], cwd=str(temp_setup), check=True)
+        subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@test.com", "commit", "-m", "Initial commit"], cwd=str(temp_setup), check=True)
+        subprocess.run(["git", "push", "origin", "master"], cwd=str(temp_setup), check=True)
+        
+        # clone to local repo
+        local_path = str(tmpdir.join("local_repo"))
+        subprocess.run(["git", "clone", str(remote_path), local_path], check=True)
+        
+        # add new commit to remote
+        new_file = temp_setup.join("new.txt")
+        new_file.write("new content")
+        subprocess.run(["git", "add", "new.txt"], cwd=str(temp_setup), check=True)
+        subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@test.com", "commit", "-m", "New commit"], cwd=str(temp_setup), check=True)
+        subprocess.run(["git", "push", "origin", "master"], cwd=str(temp_setup), check=True)
+        
+        repo = GitRepo(
+            name="test",
+            description="test",
+            local_path=local_path,
+            git_url=str(remote_path),
+            update_frequency=3600,
+            branch="master"
+        )
+
+        # local repo should not be up to date since remote has new commits
+        result = repo.repo_is_up_to_date()
+        assert result is False
+
 
 @pytest.mark.integration
 class TestPullRepo:
