@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 #
 
-cd /opt/ace
-source /venv/bin/activate
-source load_environment
+source bin/initialize-environment.sh
 
 if [ -z "${SAQ_ENC}" ]
 then
@@ -14,12 +12,14 @@ fi
 ace enc test -p "$SAQ_ENC"
 TEST_RESULT="$?"
 
+# if the encryption password hasn't been set yet, go ahead and set it now
 if [ "$TEST_RESULT" -eq 2 ]
 then
     echo "setting encryption password"
     ace enc set -o --password="$SAQ_ENC"
 elif [ "$TEST_RESULT" -ne 0 ]
 then
+    # otherwise we've provided the wrong encryption password
     echo "encryption verification failed: is SAQ_ENC env var correct?"
     exit 1
 else
@@ -27,7 +27,7 @@ else
 fi
 
 # load any auto-generated username/passwords automatically
-# once these are loaded we can remove the plaintext files
+# some of these still need to use the plain text files so they are left in place
 
 if [ -f "/auth/passwords/redis" ] && [ ! -f "/auth/passwords/redis.loaded" ]; then
     echo "loading redis auth into ace"

@@ -5,9 +5,7 @@
 # this file is sourced from every other startup file
 #
 
-cd /opt/ace
-source /venv/bin/activate
-source load_environment
+source bin/initialize-environment.sh
 
 echo -n "waiting for database..."
 while :

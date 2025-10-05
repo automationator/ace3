@@ -28,7 +28,7 @@ global:
   # this can be either PRODUCTION, QA or DEV
   # used by some routines to prevent a user from making a horrible mistake
   # if this setting is missing then the default value taken is PRODUCTION
-  instance_type: DEV
+  instance_type: env:ACE_INSTANCE_TYPE
   # forces the entire application to run under a single thread
   debug: false
   # global data directory that has all the things (relative to SAQ_HOME)
@@ -36,8 +36,9 @@ global:
   # analyst data directory that has files that analysts can control through an external git repository. these files can
   # then be used by analysis modules or collectors instead of needing to edit ACE config.
   analyst_data_dir: data/external/analyst-data
-  # temp directory for various whatever (relative to DATA_DIR)
-  tmp_dir: var/tmp
+  # if you need to override the default temp directory, set this to the path
+  # if the path is relative, it is relative to the SAQ_HOME directory
+  #tmp_dir: var/tmp
   # directory that contains any stack traces for review (relative to DATA_DIR)
   error_reporting_dir: error_reports
   # list of email addresses (comma separated) that get these reports sent to them automatically
@@ -115,6 +116,16 @@ service_llm_embedding:
   description: LLM Embedding - embeds alerts into a vector space
   enabled: true
   instance_type: ANY
+
+# cron settings
+service_cron:
+  module: saq.cron
+  class: ACECronService
+  description: ACE Cron Service - runs cron jobs
+  enabled: true
+  instance_type: ANY
+  # the path to the cron configuration file (relative to SAQ_HOME)
+  cron_config_path: etc/cron.yaml
 
 # monitor settings
 monitor:

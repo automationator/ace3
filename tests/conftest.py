@@ -19,7 +19,7 @@ from saq.database.util.automation_user import initialize_automation_user
 from saq.database.util.user_management import add_user
 from saq.email_archive import initialize_email_archive
 from saq.engine.tracking import clear_all_tracking
-from saq.environment import g, get_base_dir, get_data_dir, initialize_data_dir, initialize_environment, set_g, set_node
+from saq.environment import g, get_base_dir, get_data_dir, initialize_environment, set_g, set_node
 
 
 import pytest

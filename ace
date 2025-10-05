@@ -11,10 +11,8 @@ import logging
 import operator
 import os
 import os.path
-import pwd
 import re
 from typing import Optional
-import redis
 import shutil
 import signal
 import socket
@@ -2087,12 +2085,11 @@ def update_for_detection_observable_cache(args):
     # Database A holds the source of truth for which observables are enabled for detection.
     # Database B is used to build the cache and uses swapdb to swap itself and Database A when finished.
 
-    redis_connection_b = redis.Redis(
-        get_config()['redis-local']['host'],
-        get_config()['redis-local'].getint('port'),
-        db=REDIS_DB_FOR_DETECTION_B,
-        decode_responses=True,
-        encoding='utf-8'
+    from saq.redis_client import get_redis_connection
+
+    redis_connection_b = get_redis_connection(
+        database=REDIS_DB_FOR_DETECTION_B,
+        config_section="redis-local"
     )
 
     # Get the for_detection observables and store their IDs in the Redis cache
@@ -2127,6 +2124,7 @@ def _get_for_detect_observables_by_type() -> dict:
                                      observable_type_2: [id': obs3_id, 'value': obs3_value}], etc.}
     """
     from saq.database import Observable
+    from saq.util.time import local_time
 
     observables_by_type = {}
     for_detect_observables = get_db().query(Observable.id, Observable.type, Observable.value).filter(
@@ -2134,7 +2132,8 @@ def _get_for_detect_observables_by_type() -> dict:
             Observable.for_detection.is_(True),
             or_(
                 Observable.expires_on.is_(None),
-                datetime.datetime.utcnow() < Observable.expires_on
+                local_time() < Observable.expires_on
+                #datetime.datetime.utcnow() < Observable.expires_on
             )
         )
     ).all()
@@ -2946,6 +2945,13 @@ list_available_modules_parser = get_cli_subparsers().add_parser('list-available-
 list_available_modules_parser.set_defaults(func=list_available_modules)
 
 def config(args):
+    from saq.environment import g_str
+
+    if args.global_environment:
+        for setting in args.settings:
+            print(g_str(setting))
+
+        return 0
 
     def matches_param(section_name: str, key_name: Optional[str]=None) -> bool:
         if not args.settings:
@@ -2981,11 +2987,21 @@ def config(args):
             if matches_param(section, key):
                 result[section][key] = get_config()[section][key]
 
-    print(yaml.dump(result, indent=2))
+    # are we only printing the value out?
+    if args.value:
+        for section_key, section_dict in result.items():
+            for key, value in section_dict.items():
+                print(value)
+    else:
+        # otherwise we just dump what is queried for as yaml
+        print(yaml.dump(result, indent=2))
+
     return 0
 
 config_parser = get_cli_subparsers().add_parser('config',
     help="Queries the ACE configuration.")
+config_parser.add_argument("-v", "--value", action="store_true", default=False, help="Only print the value on output.")
+config_parser.add_argument("-g", "--global-environment", action="store_true", default=False, help="Pull the value from the global environment instead.")
 config_parser.add_argument('settings', nargs="*",
     help="Zero or more configuration items to display in the format section.key.")
 config_parser.set_defaults(func=config)
@@ -3149,6 +3165,26 @@ def list_git_repos(args):
 
 git_list_parser = git_sp.add_parser("list")
 git_list_parser.set_defaults(func=list_git_repos)
+
+s3_parser = get_cli_subparsers().add_parser("s3")
+s3_sp = s3_parser.add_subparsers(dest="s3_cmd")
+
+def s3_upload_file(args) -> int:
+    from saq.storage.minio import get_minio_client
+    client = get_minio_client()
+    # Upload the file
+    client.fput_object(
+        bucket_name=args.bucket,
+        object_name=args.key,
+        file_path=args.file
+    )
+    return 0
+
+s3_upload_parser = s3_sp.add_parser("upload")
+s3_upload_parser.add_argument("--file", help="The file to upload.")
+s3_upload_parser.add_argument("--bucket", help="The bucket to upload the file to.")
+s3_upload_parser.add_argument("--key", help="The key to upload the file to.")
+s3_upload_parser.set_defaults(func=s3_upload_file)
 
 # TODO find a better way to do this
 # pull in all the other CLI parsers
