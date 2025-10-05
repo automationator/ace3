@@ -49,6 +49,7 @@
 x-common-env: &common-env
   SAQ_ENC: ${SAQ_ENC:-test}
   SAQ_CONFIG_PATHS: ${SAQ_CONFIG_PATHS:-}
+  ACE_INSTANCE_TYPE: DEV # possible values: DEV, QA, PRODUCTION
   # if your primary database has a different hostname, you will need to pass it in as ACE_DB_HOST
   ACE_DB_HOST: ${ACE_DB_HOST:-ace-db}
   ACE_DB_READONLY_HOST: ${ACE_DB_READONLY_HOST:-ace-db-readonly}

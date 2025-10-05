@@ -1,4 +1,5 @@
 from saq.configuration.config import (
+    config_section_exists,
     get_config_value,
     get_config_value_as_boolean,
     get_config_value_as_int,
@@ -18,6 +19,9 @@ import redis
 
 
 def get_redis_connection(database: int, config_section: str = CONFIG_REDIS) -> redis.Redis:
+
+    if not config_section_exists(config_section):
+        raise RuntimeError(f"unknown redis configuration section {config_section}")
 
     kwargs = {
         "host": get_config_value(config_section, CONFIG_REDIS_HOST),

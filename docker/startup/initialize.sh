@@ -5,10 +5,10 @@
 # this file is sourced from every other startup file
 #
 
-cd /opt/ace
-source /venv/bin/activate
-source load_environment
+source /opt/ace/bin/initialize-environment.sh
 
+# NOTE in the default docker-compose.yml the ssl directory is bind-mounted
+# once this runs once you can import the certificates into your system/browser
 # do we need to create fake ssl certificates?
 if [ -z "$(ls -A ssl 2>/dev/null)" ]
 then
@@ -88,9 +88,6 @@ if [ ! -f /ace-sql-readonly/done ]
 then
     bin/initialize_database.py /ace-sql-readonly --type replica --primary-database ${ACE_DB_HOST:-ace-db}
 fi
-
-# TOOD
-# initialize gitconfig
 
 #
 # make sure all these directories and files exist

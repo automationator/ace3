@@ -1,0 +1,11 @@
+jobs:
+  - name: daily maintenance
+    command: /opt/ace/bin/daily-maintenance.sh >> /opt/ace/data/logs/daily-maintenance-`date '+%Y-%m-%d'`.log 2>&1
+    shell: /bin/bash
+    schedule: "0 5 * * *"
+    concurrencyPolicy: Forbid
+  - name: update for detection observable cache
+    command: /opt/ace/bin/update-for-detection-observable-cache >> /opt/ace/data/logs/update-for-detection-observable-cache-`date '+%Y-%m-%d'`.log 2>&1
+    shell: /bin/bash
+    schedule: "* * * * *"
+    concurrencyPolicy: Forbid

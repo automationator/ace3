@@ -1191,6 +1191,10 @@ CONFIG_PROXY = "proxy"
 CONFIG_GIT = "git"
 CONFIG_GIT_REPOS = "repos"
 
+# cron
+CONFIG_SERVICE_CRON = "service_cron"
+CONFIG_SERVICE_CRON_CONFIG = "cron_config_path"
+
 # engine state flag that indicates pre-analysis has been executed on a RootAnalysis
 STATE_PRE_ANALYSIS_EXECUTED = "pre_analysis_executed"
 STATE_POST_ANALYSIS_EXECUTED = "post_analysis_executed"

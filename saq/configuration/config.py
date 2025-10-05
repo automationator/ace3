@@ -1,5 +1,3 @@
-import configparser
-import os
 import sys
 from typing import Any, Optional
 
@@ -7,6 +5,10 @@ from saq.configuration.loader import load_configuration
 
 # global configuration singleton (INI or YAML-backed)
 CONFIG = None
+
+def config_section_exists(section_name: str) -> bool:
+    """Returns True if the given configuration section exists."""
+    return section_name in get_config()
 
 def get_config():
     """Returns the global configuration object (INI ConfigParser or YAMLConfig)."""

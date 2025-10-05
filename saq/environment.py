@@ -466,8 +466,6 @@ def initialize_environment(
         get_config_value_as_list,
         initialize_configuration,
     )
-    from saq.monitor import reset_emitter, enable_monitor_logging
-
     initialize_base_dir(saq_home=saq_home)
 
     set_g(G_ECS_SOCKET_PATH, os.path.join(get_base_dir(), ".ecs"))
@@ -502,12 +500,14 @@ def initialize_environment(
             get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_ANALYST_DATA_DIR),
         ),
     )
-    set_g(
-        G_TEMP_DIR,
-        temp_dir if temp_dir else os.path.join(
-            get_data_dir(), get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_TEMP_DIR)
-        ),
-    )
+
+    # figure out where the tmp dir should be
+    if not temp_dir:
+        temp_dir = get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_TEMP_DIR, default=os.path.join(tempfile.gettempdir(), "ace"))
+        if os.path.isabs(temp_dir):
+            temp_dir = os.path.join(get_base_dir(), temp_dir)
+
+    set_g(G_TEMP_DIR, temp_dir)
     set_g(G_DAEMON_DIR, os.path.join(get_data_dir(), "var", "daemon"))
     set_g(G_SERVICES_DIR, os.path.join(get_data_dir(), "var", "services"))
     set_g(G_COMPANY_NAME, get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_COMPANY_NAME))
