@@ -145,7 +145,7 @@ class PhishkitAnalyzer(AnalysisModule):
         self.verify_config_item_has_value('valid_file_extensions')
         self.verify_config_item_has_value('valid_mime_types')
 
-    def complete_analysis(self, observable: Observable, analysis: PhishkitAnalysis) -> AnalysisExecutionResult:
+    def continue_analysis(self, observable: Observable, analysis: PhishkitAnalysis) -> AnalysisExecutionResult:
         """Completes an existing analysis."""
         if not analysis.job_id:
             logging.error(f"no job ID for analysis {analysis}")

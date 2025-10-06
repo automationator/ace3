@@ -714,6 +714,10 @@ class AnalysisModule(FileWatcherMixin):
         """
         raise NotImplemented()
 
+    def continue_analysis(self, observable: Observable, analysis: Analysis) -> AnalysisExecutionResult:
+        """Called to continue analysis of an Observable object after delay_analysis has been called."""
+        raise NotImplemented()
+
     def execute_final_analysis(self, analysis) -> AnalysisExecutionResult:
         """Called to analyze Analysis or Observable objects after all other analysis has completed.
         Return COMPLETED if analysis has completed. The engine will not call this function again for this target.

@@ -501,7 +501,7 @@ def test_phishkit_analyzer_execute_analysis_file_error(monkeypatch, test_context
 
 
 @pytest.mark.integration
-def test_phishkit_analyzer_complete_analysis_no_job_id(test_context):
+def test_phishkit_analyzer_continue_analysis_no_job_id(test_context):
     """Test completing analysis with no job ID."""
     root = create_root_analysis(analysis_mode='test_single')
     root.initialize_storage()
@@ -512,13 +512,13 @@ def test_phishkit_analyzer_complete_analysis_no_job_id(test_context):
     url_observable.add_analysis(analysis)
     
     analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
-    result = analyzer.complete_analysis(url_observable, analysis)
+    result = analyzer.continue_analysis(url_observable, analysis)
     
     assert result == AnalysisExecutionResult.COMPLETED
 
 
 @pytest.mark.integration
-def test_phishkit_analyzer_complete_analysis_not_ready(monkeypatch, test_context):
+def test_phishkit_analyzer_continue_analysis_not_ready(monkeypatch, test_context):
     """Test completing analysis when results not ready."""
     root = create_root_analysis(analysis_mode='test_single')
     root.initialize_storage()
@@ -543,7 +543,7 @@ def test_phishkit_analyzer_complete_analysis_not_ready(monkeypatch, test_context
     
     analyzer.delay_analysis = MagicMock(side_effect=mock_delay_analysis)
     
-    result = analyzer.complete_analysis(url_observable, analysis)
+    result = analyzer.continue_analysis(url_observable, analysis)
     
     # Should call delay_analysis and return its result
     analyzer.delay_analysis.assert_called_once_with(url_observable, analysis, seconds=3, timeout_seconds=60)
@@ -551,7 +551,7 @@ def test_phishkit_analyzer_complete_analysis_not_ready(monkeypatch, test_context
 
 
 @pytest.mark.integration
-def test_phishkit_analyzer_complete_analysis_success(monkeypatch, test_context):
+def test_phishkit_analyzer_continue_analysis_success(monkeypatch, test_context):
     """Test successful analysis completion."""
     root = create_root_analysis(analysis_mode='test_single')
     root.initialize_storage()
@@ -588,7 +588,7 @@ def test_phishkit_analyzer_complete_analysis_success(monkeypatch, test_context):
         monkeypatch.setattr("saq.modules.phishkit.get_async_scan_result", mock_get_async_scan_result)
         
         analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
-        result = analyzer.complete_analysis(url_observable, analysis)
+        result = analyzer.continue_analysis(url_observable, analysis)
         
         assert result == AnalysisExecutionResult.COMPLETED
         # Only non-special files are added to output_files, and they're stored as relative paths
