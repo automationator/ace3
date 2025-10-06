@@ -7,6 +7,7 @@ import os
 import socket
 import sys
 import tempfile
+import time
 from typing import Any, Optional, Type
 
 import urllib
@@ -456,8 +457,8 @@ def initialize_environment(
         get_config_value_as_list,
         initialize_configuration,
     )
-    initialize_base_dir(saq_home=saq_home)
 
+    initialize_base_dir(saq_home=saq_home)
     initialize_configuration(config_paths=config_paths)
 
     from saq.integration.integration_loader import load_integrations
@@ -469,6 +470,7 @@ def initialize_environment(
             get_base_dir(), get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_DATA_DIR)
         ),
     )
+
     set_g(
         G_ANALYST_DATA_DIR,
         os.path.join(
@@ -603,8 +605,8 @@ def initialize_environment(
         )
 
     # warn if timezone is not UTC
-    # if time.strftime("%z") != "+0000":
-    # logging.warning("Timezone is not UTC. All ACE systems in a cluster should be in UTC.")
+    if time.strftime("%z") != "+0000":
+        logging.warning("Timezone is not UTC. All ACE systems in a cluster should be in UTC.")
 
     # we can globally disable semaphores with this flag
     set_g(
@@ -637,33 +639,10 @@ def initialize_environment(
     # initialize the database connection
     initialize_database()
 
-    # Store validated list of companies this node can work with
-    # Assume configued defaults are already valid
-    # NODE_COMPANIES.append({'name': COMPANY_NAME, 'id': COMPANY_ID})
-    # _secondary_company_ids = CONFIG['global'].get('secondary_company_ids', None)
-    # if _secondary_company_ids is not None:
-    # _secondary_company_ids = [int(_) for _ in _secondary_company_ids.split(',')]
-    # from saq.database import get_db_connection
-    # try:
-    # with get_db_connection() as db:
-    # c = db.cursor()
-    # c.execute("SELECT name,id FROM company")
-    # for row in c:
-    # if row[1] in _secondary_company_ids:
-    # NODE_COMPANIES.append({'name': row[0], 'id': row[1]})
-    # except Exception as e:
-    # logging.error(f"problem querying database {e}")
-
     # initialize fallback semaphores
     from saq.network_semaphore.fallback import initialize_fallback_semaphores
 
     initialize_fallback_semaphores()
-
-    # XXX get rid of this
-    # try:
-    # maliciousdir = CONFIG.get("global", "malicious")
-    # except:
-    # maliciousdir = "malicious"
 
     set_g(G_STATS_DIR, os.path.join(get_data_dir(), "stats"))
     set_g(G_MODULE_STATS_DIR, os.path.join(g(G_STATS_DIR), "modules"))
@@ -734,10 +713,6 @@ def initialize_environment(
                 g_list(G_MANAGED_NETWORKS).append(iptools.IpRange(cidr.strip()))
         except Exception as e:
             logging.error("invalid managed network {}: {}".format(cidr, str(e)))
-
-    # are we running as a daemon?
-    # if args:
-    # DAEMON_MODE = args.daemon
 
     # make sure we've got the automation user set up
     # XXX move this to database initialization time
