@@ -1202,6 +1202,10 @@ STATE_POST_ANALYSIS_EXECUTED = "post_analysis_executed"
 # storage constants
 BUCKET_ACE3 = "ace3"
 
+# email archive constants
+EMAIL_ARCHIVE_FIELD_MESSAGE_ID = "message_id"
+EMAIL_ARCHIVE_FIELD_URL = "url"
+
 class AnalysisExecutionResult(Enum):
     """Enum representing the possible results of an analysis execution."""
     COMPLETED = "completed"

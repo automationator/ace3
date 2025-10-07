@@ -14,7 +14,5 @@ from saq.email_archive.wrapper import (
     iter_decrypt_email,
     get_email_archive_local_server_name,
     get_email_archive_server_id,
-    FIELD_MESSAGE_ID,
-    FIELD_URL,
     ArchiveEmailResult,
 )

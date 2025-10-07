@@ -4,7 +4,6 @@ import pytest
 from saq.database import get_db_connection
 from saq.constants import DB_EMAIL_ARCHIVE
 from saq.email_archive import (
-    FIELD_MESSAGE_ID,
     ArchiveEmailResult,
     archive_email,
     archive_email_file,

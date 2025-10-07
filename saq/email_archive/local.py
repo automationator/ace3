@@ -16,7 +16,7 @@ from typing import Optional
 from pymysql import IntegrityError
 
 from saq.configuration import get_config_value
-from saq.constants import CONFIG_EMAIL_ARCHIVE_MODULE, CONFIG_EMAIL_ARCHIVE_MODULE_DIR, DB_EMAIL_ARCHIVE, G_EMAIL_ARCHIVE_SERVER_ID
+from saq.constants import CONFIG_EMAIL_ARCHIVE_MODULE, CONFIG_EMAIL_ARCHIVE_MODULE_DIR, DB_EMAIL_ARCHIVE, EMAIL_ARCHIVE_FIELD_MESSAGE_ID, EMAIL_ARCHIVE_FIELD_URL, G_EMAIL_ARCHIVE_SERVER_ID
 from saq.crypto import decrypt, encrypt, is_encryption_initialized
 from saq.database import get_db_connection, execute_with_retry
 from saq.email import normalize_email_address, normalize_message_id
@@ -26,10 +26,6 @@ from saq.environment import g_int, get_data_dir, set_g
 from saq.local_locking import LocalLockError, lock_local
 from saq.util import fully_qualified
 from saq.util.hashing import sha256_file
-
-
-FIELD_MESSAGE_ID = "message_id"
-FIELD_URL = "url"
 
 class EmailArchiveLocal(EmailArchiveInterface):
     def get_archive_dir(self) -> str:
@@ -63,7 +59,7 @@ class EmailArchiveLocal(EmailArchiveInterface):
         with get_db_connection(DB_EMAIL_ARCHIVE) as db:
             cursor = db.cursor()
             archive_id = self.insert_email_archive(db, cursor, hash)
-            self.index_email_archive(db, cursor, archive_id, FIELD_MESSAGE_ID, message_id, insert_date)
+            self.index_email_archive(db, cursor, archive_id, EMAIL_ARCHIVE_FIELD_MESSAGE_ID, message_id, insert_date)
             self.index_email_history(db, cursor, message_id, recipients, insert_date)
             db.commit()
 
@@ -180,8 +176,8 @@ class EmailArchiveLocal(EmailArchiveInterface):
 
     def index_email_archive(self, db, cursor, archive_id: int, field_name: str, field_value: str, insert_date: datetime):
         # 03/09/2022 - these are the only two fields used from this table
-        if field_name in [ FIELD_MESSAGE_ID, FIELD_URL ]: # TODO make configurable
-            if field_name == FIELD_MESSAGE_ID:
+        if field_name in [ EMAIL_ARCHIVE_FIELD_MESSAGE_ID, EMAIL_ARCHIVE_FIELD_URL ]: # TODO make configurable
+            if field_name == EMAIL_ARCHIVE_FIELD_MESSAGE_ID:
                 field_value = normalize_message_id(field_value)
 
             execute_with_retry(db, cursor, 

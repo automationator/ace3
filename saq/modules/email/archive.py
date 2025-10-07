@@ -6,10 +6,10 @@ from typing import Optional
 from saq.analysis.analysis import Analysis
 from saq.analysis.observable import Observable
 from saq.analysis.search import recurse_tree
-from saq.constants import DB_EMAIL_ARCHIVE, DIRECTIVE_ARCHIVE, F_FILE, F_URL, G_ENCRYPTION_INITIALIZED, TAG_DECRYPTED_EMAIL, AnalysisExecutionResult
+from saq.constants import DB_EMAIL_ARCHIVE, DIRECTIVE_ARCHIVE, EMAIL_ARCHIVE_FIELD_URL, F_FILE, F_URL, G_ENCRYPTION_INITIALIZED, TAG_DECRYPTED_EMAIL, AnalysisExecutionResult
 from saq.crypto import decrypt
 from saq.database.pool import get_db_connection
-from saq.email_archive import FIELD_URL, archive_email, index_email_archive
+from saq.email_archive import archive_email, index_email_archive
 from saq.environment import g_boolean
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
@@ -193,7 +193,7 @@ class EmailArchiveAction(AnalysisModule):
 
         def _callback(target):
             if isinstance(target, Observable) and target.type == F_URL:
-                transactions.append((FIELD_URL, target.value))
+                transactions.append((EMAIL_ARCHIVE_FIELD_URL, target.value))
                     
         recurse_tree(_file, _callback)
 

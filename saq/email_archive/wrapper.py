@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Optional
 from saq.email_archive.factory import EmailArchiveFactory
 from saq.email_archive.types import ArchiveEmailResult
-from saq.email_archive.local import FIELD_MESSAGE_ID, FIELD_URL
 
 def get_archive_dir() -> str:
     """Returns the relative path of the email archive directory (relative to get_data_dir())"""
