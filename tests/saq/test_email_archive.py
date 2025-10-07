@@ -9,18 +9,21 @@ from saq.email_archive import (
     archive_email_file,
     get_archive_path_by_hash,
     get_archived_email_server,
-    get_email_archive_dir,
     get_email_archive_local_server_name,
     get_email_archive_server_id,
     get_recipients_by_message_id,
     index_email_history,
-    insert_email_archive,
     get_archived_email_path,
-    index_email_archive,
     iter_decrypt_email,
 )
+from saq.email_archive.types import EmailArchiveTargetType
 from saq.environment import get_data_dir
 from saq.util.time import local_time
+
+@pytest.fixture(autouse=True, scope="function", params=[EmailArchiveTargetType.LOCAL, EmailArchiveTargetType.S3])
+def patch_email_archive_target_type(monkeypatch, request):
+    monkeypatch.setattr("saq.email_archive.factory.get_email_archive_type", lambda: request.param)
+    return request.param
 
 @pytest.mark.integration
 def test_register_email_archive():

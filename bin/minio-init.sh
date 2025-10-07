@@ -6,6 +6,8 @@ if [ ! -f /data/.init_done ]; then
     mc mb local/ace3 || true
     mc mb local/ace3test || true
     mc mb local/journal-emails || true
+    mc mb local/ace-email-archive || true
+    mc mb local/ace-email-archive-test || true
     # the ace3test user is used in integration tests so it only gets access to the ace3test bucket
     mc admin policy attach local readwrite --user ace3api || true
     cat > /tmp/ace3test-readwrite-policy.json <<JSON
@@ -17,7 +19,9 @@ if [ ! -f /data/.init_done ]; then
       "Action": ["s3:*"],
       "Resource": [
         "arn:aws:s3:::ace3test",
-        "arn:aws:s3:::ace3test/*"
+        "arn:aws:s3:::ace3test/*",
+        "arn:aws:s3:::ace-email-archive-test",
+        "arn:aws:s3:::ace-email-archive-test/*"
       ]
     }
   ]
@@ -29,6 +33,8 @@ JSON
     mc ilm rule add local/ace3 --expire-days 3 || true
     mc ilm rule add local/ace3test --expire-days 3 || true
     mc ilm rule add local/journal-emails --expire-days 30 || true
+    mc ilm rule add local/ace-email-archive --expire-days 30 || true
+    mc ilm rule add local/ace-email-archive-test --expire-days 3 || true
     # configure bucket notifications for email journal collector
     mc admin config set local \
       notify_amqp:local \

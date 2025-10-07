@@ -33,7 +33,7 @@ class StorageInterface(Protocol):
         bucket: str,
         remote_path: str,
         local_path: Union[str, Path]
-    ) -> str:
+    ) -> object:
         """
         Download a file from storage.
         
@@ -43,7 +43,7 @@ class StorageInterface(Protocol):
             local_path: Local path where the file should be saved
             
         Returns:
-            str: The URL or identifier of the downloaded file
+            object: The "object" that was downloaded
             
         Raises:
             FileNotFoundError: If the source file doesn't exist in storage

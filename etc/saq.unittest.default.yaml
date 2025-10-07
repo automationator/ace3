@@ -604,3 +604,6 @@ minio:
 
 service_llm_embedding:
   enabled: false
+
+email_archive:
+  s3_bucket: ace-email-archive-test

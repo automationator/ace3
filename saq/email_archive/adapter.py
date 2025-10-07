@@ -30,6 +30,10 @@ class EmailArchiveAdapter(EmailArchiveInterface):
         """Returns the local server name of the email archive server."""
         return self._email_archive.get_email_archive_local_server_name()
 
+    def archive_email_is_local(self, message_id: str) -> bool:
+        """Returns True if the archived email is stored locally on this server."""
+        return self._email_archive.archive_email_is_local(message_id)
+
     def initialize_email_archive(self):
         """Initializes the email archive subsystem. Must be called once at application startup."""
         return self._email_archive.initialize_email_archive()

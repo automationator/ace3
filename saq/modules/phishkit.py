@@ -4,7 +4,7 @@ from typing import Optional, List, override
 
 from saq.analysis import Analysis
 from saq.analysis.observable import Observable
-from saq.constants import DIRECTIVE_CRAWL, DIRECTIVE_RENDER, F_URL, F_FILE, AnalysisExecutionResult, DIRECTIVE_EXCLUDE_ALL
+from saq.constants import DIRECTIVE_CRAWL, DIRECTIVE_RENDER, F_URL, F_FILE, AnalysisExecutionResult
 from saq.modules import AnalysisModule
 from saq.observables.file import FileObservable
 from saq.phishkit import get_async_scan_result, scan_file, scan_url

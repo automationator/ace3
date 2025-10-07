@@ -28,6 +28,9 @@ from saq.util import fully_qualified
 from saq.util.hashing import sha256_file
 
 class EmailArchiveLocal(EmailArchiveInterface):
+    def __init__(self):
+        self._hostname = socket.gethostname().lower()
+
     def get_archive_dir(self) -> str:
         """Returns the relative path of the email archive directory (relative to get_data_dir())"""
         return get_config_value(CONFIG_EMAIL_ARCHIVE_MODULE, CONFIG_EMAIL_ARCHIVE_MODULE_DIR)
@@ -42,7 +45,11 @@ class EmailArchiveLocal(EmailArchiveInterface):
 
     def get_email_archive_local_server_name(self) -> str:
         """Returns the local server name of the email archive server."""
-        return socket.gethostname().lower()
+        return self._hostname
+
+    def archive_email_is_local(self, message_id: str) -> bool:
+        """Returns True if the archived email is stored locally on this server."""
+        return self.get_archived_email_server(message_id) == self.get_email_archive_local_server_name()
 
     def initialize_email_archive(self):
         """Initializes the email archive subsystem. Must be called once at application startup."""
@@ -66,7 +73,7 @@ class EmailArchiveLocal(EmailArchiveInterface):
         return ArchiveEmailResult(archive_id=archive_id, hash=hash, archive_path=self.get_archive_path_by_hash(hash), insert_date=insert_date)
 
     def archive_email_file(self, file_path: str, message_id: str) -> str:
-        """Stores the email in the archive system and returns the md5 hash of the archived email.
+        """Stores the email in the archive system and returns the sha256 hash of the archived email.
         If the email is already stored then nothing changes."""
         assert isinstance(file_path, str)
         assert isinstance(message_id, str) and message_id

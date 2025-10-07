@@ -2,14 +2,12 @@ from aceapi.auth import api_auth_check
 from aceapi.blueprints import email_bp
 
 import logging
-import socket
 
 from urllib.parse import urlencode, quote_plus
 
 from saq.constants import G_ENCRYPTION_KEY
-from saq.email_archive import get_archived_email_path, iter_decrypt_email, get_archived_email_server
+from saq.email_archive import get_archived_email_path, iter_decrypt_email, get_archived_email_server, archive_email_is_local
 from saq.environment import g
-from saq.util import fully_qualified
 
 from flask import request, Response, abort, redirect
 
@@ -33,7 +31,7 @@ def get_archived_email():
         abort(404)
 
     # is this email stored on a different server?
-    if target_server != fully_qualified(socket.gethostname().lower()):
+    if not archive_email_is_local(request.values[KEY_MESSAGE_ID]):
         params = { "message_id": request.values[KEY_MESSAGE_ID] }
         # XXX kind of a sloppy way to do this
         target_url = f"https://{target_server}/api/email/get_archived_email?{urlencode(params, quote_via=quote_plus)}"

@@ -1,6 +1,5 @@
 import logging
 import os
-from typing import Optional
 
 from saq.cli.cli_main import get_cli_subparsers
 from saq.storage.factory import get_storage_system

@@ -209,11 +209,7 @@ class TestMinIOStorageFileOperations:
         storage.upload_file(local_path, test_bucket, remote_path)
         
         # Download the file
-        url = storage.download_file(test_bucket, remote_path, download_path)
-        
-        # Verify URL format  
-        expected_url = f"http://{storage.host}:{storage.port}/{test_bucket}/{remote_path}"
-        assert url == expected_url
+        result = storage.download_file(test_bucket, remote_path, download_path)
         
         # Verify downloaded file exists and has correct content
         assert os.path.exists(download_path)

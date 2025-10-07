@@ -58,6 +58,10 @@ def get_archived_email_server(message_id: str) -> str:
     Returns None if it cannot be found."""
     return EmailArchiveFactory.get_email_archive_interface().get_archived_email_server(message_id)
 
+def archive_email_is_local(message_id: str) -> bool:
+    """Returns True if the archived email is stored locally on this server."""
+    return EmailArchiveFactory.get_email_archive_interface().archive_email_is_local(message_id)
+
 def get_archived_email_path(message_id: str) -> str:
     """Returns the local file path to the archive  email specified by message id.
     Returns None if it cannot be found."""

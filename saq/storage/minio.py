@@ -162,7 +162,8 @@ class MinIOStorage(StorageInterface):
         self,
         local_path: Union[str, Path],
         bucket: str,
-        remote_path: str
+        remote_path: str,
+        **kwargs
     ) -> str:
         """
         Upload a file to MinIO storage.
@@ -194,7 +195,8 @@ class MinIOStorage(StorageInterface):
             self.client.fput_object(
                 bucket_name=bucket,
                 object_name=remote_path,
-                file_path=local_path_str
+                file_path=local_path_str,
+                **kwargs
             )
             
             # Generate URL for the uploaded file
@@ -217,7 +219,7 @@ class MinIOStorage(StorageInterface):
         bucket: str,
         remote_path: str,
         local_path: Union[str, Path]
-    ) -> str:
+    ) -> object:
         """
         Download a file from MinIO storage.
         
@@ -251,17 +253,18 @@ class MinIOStorage(StorageInterface):
                 raise
             
             # Download the file
-            self.client.fget_object(
+            result = self.client.fget_object(
                 bucket_name=bucket,
                 object_name=remote_path,
                 file_path=local_path_str
             )
             
             # Generate URL for the downloaded file
-            file_url = self._generate_file_url(bucket, remote_path)
+            #file_url = self._generate_file_url(bucket, remote_path)
             
             logging.info(f"downloaded {bucket}/{remote_path} to {local_path_str}")
-            return file_url
+            return result
+            #return file_url
             
         except FileNotFoundError:
             raise

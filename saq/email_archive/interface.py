@@ -22,6 +22,10 @@ class EmailArchiveInterface(Protocol):
     def get_email_archive_local_server_name(self) -> str:
         """Returns the local server name of the email archive server."""
         ...
+    
+    def archive_email_is_local(self, message_id: str) -> bool:
+        """Returns True if the archived email is stored locally on this server."""
+        ...
 
     def initialize_email_archive(self):
         """Initializes the email archive subsystem. Must be called once at application startup."""
