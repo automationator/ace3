@@ -2,3 +2,4 @@ celery[redis]
 pydantic
 minio
 pyyaml
+python-magic

@@ -1,7 +1,7 @@
 ARG DOCKER_IN_DOCKER_IMAGE=docker:dind
 FROM ${DOCKER_IN_DOCKER_IMAGE}
 
-RUN apk update && apk add --no-cache python3
+RUN apk update && apk add --no-cache python3 libmagic
 
 RUN python3 -m venv /opt/venv
 RUN /opt/venv/bin/pip install -U pip

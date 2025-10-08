@@ -6,12 +6,14 @@
 
 import argparse
 import logging
+import mimetypes
 import os
 from subprocess import PIPE, Popen
 import uuid
 from celery import Celery
 from minio import Minio
 from yaml import load, SafeLoader
+import magic
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,35 @@ def _process_output(job_id: str, output_dir: str) -> str:
     # return the object prefix
     return file_prefix
 
+def _correct_file_extension(file_path: str) -> str:
+    """Attempts to correct the file extension of the given file based on the mime type.
+    If the file extension needs to change, the file is renamed and the new file path is returned.
+    If the guess on the mime type or file extension fails, the original file path is returned.
+    Otherwise, the original file path is returned."""
+
+    mime_type = magic.from_file(file_path, mime=True)
+    if not mime_type:
+        return file_path
+
+    logging.info(f"mime type: {mime_type} for {file_path}")
+
+    file_extension = mimetypes.guess_extension(mime_type)
+    if not file_extension:
+        return file_path
+
+    # NOTE file_extension already has a leading dot
+    logging.info(f"file extension: {file_extension} for {file_path}")
+
+    if file_path.lower().endswith(f"{file_extension.lower()}"):
+        return file_path
+
+    # create a new file path with the correct extension
+    dir_path = os.path.dirname(file_path)
+    file_name, _ = os.path.splitext(os.path.basename(file_path))
+    new_file_path = f"{dir_path}/{file_name}{file_extension}"
+    logging.info(f"correcting file extension from {file_path} to {new_file_path}")
+    os.rename(file_path, new_file_path)
+    return new_file_path
 
 @app.task
 def scan_file(bucket: str, file_path: str) -> str:
@@ -91,6 +122,9 @@ def scan_file(bucket: str, file_path: str) -> str:
         secure=False,  # HTTP, not HTTPS
     )
     minio.fget_object(bucket, file_path, target_file_path)
+
+    # correct the file extension
+    target_file_path = _correct_file_extension(target_file_path)
 
     # launch the scan job and wait for it to complete
     process = Popen(
