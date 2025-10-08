@@ -5,6 +5,7 @@ from typing import Optional, List, override
 from saq.analysis import Analysis
 from saq.analysis.observable import Observable
 from saq.constants import DIRECTIVE_CRAWL, DIRECTIVE_RENDER, F_URL, F_FILE, AnalysisExecutionResult
+from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
 from saq.observables.file import FileObservable
 from saq.phishkit import get_async_scan_result, scan_file, scan_url
@@ -258,6 +259,7 @@ class PhishkitAnalyzer(AnalysisModule):
             except Exception as e:
                 error_msg = f"Failed to scan file {observable.value}: {str(e)}"
                 logging.error(error_msg)
+                report_exception()
                 analysis.error = error_msg
                 return AnalysisExecutionResult.COMPLETED
 

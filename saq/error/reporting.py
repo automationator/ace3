@@ -56,5 +56,5 @@ def report_exception(execution_context: Optional["EngineExecutionContext"]=None)
         return error_report_path
 
     except Exception as e:
-        logging.error("uncaught exception we reporting an exception: {}".format(e))
+        logging.error("uncaught exception when reporting an exception: {}".format(e))
         return None

@@ -619,8 +619,6 @@ def correlate(args):
                 root.details = json.load(fp)
         else:
             root.details = { 
-                'local_user': pwd.getpwuid(os.getuid())[0],
-                'local_user_uid': os.getuid(),
                 'comment': args.comment
             }
 

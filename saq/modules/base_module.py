@@ -619,8 +619,10 @@ class AnalysisModule(FileWatcherMixin):
         elif delayed_analysis:
             # get the analysis that has been completed so far
             existing_analysis = obj.get_and_load_analysis(self.generated_analysis_type, instance=self.instance)
-            assert existing_analysis is not None
-            analysis_result = self.continue_analysis(obj, existing_analysis)
+            if existing_analysis:
+                analysis_result = self.continue_analysis(obj, existing_analysis)
+            else:
+                analysis_result = self.execute_analysis(obj)
         else:
             analysis_result = self.execute_analysis(obj)
                 
