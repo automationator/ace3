@@ -193,8 +193,6 @@ sqlite3:
   timeout: 5
 
 encryption:
-  # path (relative to DATA_DIR) to the directory that contains the encrypted encryption key and verification key
-  encryption_store_path: var/encryption
   # size of the salt for PBKDF2 (in bytes)
   salt_size: 32
   # iterations for the PBKDF2 algorithm - the default is fine but if you're paranoid you can make it even larger
