@@ -138,7 +138,6 @@ rabbitmq:
   port: 5672
 
 minio:
-  # for aws use s3.amazonaws.com port 443
   host: minio
   port: 9000
   access_key: ace3api
@@ -149,8 +148,6 @@ minio:
   cert_check: false
   # leave empty for MinIO server
   region:
-  # query the EC2 metadata service for credentials
-  use_ec2_metadata: false
 
 # global redis settings
 redis:
@@ -460,7 +457,7 @@ messaging:
 message_routing: {}
 
 email_archive:
-  target: local # possible values: local, s3
+  target: local # possible values: local, minio, s3
   # if this system is archiving emails, this determines what section to use for the database config
   # NOTE this is the name of the section without the leading database_ (legacy issue)
   primary: email_archive
