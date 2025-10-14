@@ -91,6 +91,7 @@ class EmailArchiveLocal(EmailArchiveInterface):
 
         # does it already exist?
         if os.path.exists(target_path):
+            logging.info(f"email {sha256_hash} already exists in local archive")
             # TODO metrics to record this
             return sha256_hash
 
@@ -139,6 +140,7 @@ class EmailArchiveLocal(EmailArchiveInterface):
         JOIN archive_index ON archive.archive_id = archive_index.archive_id
     WHERE 
         archive_index.field = 'message_id' AND archive_index.hash = UNHEX(SHA2(%s, 256))
+    ORDER BY archive.insert_date DESC
     """
     , (normalize_message_id(message_id),))
             return cursor.fetchone()
@@ -226,7 +228,7 @@ class EmailArchiveLocal(EmailArchiveInterface):
 
         return fully_qualified(result[0])
 
-    def get_archived_email_path(self, message_id: str) -> str:
+    def get_archived_email_path(self, message_id: str) -> Optional[str]:
         """Returns the local file path to the archive  email specified by message id.
         Returns None if it cannot be found."""
         result = self.query_by_message_id(message_id)
@@ -250,6 +252,10 @@ class EmailArchiveLocal(EmailArchiveInterface):
 
                     yield data
 
+    def iter_archived_email(self, message_id: str, chunk_size: Optional[int]=None):
+        """Iterate the contents of the archived email specified by message id."""
+        return self.iter_decrypt_email(self.get_archived_email_path(message_id), chunk_size)
+
     def get_recipients_by_message_id(self, message_id: str) -> list[str]:
         """Returns all recipients who received the email identified by message-id."""
         with get_db_connection(DB_EMAIL_ARCHIVE) as db:
@@ -260,3 +266,7 @@ class EmailArchiveLocal(EmailArchiveInterface):
                 result.append(row[0])
 
             return result
+
+    def email_is_archived(self, message_id: str) -> bool:
+        """Returns True if the email is archived."""
+        return self.get_archived_email_path(message_id) is not None

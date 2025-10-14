@@ -73,7 +73,7 @@ class EmailArchiveAdapter(EmailArchiveInterface):
         Returns None if it cannot be found."""
         return self._email_archive.get_archived_email_server(message_id)
 
-    def get_archived_email_path(self, message_id: str) -> str:
+    def get_archived_email_path(self, message_id: str) -> Optional[str]:
         """Returns the local file path to the archive  email specified by message id.
         Returns None if it cannot be found."""
         return self._email_archive.get_archived_email_path(message_id)
@@ -82,7 +82,15 @@ class EmailArchiveAdapter(EmailArchiveInterface):
         """Decrypt and iterate the contents of the target archived email."""
         return self._email_archive.iter_decrypt_email(target_path, chunk_size)
 
+    def iter_archived_email(self, message_id: str, chunk_size: Optional[int]=None):
+        """Iterate the contents of the archived email specified by message id."""
+        return self._email_archive.iter_archived_email(message_id, chunk_size)
+
     def get_recipients_by_message_id(self, message_id: str) -> list[str]:
         """Returns all recipients who received the email identified by message-id."""
         return self._email_archive.get_recipients_by_message_id(message_id)
+
+    def email_is_archived(self, message_id: str) -> bool:
+        """Returns True if the email is archived."""
+        return self._email_archive.email_is_archived(message_id)
 

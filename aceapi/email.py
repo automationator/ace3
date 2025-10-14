@@ -3,13 +3,12 @@ from aceapi.blueprints import email_bp
 
 import logging
 
-from urllib.parse import urlencode, quote_plus
 
 from saq.constants import G_ENCRYPTION_KEY
-from saq.email_archive import get_archived_email_path, iter_decrypt_email, get_archived_email_server, archive_email_is_local
+from saq.email_archive import iter_archived_email, email_is_archived
 from saq.environment import g
 
-from flask import request, Response, abort, redirect
+from flask import request, Response, abort
 
 
 KEY_MESSAGE_ID = "message_id"
@@ -25,22 +24,8 @@ def get_archived_email():
         logging.warning("missing get parameter %s in api call to get_archived_email", KEY_MESSAGE_ID)
         abort(400)
 
-    target_server = get_archived_email_server(request.values[KEY_MESSAGE_ID])
-    if not target_server:
-        logging.info("unknown message id %s in called to get_archived_email", request.values[KEY_MESSAGE_ID])
+    if not email_is_archived(request.values[KEY_MESSAGE_ID]):
+        logging.info(f"email {request.values[KEY_MESSAGE_ID]} is not archived")
         abort(404)
 
-    # is this email stored on a different server?
-    if not archive_email_is_local(request.values[KEY_MESSAGE_ID]):
-        params = { "message_id": request.values[KEY_MESSAGE_ID] }
-        # XXX kind of a sloppy way to do this
-        target_url = f"https://{target_server}/api/email/get_archived_email?{urlencode(params, quote_via=quote_plus)}"
-        logging.info("redirecting request for %s to %s", request.values[KEY_MESSAGE_ID], target_url)
-        return redirect(target_url, 302)
-
-    target_path = get_archived_email_path(request.values[KEY_MESSAGE_ID])
-    if not target_path:
-        logging.info("unknown message id %s in called to get_archived_email", request.values[KEY_MESSAGE_ID])
-        abort(404)
-
-    return Response(iter_decrypt_email(target_path), mimetype="message/rfc822")
+    return Response(iter_archived_email(request.values[KEY_MESSAGE_ID]), mimetype="message/rfc822")

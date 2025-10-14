@@ -4,6 +4,7 @@ from enum import Enum
 
 class EmailArchiveTargetType(Enum):
     LOCAL = "local"
+    MINIO = "minio"
     S3 = "s3"
 
 

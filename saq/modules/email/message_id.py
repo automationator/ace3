@@ -1,7 +1,7 @@
 import logging
 import os
 from typing import Optional, override
-from ace_api import iter_archived_email
+from saq.email_archive import iter_archived_email, email_is_archived
 from saq.analysis.analysis import Analysis
 from saq.analysis.search import search_down
 from saq.constants import F_MESSAGE_ID, AnalysisExecutionResult
@@ -70,6 +70,10 @@ class MessageIDAnalyzerV2(AnalysisModule):
 
         if email_analysis:
             logging.debug(f"already have email analysis for {message_id.value}")
+            return AnalysisExecutionResult.COMPLETED
+
+        if not email_is_archived(message_id.value):
+            logging.info(f"email {message_id.value} is not archived")
             return AnalysisExecutionResult.COMPLETED
 
         target_path = self.get_root().create_file_path(f"{message_id.value}.rfc822")

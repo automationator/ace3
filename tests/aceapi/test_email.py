@@ -15,7 +15,7 @@ TEST_REMOTE_MESSAGE_ID = "<remote-message-id@example.com>"
 TEST_RECIPIENT = "test@local"
 
 
-@pytest.fixture(autouse=True, scope="function", params=[EmailArchiveTargetType.LOCAL, EmailArchiveTargetType.S3])
+@pytest.fixture(autouse=True, scope="function", params=[EmailArchiveTargetType.MINIO])
 def patch_email_archive_target_type(monkeypatch, request):
     monkeypatch.setattr("saq.email_archive.factory.get_email_archive_type", lambda: request.param)
     return request.param

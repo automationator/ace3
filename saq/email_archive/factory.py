@@ -3,6 +3,7 @@ from saq.configuration.config import get_config_value
 from saq.email_archive.adapter import EmailArchiveAdapter
 from saq.email_archive.interface import EmailArchiveInterface
 from saq.email_archive.local import EmailArchiveLocal
+from saq.email_archive.minio import EmailArchiveMinio
 from saq.email_archive.s3 import EmailArchiveS3
 from saq.email_archive.types import EmailArchiveTargetType
 
@@ -18,7 +19,9 @@ class EmailArchiveFactory:
     def get_email_archive_interface() -> EmailArchiveInterface:
         """Create an EmailArchiveInterface instance."""
         if get_email_archive_type() == EmailArchiveTargetType.LOCAL:
-            return EmailArchiveAdapter(EmailArchiveLocal())
+            raise ValueError("Local email archive is no longer supported")
+        elif get_email_archive_type() == EmailArchiveTargetType.MINIO:
+            return EmailArchiveAdapter(EmailArchiveMinio())
         elif get_email_archive_type() == EmailArchiveTargetType.S3:
             return EmailArchiveAdapter(EmailArchiveS3())
         else:

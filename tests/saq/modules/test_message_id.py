@@ -1,5 +1,3 @@
-import os.path
-
 import pytest
 
 from saq.configuration import get_config
@@ -46,6 +44,7 @@ def test_message_id_analyzer_v2(test_context, tmpdir, monkeypatch):
         yield b"This is a test."
 
     monkeypatch.setattr(saq.modules.email.message_id, "iter_archived_email", mock_iter_archived_email)
+    monkeypatch.setattr(saq.modules.email.message_id, "email_is_archived", lambda message_id: True)
     analyzer = MessageIDAnalyzerV2(context=create_test_context(root=root))
     analyzer.execute_analysis(observable)
     analysis = observable.get_and_load_analysis(analyzer.generated_analysis_type)
@@ -104,6 +103,7 @@ def test_message_id_analyzer_v2_target_file_exists(test_context, tmpdir, monkeyp
         yield b"This is a test."
 
     monkeypatch.setattr(saq.modules.email.message_id, "iter_archived_email", mock_iter_archived_email)
+    monkeypatch.setattr(saq.modules.email.message_id, "email_is_archived", lambda message_id: True)
     analyzer = MessageIDAnalyzerV2(context=create_test_context(root=root))
     analyzer.execute_analysis(observable)
     analysis = observable.get_and_load_analysis(analyzer.generated_analysis_type)

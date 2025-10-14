@@ -2,12 +2,18 @@ import logging
 import os
 import tempfile
 from typing import Optional
-from saq.configuration.config import get_config_value
-from saq.constants import CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_S3_BUCKET, CONFIG_EMAIL_ARCHIVE_S3_REGION
-from saq.email_archive.local import EmailArchiveLocal
 
-import boto3
-import botocore.exceptions
+from minio import Minio
+from minio.error import S3Error
+from saq.configuration.config import get_config_value
+from saq.constants import CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_S3_BUCKET, CONFIG_EMAIL_ARCHIVE_S3_CONFIG
+from saq.email_archive.local import EmailArchiveLocal
+from saq.storage.minio import get_minio_client
+
+#
+# right now we're trying to stay backwards compatible with the local implementation
+# as much as possible
+#
 
 def _extract_sha256_from_file_name(file_path: str) -> str:
     """Given a local email archive file path, extract the sha256 hash from the file name."""
@@ -15,19 +21,20 @@ def _extract_sha256_from_file_name(file_path: str) -> str:
     # file name should be sha256_hash.lower().gz.e
     return os.path.basename(file_path).split('.')[0]
 
-def _get_s3_client() -> boto3.client:
-    return boto3.client("s3", region_name=get_config_value(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_S3_REGION))
+def _get_email_archive_minio_client() -> Minio:
+    return get_minio_client(get_config_value(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_S3_CONFIG))
 
-class EmailArchiveS3(EmailArchiveLocal):
+class EmailArchiveMinio(EmailArchiveLocal):
     def email_exists_in_s3(self, sha256_hash: str) -> bool:
         bucket = get_config_value(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_S3_BUCKET)
-        s3_client = _get_s3_client()
+        s3_client = _get_email_archive_minio_client()
 
         try:
-            result = s3_client.head_object(Bucket=bucket, Key=sha256_hash)
+            result = s3_client.stat_object(bucket, sha256_hash)
             return result is not None
-        except botocore.exceptions.ClientError as e:
-            if e.response["Error"]["Code"] == "404":
+        except S3Error as e:
+            # if the object doesn't exist, stat_object raises an exception with code NoSuchKey
+            if e.code == "NoSuchKey":
                 logging.debug(f"email {sha256_hash} does not exist in s3: {e}")
                 return False
 
@@ -37,8 +44,8 @@ class EmailArchiveS3(EmailArchiveLocal):
         bucket = get_config_value(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_S3_BUCKET)
         metadata = { "message_id": message_id }
         logging.info(f"uploading email archive {sha256_hash} to {bucket} with metadata {metadata}")
-        s3_client = _get_s3_client()
-        result = s3_client.upload_file(local_path, bucket, sha256_hash, ExtraArgs={"Metadata": metadata})
+        s3_client = _get_email_archive_minio_client()
+        result = s3_client.fput_object(bucket, sha256_hash, local_path, metadata=metadata)
         logging.debug(f"uploaded email archive {sha256_hash} to {bucket}: {result}")
         return True
 
@@ -56,17 +63,17 @@ class EmailArchiveS3(EmailArchiveLocal):
         # NOTE we want to keep the temporary file in the same directory as the target path
         # so then we we MOVE it to the target path it's guaranteed to be atomic
         # this is a cheap way to avoid concurrency issues
-        fd, temp_path = tempfile.mkstemp(prefix=f'archive_{sha256_hash}.', suffix='.gz.e', dir=os.path.dirname(target_path))
+        fd, temp_path = tempfile.mkstemp(prefix=f'archive_{sha256_hash}.', suffix='.gz.e')
         os.close(fd)
 
-        s3_client = _get_s3_client()
+        s3_client = _get_email_archive_minio_client()
         logging.info(f"downloading email archive {sha256_hash} to {temp_path}")
-        s3_client.download_file(
+        s3_client.fget_object(
             get_config_value(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_S3_BUCKET),
             sha256_hash,
             temp_path)
 
-        # once it's downloaded we move it to the target path
+        # move it to the target path
         os.rename(temp_path, target_path)
         return target_path
 

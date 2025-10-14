@@ -71,6 +71,14 @@ def iter_decrypt_email(target_path: str, chunk_size: Optional[int]=None):
     """Decrypt and iterate the contents of the target archived email."""
     return EmailArchiveFactory.get_email_archive_interface().iter_decrypt_email(target_path, chunk_size)
 
+def iter_archived_email(message_id: str, chunk_size: Optional[int]=None):
+    """Iterate the contents of the archived email specified by message id."""
+    return EmailArchiveFactory.get_email_archive_interface().iter_archived_email(message_id, chunk_size)
+
 def get_recipients_by_message_id(message_id: str) -> list[str]:
     """Returns all recipients who received the email identified by message-id."""
     return EmailArchiveFactory.get_email_archive_interface().get_recipients_by_message_id(message_id)
+
+def email_is_archived(message_id: str) -> bool:
+    """Returns True if the email is archived."""
+    return EmailArchiveFactory.get_email_archive_interface().email_is_archived(message_id)
