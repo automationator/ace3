@@ -999,8 +999,8 @@ def start_gui(args):
     listen_port = args.port or get_config_value_as_int(CONFIG_GUI, CONFIG_GUI_LISTEN_PORT)
     #run_simple(get_config().get('gui', 'listen_address'), get_config().getint('gui', 'listen_port'), app,
     run_simple(listen_address, listen_port, app,
-               #ssl_context=(get_config().get('gui', 'ssl_cert'), get_config().get('gui', 'ssl_key')),
-               ssl_context="adhoc",
+               ssl_context=(get_config().get('gui', 'ssl_cert'), get_config().get('gui', 'ssl_key')),
+               #ssl_context="adhoc",
                use_reloader=True)
 
 # start-gui
@@ -3168,20 +3168,43 @@ s3_parser = get_cli_subparsers().add_parser("s3")
 s3_sp = s3_parser.add_subparsers(dest="s3_cmd")
 
 def s3_upload_file(args) -> int:
-    from saq.storage.minio import get_minio_client
-    client = get_minio_client()
-    # Upload the file
-    client.fput_object(
-        bucket_name=args.bucket,
-        object_name=args.key,
-        file_path=args.file
-    )
-    return 0
+    """Upload a file to S3 using boto3."""
+    if not args.file:
+        logging.error("--file is required")
+        return 1
+    
+    if not args.bucket:
+        logging.error("--bucket is required")
+        return 1
+    
+    if not args.key:
+        logging.error("--key is required")
+        return 1
+    
+    if not os.path.exists(args.file):
+        logging.error(f"File does not exist: {args.file}")
+        return 1
+    
+    try:
+        # Create S3 client using EC2 instance credentials
+        import boto3
+        s3_client = boto3.client('s3')
+        
+        # Upload the file
+        logging.info(f"Uploading {args.file} to s3://{args.bucket}/{args.key}")
+        s3_client.upload_file(args.file, args.bucket, args.key)
+        
+        logging.info(f"Successfully uploaded {args.file} to s3://{args.bucket}/{args.key}")
+        return 0
+    except Exception as e:
+        logging.error(f"Failed to upload file: {e}")
+        return 1
 
 s3_upload_parser = s3_sp.add_parser("upload")
 s3_upload_parser.add_argument("--file", help="The file to upload.")
 s3_upload_parser.add_argument("--bucket", help="The bucket to upload the file to.")
 s3_upload_parser.add_argument("--key", help="The key to upload the file to.")
+s3_upload_parser.add_argument("--config", help="The configuration to use for the MinIO client.")
 s3_upload_parser.set_defaults(func=s3_upload_file)
 
 # TODO find a better way to do this
