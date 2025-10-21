@@ -110,7 +110,7 @@ function submit_edit_user() {
         json_submission[selected_user_ids[i]].groups = groups;
     }
 
-    fetch("/auth/edit", {
+    fetch("/ace/auth/edit", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -162,7 +162,7 @@ function submit_add_user() {
 
     json_submission.groups = groups;
 
-    fetch("/auth/add", {
+    fetch("/ace/auth/add", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -251,7 +251,7 @@ $(document).ready(function() {
             $("#edit_user_modal_label").text("Edit User");
             // get the details of the selected user
             var user_id = selected_user_ids[0];
-            fetch(`/auth/user?user_ids=${user_id}`)
+            fetch(`/ace/auth/user?user_ids=${user_id}`)
                 .then(response => {
                     if (!response.ok) {
                         response.text().then(text => {
@@ -330,7 +330,7 @@ $(document).ready(function() {
             };
         }
 
-        fetch("/auth/edit", {
+        fetch("/ace/auth/edit", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -360,7 +360,7 @@ $(document).ready(function() {
             };
         }
 
-        fetch("/auth/edit", {
+        fetch("/ace/auth/edit", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -392,7 +392,7 @@ $(document).ready(function() {
 
         var json_submission = { groups: selected_group_ids };
 
-        fetch("/auth/group/delete", {
+        fetch("/ace/auth/group/delete", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -430,7 +430,7 @@ $(document).ready(function() {
             groups: groups,
         };
 
-        fetch("/auth/permission/add", {
+        fetch("/ace/auth/permission/add", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -458,7 +458,7 @@ $(document).ready(function() {
             groups: groups,
         };
 
-        fetch("/auth/permission/delete", {
+        fetch("/ace/auth/permission/delete", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
