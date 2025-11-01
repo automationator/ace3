@@ -46,6 +46,7 @@ from saq.constants import (
     CONFIG_SQLITE3_TIMEOUT,
     CONFIG_SSL,
     CONFIG_SSL_CA_CHAIN_PATH,
+    ENV_ACE_LOG_CONFIG_PATH,
     G_ANALYST_DATA_DIR,
     G_API_PREFIX,
     G_AUTOMATION_USER_ID,
@@ -532,7 +533,11 @@ def initialize_environment(
             sys.stderr.write("unable to mkdir {}: {}\n".format(g(G_LOG_DIRECTORY), e))
             raise e
 
-    # by default we log to the console
+    # if the logging configuration path is not specified, see if it's set in the environment
+    if logging_config_path is None:
+        logging_config_path = os.environ.get(ENV_ACE_LOG_CONFIG_PATH)
+
+    # if it's still not set, use the default console logging configuration
     if logging_config_path is None:
         logging_config_path = os.path.join(get_base_dir(), "etc", "logging_configs", "console_logging.yaml")
 

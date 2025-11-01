@@ -7,6 +7,13 @@
 
 from enum import Enum
 
+#
+# environment variables
+#
+
+# path to the logging configuration file
+ENV_ACE_LOG_CONFIG_PATH = "ACE_LOG_CONFIG_PATH"
+
 
 DB_ACE = "ace"
 DB_BROCESS = "brocess"

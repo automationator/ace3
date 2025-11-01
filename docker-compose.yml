@@ -241,7 +241,9 @@ services:
       - ace
 
   http-app:
-    environment: *common-env
+    environment:
+      <<: *common-env
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/app_logging.yaml
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       - ace
@@ -257,7 +259,9 @@ services:
       - ace
 
   http-api:
-    environment: *common-env
+    environment:
+      <<: *common-env
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/api_logging.yaml
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       - ace
@@ -295,7 +299,9 @@ services:
       - ace
 
   http-debug:
-    environment: *common-env
+    environment:
+      <<: *common-env
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/debug_logging.yaml
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       - ace
@@ -311,7 +317,9 @@ services:
       - ace
 
   network-semaphore:
-    environment: *common-env
+    environment:
+      <<: *common-env
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_network_semaphore.yaml
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace-setup:
@@ -328,7 +336,9 @@ services:
       - ace
 
   git:
-    environment: *common-env
+    environment:
+      <<: *common-env
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_git.yaml
     depends_on:
       - ace
     image: ${ACE3_IMAGE_URL:-ace3:latest}
@@ -341,7 +351,9 @@ services:
       - ace
 
   cron:
-    environment: *common-env
+    environment:
+      <<: *common-env
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_cron.yaml
     depends_on:
       - ace
     image: ${ACE3_IMAGE_URL:-ace3:latest}
@@ -354,7 +366,9 @@ services:
       - ace
 
   yara:
-    environment: *common-env
+    environment:
+      <<: *common-env
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_yara.yaml
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace-setup:
@@ -369,7 +383,9 @@ services:
       - ace
 
   background-executor:
-    environment: *common-env
+    environment:
+      <<: *common-env
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_background_executor.yaml
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace:
@@ -386,7 +402,9 @@ services:
       - ace
 
   embedding-service:
-    environment: *common-env
+    environment:
+      <<: *common-env
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_llm_embedding.yaml
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace:
@@ -420,7 +438,9 @@ services:
       - ace
 
   ace:
-    environment: *common-env
+    environment:
+      <<: *common-env
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_engine.yaml
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace-setup:
