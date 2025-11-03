@@ -86,6 +86,7 @@ RUN apt-get update && \
         libxslt1-dev \
         libyaml-dev \
         locales \
+        logrotate \
         lsb-release \
         lsof \
         make \

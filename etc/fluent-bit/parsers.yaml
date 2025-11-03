@@ -1,0 +1,53 @@
+parsers:
+  - name: ace_json
+    format: json
+    time_key: asctime
+    time_format: "%Y-%m-%d %H:%M:%S,%L"
+    time_keep: true
+
+  - name: phishfinder_json
+    format: json
+    time_key: date
+    time_format: "%Y-%m-%d %H:%M:%S.%L %z"
+    time_keep: true
+
+  - name: mysql
+    format: regex
+    regex: '^(?<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z) (?<level>[0-9]+) \[(?<category>[^\]]+)\] \[(?<code>[^\]]+)\] \[(?<source>[^\]]+)\] (?<message>.*)$'
+    time_key: timestamp
+    time_format: "%Y-%m-%dT%H:%M:%S.%LZ"
+    time_keep: true
+
+  - name: qdrant
+    format: regex
+    regex: '^(?<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?<level>[A-Z]+)\s+(?<log_source>[^\s]+)\s+(?<message>.*)$'
+    time_key: timestamp
+    time_format: "%Y-%m-%dT%H:%M:%S.%LZ"
+    time_keep: true
+
+  - name: nginx
+    format: regex
+    regex: '^(?<time>\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}) \[(?<level>\w+)\] (?<pid>\d+)#(?<tid>\d+): (?<message>.*)$'
+    time_key: time
+    time_format: "%Y/%m/%d %H:%M:%S"
+    time_keep: true
+
+  - name: redis
+    format: regex
+    regex: '^(?<pid>\d+):(?<role>[A-Z])\s+(?<timestamp>\d{2} \w{3} \d{4} \d{2}:\d{2}:\d{2}\.\d+)\s+(?<level>[*#\-\.])\s+(?<message>.*)$'
+    time_key: timestamp
+    time_format: "%d %b %Y %H:%M:%S.%L"
+    time_keep: true
+
+  - name: rabbitmq
+    format: json
+    time_key: time
+    time_format: epoch_usecs
+    time_keep: true
+
+  - name: phishkit
+    format: regex
+    regex: '^\[(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}): (?<level>[A-Z]+)\/(?<process>[^\]]+)\] (?<message>.*)$'
+    time_key: timestamp
+    time_format: "%Y-%m-%d %H:%M:%S,%L"
+    time_keep: true

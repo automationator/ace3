@@ -1,0 +1,123 @@
+service:
+  flush: 1
+  daemon: off
+  log_level: info
+  parsers_file: /fluent-bit/etc/parsers.yaml
+  # HTTP server useful for health/metrics while testing
+  # http_server: on
+  # http_listen: 0.0.0.0
+  # http_port: 2020
+
+pipeline:
+  inputs:
+    - name: forward
+      listen: 0.0.0.0
+      port: 24224
+
+    # email scanner logs
+    - name: tail
+      tag: phishfinder
+      path: /data/logs/email/email-*.log.json
+      parser: phishfinder_json
+      db: /data/logs/tail-state-phishfinder.db
+      mem_buf_limit: 50MB
+      read_from_head: true
+
+  filters:
+    - name: parser
+      match: ace-*
+      key_name: log
+      parser: ace_json
+      reserve_data: on
+
+    - name: parser
+      match: phishfinder
+      key_name: log
+      parser: phishfinder_json
+      reserve_data: on
+
+    - name: parser
+      match: mysql-db-*
+      key_name: log
+      parser: mysql
+      reserve_data: on
+
+    - name: parser
+      match: qdrant
+      key_name: log
+      parser: qdrant
+      reserve_data: on
+
+    - name: parser
+      match: nginx
+      key_name: log
+      parser: nginx
+      reserve_data: on
+
+    - name: parser
+      match: redis
+      key_name: log
+      parser: redis
+      reserve_data: on
+
+    - name: parser
+      match: rabbitmq
+      key_name: log
+      parser: rabbitmq
+      reserve_data: on
+
+    - name: parser
+      match: phishkit
+      key_name: log
+      parser: phishkit
+      reserve_data: on
+
+  outputs:
+    - name: file
+      path: /data/logs
+      match: "ace-*"
+      format: template
+      template: '[{asctime}] [{filename}:{lineno}] [{threadName}] [{process}] [{severity}] - {message}'
+      workers: 1
+
+    - name: file
+      path: /data/logs
+      match: "mysql-db-*"
+      format: out_file
+      workers: 1
+
+    - name: file
+      path: /data/logs
+      match: "qdrant"
+      format: out_file
+      workers: 1
+
+    - name: file
+      path: /data/logs
+      match: "nginx"
+      format: out_file
+      workers: 1
+
+    - name: file
+      path: /data/logs
+      match: "redis"
+      format: out_file
+      workers: 1
+
+    - name: file
+      path: /data/logs
+      match: "rabbitmq"
+      format: out_file
+      workers: 1
+
+    - name: file
+      path: /data/logs
+      match: "phishkit"
+      format: out_file
+      workers: 1
+
+    # in a standalone system we don't re-log the email logs because they are already logged to the file system
+    - name: null
+      match: phishfinder
+
+

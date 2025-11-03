@@ -115,7 +115,7 @@ class SplunkQueryObject:
         self.search_session.verify = False
 
         # determine gui search path from namespace app
-        self.gui_path = 'en-US/app/search/search' if app == '-' else f'en-US/app/{app}/search'
+        self.gui_path = 'en-US/app/search/search' if app is None or app == '-' else f'en-US/app/{app}/search'
 
         self.performance_logging_directory = performance_logging_directory
         if self.performance_logging_directory is None:

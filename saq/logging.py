@@ -66,7 +66,7 @@ LOGGING_BASE_CONFIG = {
     },
 }
 
-def initialize_logging(logging_config_path: str, log_sql: Optional[bool]=False):
+def initialize_logging(logging_config_path: str, log_sql: Optional[bool]=False, fluent_bit_tag: Optional[str]=None):
     assert isinstance(logging_config_path, str) and logging_config_path
 
     try:
@@ -78,6 +78,12 @@ def initialize_logging(logging_config_path: str, log_sql: Optional[bool]=False):
 
         if "disable_existing_loggers" not in logging_config:
             logging_config["disable_existing_loggers"] = False
+
+        # allow dynamic fluent-bit tagging
+        if fluent_bit_tag:
+            if "handlers" in logging_config:
+                if "fluent" in logging_config["handlers"]:
+                    logging_config["handlers"]["fluent"]["tag"] = fluent_bit_tag
 
         logging.config.dictConfig(logging_config)
 

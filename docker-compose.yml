@@ -21,6 +21,7 @@
 # QDRANT_DOCKER_IMAGE
 # DOCKER_IN_DOCKER_IMAGE
 # UBUNTU_DOCKER_IMAGE
+# FLUENT_BIT_DOCKER_IMAGE
 #
 # password and configuration settings
 # NOTE if these are not set they are auto-generated
@@ -45,6 +46,8 @@
 #
 # configuration options
 # SAQ_CONFIG_PATHS
+# SAQ_USER_ID
+# SAQ_GROUP_ID
 #
 
 x-common-env: &common-env
@@ -72,12 +75,13 @@ x-common-volumes: &common-volumes
   - ace-sql:/docker-entrypoint-initdb.d
   - ace-sql-readonly:/ace-sql-readonly
   - ace-yara:/opt/ace/etc/yara
-  - ace-hunt:/opt/ace/hunts
+  - ./hunts:/opt/ace/hunts
   - ace-auth:/auth
   - ace-user-home:/home/ace
   - ./ssl:/opt/ace/ssl
 
 services:
+
   # ensures file permissions on named volumes are correct
   ace-root-volume-initialize:
     environment: *common-env
@@ -101,6 +105,25 @@ services:
     networks: 
       - ace
 
+  fluent-bit:
+    environment: *common-env
+    image: ${FLUENT_BIT_DOCKER_IMAGE:-fluent/fluent-bit:latest}
+    ports:
+      - "24224:24224"
+    restart: unless-stopped
+    hostname: fluent-bit
+    command: /fluent-bin/bin/fluent-bit -c /fluent-bit/etc/fluent-bit.yaml
+    depends_on:
+      ace-root-volume-initialize:
+        condition: service_completed_successfully
+    user: ${SAQ_USER_ID:-1000}:${SAQ_GROUP_ID:-1000}
+    volumes:
+      - ./etc/fluent-bit/fluent-bit.yaml:/fluent-bit/etc/fluent-bit.yaml:ro
+      - ./etc/fluent-bit/parsers.yaml:/fluent-bit/etc/parsers.yaml:ro
+      - ace-data:/data
+    networks: 
+      - ace
+
   # performs all first-time initialization routines that do not require the db
   ace-initialize:
     environment: *common-env
@@ -119,6 +142,12 @@ services:
   ace-db:
     image: ${MYSQL_DOCKER_IMAGE:-mysql:9.2}
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_520_ci --max-allowed-packet=1073741824
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: mysql-db-primary
+        fluentd-async: "true"
     healthcheck:
       test: ["CMD", "mysql", "--defaults-file=/docker-entrypoint-initdb.d/mysql_defaults", "-h", "${ACE_DB_HOST:-ace-db}", "-e", "use ace;"]
       interval: 3s
@@ -129,6 +158,8 @@ services:
     depends_on:
       ace-initialize:
         condition: service_completed_successfully
+      fluent-bit:
+        condition: service_started
     environment:
       MYSQL_RANDOM_ROOT_PASSWORD: 1
     volumes:
@@ -146,6 +177,12 @@ services:
   ace-db-readonly:
     image: ${MYSQL_DOCKER_IMAGE:-mysql:9.2}
     command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_520_ci --max-allowed-packet=1073741824
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: mysql-db-readonly
+        fluentd-async: "true"
     healthcheck:
       test: ["CMD", "mysql", "--defaults-file=/docker-entrypoint-initdb.d/mysql_defaults", "-h", "${ACE_DB_READONLY_HOST:-ace-db-readonly}", "-e", "use ace;"]
       interval: 3s
@@ -156,6 +193,8 @@ services:
     depends_on:
       ace-db:
         condition: service_healthy
+      fluent-bit:
+        condition: service_started
     environment:
       MYSQL_RANDOM_ROOT_PASSWORD: 1
     volumes:
@@ -181,9 +220,17 @@ services:
       /bin/sh -c "
       export QDRANT__SERVICE__API_KEY=$(cat /auth/passwords/qdrant) && ./entrypoint.sh
       "
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: qdrant
+        fluentd-async: "true"
     depends_on:
       ace-setup:
         condition: service_completed_successfully
+      fluent-bit:
+        condition: service_started
     ports:
       - "6333"
     volumes:
@@ -195,7 +242,9 @@ services:
 
   # performs all first-time initialization routines that require the db
   ace-setup:
-    environment: *common-env
+    environment: 
+      <<: *common-env
+      FLUENT_BIT_TAG: ace-setup
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     command: /bin/bash -c "/opt/ace/docker/startup/setup.sh"
     depends_on:
@@ -211,9 +260,16 @@ services:
   ace-http-external:
     image: ${NGINX_DOCKER_IMAGE:-nginx:latest}
     restart: always
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: nginx
+        fluentd-async: "true"
     depends_on:
       - http-app
       - http-api
+      - fluent-bit
     volumes:
       - ./etc/nginx/conf.d.external:/etc/nginx/conf.d:ro
       - ./app/static:/opt/ace/app/static:ro
@@ -227,9 +283,16 @@ services:
   ace-http:
     image: ${NGINX_DOCKER_IMAGE:-nginx:latest}
     restart: always
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: nginx
+        fluentd-async: "true"
     depends_on:
       - http-app
       - http-api
+      - fluent-bit
     volumes: 
       - ./etc/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./app/static:/opt/ace/app/static:ro
@@ -243,7 +306,8 @@ services:
   http-app:
     environment:
       <<: *common-env
-      ACE_LOG_CONFIG_PATH: etc/logging_configs/app_logging.yaml
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/ace_logging.yaml
+      FLUENT_BIT_TAG: ace-app
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       - ace
@@ -261,7 +325,8 @@ services:
   http-api:
     environment:
       <<: *common-env
-      ACE_LOG_CONFIG_PATH: etc/logging_configs/api_logging.yaml
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/ace_logging.yaml
+      FLUENT_BIT_TAG: ace-api
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       - ace
@@ -288,9 +353,17 @@ services:
       timeout: 10s
       retries: 5
       start_period: 20s
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: redis
+        fluentd-async: "true"
     depends_on:
       ace-setup:
         condition: service_completed_successfully
+      fluent-bit:
+        condition: service_started
     # here we're loading the redis.conf that is built from the ace-setup container
     command: ["redis-server", "/auth/etc/redis/redis.conf"]
     volumes:
@@ -301,7 +374,8 @@ services:
   http-debug:
     environment:
       <<: *common-env
-      ACE_LOG_CONFIG_PATH: etc/logging_configs/debug_logging.yaml
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/ace_logging.yaml
+      FLUENT_BIT_TAG: ace-debug
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       - ace
@@ -319,7 +393,8 @@ services:
   network-semaphore:
     environment:
       <<: *common-env
-      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_network_semaphore.yaml
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/ace_logging.yaml
+      FLUENT_BIT_TAG: ace-network-semaphore
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace-setup:
@@ -338,7 +413,8 @@ services:
   git:
     environment:
       <<: *common-env
-      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_git.yaml
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/ace_logging.yaml
+      FLUENT_BIT_TAG: ace-git
     depends_on:
       - ace
     image: ${ACE3_IMAGE_URL:-ace3:latest}
@@ -353,7 +429,8 @@ services:
   cron:
     environment:
       <<: *common-env
-      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_cron.yaml
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/ace_logging.yaml
+      FLUENT_BIT_TAG: ace-cron
     depends_on:
       - ace
     image: ${ACE3_IMAGE_URL:-ace3:latest}
@@ -368,7 +445,8 @@ services:
   yara:
     environment:
       <<: *common-env
-      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_yara.yaml
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/ace_logging.yaml
+      FLUENT_BIT_TAG: ace-yara
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace-setup:
@@ -385,7 +463,8 @@ services:
   background-executor:
     environment:
       <<: *common-env
-      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_background_executor.yaml
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/ace_logging.yaml
+      FLUENT_BIT_TAG: ace-background-executor
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace:
@@ -404,7 +483,8 @@ services:
   embedding-service:
     environment:
       <<: *common-env
-      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_llm_embedding.yaml
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/ace_logging.yaml
+      FLUENT_BIT_TAG: ace-embedding-service
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace:
@@ -420,6 +500,7 @@ services:
     networks: 
       - ace
 
+  # this is the service you will attach to for development purposes
   dev:
     environment: *common-env
     image: ${ACE3_IMAGE_URL:-ace3:latest}
@@ -440,7 +521,8 @@ services:
   ace:
     environment:
       <<: *common-env
-      ACE_LOG_CONFIG_PATH: etc/logging_configs/service_engine.yaml
+      ACE_LOG_CONFIG_PATH: etc/logging_configs/ace_logging.yaml
+      FLUENT_BIT_TAG: ace-engine
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       ace-setup:
@@ -481,10 +563,19 @@ services:
       timeout: 10s
       retries: 5
       start_period: 20s
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: rabbitmq
+        fluentd-async: "true"
     depends_on:
       ace-setup:
         condition: service_completed_successfully
+      fluent-bit:
+        condition: service_started
     volumes:
+      - ./etc/rabbitmq/conf.d/20-logging.conf:/etc/rabbitmq/conf.d/20-logging.conf:ro
       - ace-auth:/auth
     networks:
       - ace
@@ -558,6 +649,12 @@ services:
       args:
         DOCKER_IN_DOCKER_IMAGE: ${DOCKER_IN_DOCKER_IMAGE:-docker:dind}
     image: ${ACE3_PHISHKIT_MANAGER_IMAGE_URL:-phishkit-manager:latest}
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: phishkit
+        fluentd-async: "true"
     depends_on:
       phishkit-init:
         condition: service_completed_successfully
@@ -567,6 +664,8 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+      fluent-bit:
+        condition: service_started
     volumes:
       # this is needed so that this container can create other containers
       - /var/run/docker.sock:/var/run/docker.sock
@@ -576,7 +675,6 @@ services:
       - ace-auth:/auth
     networks:
       - ace
-
 
 volumes:
   ace-data:

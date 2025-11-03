@@ -3,7 +3,7 @@ disable_existing_loggers: false
 
 formatters:
   base:
-    format: '[%(asctime)s] [%(name)s] [%(pathname)s:%(funcName)s:%(lineno)d] [%(threadName)s] [%(process)d] [%(levelname)s] - %(message)s'
+    format: '[%(asctime)s] [%(filename)s:%(lineno)d] [%(threadName)s] [%(process)d] [%(levelname)s] - %(message)s'
   fluent_fmt:
     '()': fluent.handler.FluentRecordFormatter
     format:
@@ -17,23 +17,18 @@ formatters:
       logSource: '%(name)s'
 
 handlers:
-  console:
-    class: ansistrm.ColorizingStreamHandler
-    level: DEBUG
-    formatter: base
-    stream: ext://sys.stderr
   fluent:
     class: fluent.handler.FluentHandler
     host: fluent-bit
     port: 24224
     # NOTE this gets overridden by the FLUENT_BIT_TAG environment variable
-    tag: ace-debug
+    tag: ace-default
     #buffer_overflow_handler: TBD
     formatter: fluent_fmt
-    level: DEBUG
+    level: INFO
 
 loggers:
   '': # root logger
-    handlers: [console, fluent]
-    level: DEBUG
+    handlers: [fluent]
+    level: INFO
     propagate: false

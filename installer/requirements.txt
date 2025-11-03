@@ -16,6 +16,7 @@ Flask-Login
 Flask-Script
 Flask-SQLAlchemy
 Flask-WTF
+fluent-logger
 gglsbl-rest-client
 hexdump
 html2text

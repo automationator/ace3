@@ -18,11 +18,8 @@ handlers:
     filename: data/logs/console.log
     mode: a
 
-root:
-  level: INFO
-  handlers: [file, console]
-
-
-
-
-
+loggers:
+  '': # root logger
+    handlers: [console, file]
+    level: DEBUG
+    propagate: false

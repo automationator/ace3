@@ -13,6 +13,7 @@ from enum import Enum
 
 # path to the logging configuration file
 ENV_ACE_LOG_CONFIG_PATH = "ACE_LOG_CONFIG_PATH"
+ENV_FLUENT_BIT_TAG = "FLUENT_BIT_TAG"
 
 
 DB_ACE = "ace"

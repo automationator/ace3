@@ -47,6 +47,7 @@ from saq.constants import (
     CONFIG_SSL,
     CONFIG_SSL_CA_CHAIN_PATH,
     ENV_ACE_LOG_CONFIG_PATH,
+    ENV_FLUENT_BIT_TAG,
     G_ANALYST_DATA_DIR,
     G_API_PREFIX,
     G_AUTOMATION_USER_ID,
@@ -548,6 +549,8 @@ def initialize_environment(
         log_sql=get_config_value_as_boolean(
             CONFIG_GLOBAL, CONFIG_GLOBAL_LOG_SQL, False
         ),
+        # optional fluent-bit tag will set the tag for all log messages sent to fluent-bit
+        fluent_bit_tag=os.environ.get(ENV_FLUENT_BIT_TAG),
     )  # this log file just gets some startup information
 
     # has the encryption password been set yet?

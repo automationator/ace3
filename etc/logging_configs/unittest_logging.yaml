@@ -18,11 +18,8 @@ handlers:
     log_dir: data/logs
     filename_format: 'unittest.log'
 
-root:
-  level: DEBUG
-  handlers: [console, file]
-
-
-
-
-
+loggers:
+  '': # root logger
+    handlers: [console, file]
+    level: DEBUG
+    propagate: false
