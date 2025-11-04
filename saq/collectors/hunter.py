@@ -38,7 +38,7 @@ from croniter import croniter
 import pytz
 
 from saq.analysis.root import Submission
-from saq.collectors.base_collector import Collector, CollectorService
+from saq.collectors.base_collector import Collector, CollectorExecutionMode, CollectorService
 from saq.collectors.collector_configuration import CollectorServiceConfiguration
 from saq.configuration import get_config, get_config_value
 from saq.constants import ANALYSIS_MODE_CORRELATION, CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR, QUEUE_DEFAULT, ExecutionMode
@@ -941,12 +941,16 @@ class HunterService(ACEServiceInterface):
     def start(self):
         self.load_hunt_managers()
         self.start_hunt_managers()
+        self.collector_service.start()
 
     @override
     def wait_for_start(self, timeout: float = 5) -> bool:
         for manager in self.hunt_managers.values():
             if not manager.wait_for_startup(timeout):
                 return False
+
+        if not self.collector_service.wait_for_start(timeout):
+            return False
 
         return True
 
@@ -956,14 +960,19 @@ class HunterService(ACEServiceInterface):
         for manager in self.hunt_managers.values():
             manager.start_single_threaded()
 
+        self.collector_service.start_single_threaded(execution_mode=CollectorExecutionMode.SINGLE_SHOT)
+
     @override
     def stop(self):
         self.stop_hunt_managers()
+        self.collector_service.stop()
 
     @override
     def wait(self):
         for manager in self.hunt_managers.values():
             manager.wait()
+
+        self.collector_service.wait()
 
     def hunt_managers_loaded(self) -> bool:
         """Returns True if the hunt managers have been loaded, False otherwise."""
