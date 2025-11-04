@@ -600,7 +600,7 @@ class HuntManager:
             self.update_manager_thread.join()
 
     def update_loop(self):
-        logging.debug(f"started update manager for {self}")
+        logging.info(f"started update manager for {self}")
         self.update_manager_startup_event.set()
         while not self.manager_control_event.is_set():
             try:
@@ -611,7 +611,7 @@ class HuntManager:
                 logging.error(f"uncaught exception {e}")
                 report_exception()
 
-        logging.debug(f"stopped update manager for {self}")
+        logging.info(f"stopped update manager for {self}")
 
     def check_hunts(self):
         """Checks to see if any existing hunts have been modified, created or deleted."""
