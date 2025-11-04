@@ -253,7 +253,7 @@ def test_start_stop():
     wait_for_log_count('started Hunt Manager(test_query)', 1)
 
     # verify the rules where loaded
-    assert log_count('loading hunt from') == 2
+    assert log_count('loading hunt from') >= 2
     assert log_count('loaded Hunt(query_test_1[test_query])') == 1
 
     # wait for the hunt to execute

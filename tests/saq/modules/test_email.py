@@ -21,7 +21,7 @@ from saq.environment import g, g_obj, get_data_dir, get_local_timezone
 from saq.json_encoding import _JSONEncoder
 from saq.modules.email.archive import EmailArchiveResults
 from saq.modules.email.correlation import URLEmailPivotAnalysis_v2
-from saq.modules.email.logging import EmailLoggingAnalyzer
+from saq.modules.email.logging import CONFIG_SPLUNK_LOGGING_ENABLED, EmailLoggingAnalyzer
 from saq.modules.email.mailbox import MAILBOX_ALERT_PREFIX
 from saq.modules.email.message_id import MessageIDAnalysisV2
 from saq.modules.email.rfc822 import EmailAnalysis
@@ -161,7 +161,10 @@ def test_mailbox_submission(test_client, root_analysis, datadir):
     assert analysis.details == root_analysis.details
 
 @pytest.mark.integration
-def test_splunk_logging(root_analysis, datadir):
+def test_splunk_logging(root_analysis, datadir, monkeypatch):
+
+    # enable splunk logging
+    monkeypatch.setitem(get_config()["analysis_module_email_logger"], CONFIG_SPLUNK_LOGGING_ENABLED, True)
 
     # clear splunk logging directory
     splunk_log_dir = os.path.join(get_data_dir(), get_config()[CONFIG_SPLUNK_LOGGING][CONFIG_SPLUNK_LOGGING_DIR], 'smtp')

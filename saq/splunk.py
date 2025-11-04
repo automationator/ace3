@@ -93,6 +93,14 @@ class SplunkQueryObject:
         self.user_context = user_context
         self.app = app
 
+        if self.user_context is None:
+            logging.warning("user_context is not set, using default '-'")
+            self.user_context = '-'
+
+        if self.app is None:
+            logging.warning("app is not set, using default '-'")
+            self.app = '-'
+
         self.base_session = Session(max_retries=0)
         self.base_session.base_url = uri
         if token:
@@ -631,20 +639,20 @@ class SplunkQueryObject:
             logging.error(f"unable to record splunk query performance: {e}")
             report_exception()
 
-        try:
-            log_dir = os.path.join(target_dir, "logs")
-            if not os.path.isdir(log_dir):
-                os.mkdir(log_dir)
+        #try:
+            #log_dir = os.path.join(target_dir, "logs")
+            #if not os.path.isdir(log_dir):
+                #os.mkdir(log_dir)
 
-            log_path = os.path.join(log_dir, f"{sid}.log")
-            if os.path.exists(log_path):
-                logging.info(f"splunk log file {log_path} already exists")
-            else:
-                if self.get_search_log(sid, log_path):
-                    logging.info(f"saved search log for {sid} to {log_path}")
+            #log_path = os.path.join(log_dir, f"{sid}.log")
+            #if os.path.exists(log_path):
+                #logging.info(f"splunk log file {log_path} already exists")
+            #else:
+                #if self.get_search_log(sid, log_path):
+                    #logging.info(f"saved search log for {sid} to {log_path}")
 
-        except Exception as e:
-            logging.warning(f"unable to acquire search.log for {sid}: {e}")
+        #except Exception as e:
+            #logging.warning(f"unable to acquire search.log for {sid}: {e}")
 
     def get_saved_searches(self) -> list[SavedSearch]:
         """Returns the list of all the saved searches available as a list of SavedSearch objects."""
@@ -737,6 +745,7 @@ class SplunkQueryObject:
         response.raise_for_status()
         return response.status_code in range(200, 300)
 
+# XXX refactor this garbage function
 def SplunkClient(config: str = "splunk", **kwargs) -> SplunkQueryObject:
     """Convenience function for creating a SplunkClient from a config section
 
@@ -757,5 +766,11 @@ def SplunkClient(config: str = "splunk", **kwargs) -> SplunkQueryObject:
         kwargs["password"] = get_config()[config]["password"]
     else:
         kwargs["token"] = get_config()[config]["token"]
+
+    if get_config()[config].get("user_context"):
+        kwargs["user_context"] = get_config()[config]["user_context"]
+
+    if get_config()[config].get("app_context"):
+        kwargs["app"] = get_config()[config]["app_context"]
 
     return SplunkQueryObject(**kwargs)

@@ -485,6 +485,9 @@ class HuntManager:
         # controls how hunts are executed
         self.execution_mode = execution_mode
 
+        # so we don't spam the logs with the same message over and over
+        self.last_hunt_status_message = None
+
     def __str__(self):
         return f"Hunt Manager({self.hunt_type})"
 
@@ -694,7 +697,11 @@ class HuntManager:
             else:
                 idle_count += 1
 
-        logging.info(f"hunt status: {disabled_count} disabled {suppressed_count} suppressed {running_count} running {ready_count} ready {idle_count} idle")
+        hunt_status_message = f"hunt status: {disabled_count} disabled {suppressed_count} suppressed {running_count} running {ready_count} ready {idle_count} idle"
+        if hunt_status_message != self.last_hunt_status_message:
+            logging.info(hunt_status_message)
+            self.last_hunt_status_message = hunt_status_message
+        #logging.info(f"hunt status: {disabled_count} disabled {suppressed_count} suppressed {running_count} running {ready_count} ready {idle_count} idle")
 
 
     def execute_hunt(self, hunt):
@@ -1009,7 +1016,7 @@ class HunterService(ACEServiceInterface):
                             hunt_cls=class_definition,
                             concurrency_limit=section.get('concurrency_limit', fallback=None),
                             persistence_dir=get_config_value(CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR),
-                            update_frequency=section.getint('update_frequency'),
+                            update_frequency=section.getint('update_frequency', fallback=60),
                             config = section,
                             execution_mode=execution_mode))
 

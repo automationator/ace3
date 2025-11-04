@@ -50,18 +50,18 @@ def execute_hunt(args):
     import ace_api
     import pytz
     from saq.constants import EVENT_TIME_FORMAT_TZ
-    from saq.collectors.hunter import HunterCollector
+    from saq.collectors.hunter import HunterService
     from saq.collectors.query_hunter import QueryHunt
-    collector = HunterCollector()
-    collector.load_hunt_managers()
+    hunter_service = HunterService()
+    hunter_service.load_hunt_managers()
     
     hunt_type, hunt_name = args.hunt.split(':', 1)
-    if hunt_type not in collector.hunt_managers:
+    if hunt_type not in hunter_service.hunt_managers:
         logging.error(f"invalid hunt type {hunt_type}")
         sys.exit(1)
 
-    collector.hunt_managers[hunt_type].load_hunts_from_config()
-    hunt = collector.hunt_managers[hunt_type].get_hunt(lambda hunt: hunt_name in hunt.ini_path)
+    hunter_service.hunt_managers[hunt_type].load_hunts_from_config()
+    hunt = hunter_service.hunt_managers[hunt_type].get_hunt(lambda hunt: hunt_name in hunt.ini_path)
     if hunt is None:
         logging.error(f"unknown hunt {hunt_name} for type {hunt_type}")
         sys.exit(1)
@@ -90,9 +90,9 @@ def execute_hunt(args):
 
     json_dir_index = 0
     for submission in hunt.execute(**exec_kwargs):
-        print(submission.description)
+        print(submission.root.description)
         if args.details:
-            for o in submission.observables:
+            for o in submission.root.observables:
                 output = f"\t(*) {o['type']} - {o['value']}"
                 if 'time' in o:
                     output += " - {}".format(o['time'].strftime(EVENT_TIME_FORMAT_TZ))
@@ -106,22 +106,22 @@ def execute_hunt(args):
                 # TODO the other stuff
                 print(output)
 
-            for t in submission.tags:
+            for t in submission.root.tags:
                 print(f"\t(+) {t}")
 
-            if submission.extensions:
-                for url in submission.extensions.get("pivot_links", []):
+            if submission.root.extensions:
+                for url in submission.root.extensions.get("pivot_links", []):
                     print(f"\t🔗 {url}")
             
         if args.events:
             print("BEGIN EVENTS")
-            for event in submission.details:
+            for event in submission.root.details:
                 print(event)
             print("END EVENTS")
 
         if args.json_dir is not None:
             buffer = []
-            for event in submission.details:
+            for event in submission.root.details:
                 buffer.append(event)
 
             target_json_file = os.path.join(args.json_dir, '{}.json'.format(str(json_dir_index)))
@@ -129,26 +129,39 @@ def execute_hunt(args):
                 json.dump(buffer, fp)
 
             with open(os.path.join(args.json_dir, 'manifest'), 'a') as fp:
-                fp.write(f'{json_dir_index} = {submission.description}\n')
+                fp.write(f'{json_dir_index} = {submission.root.description}\n')
 
             json_dir_index += 1
 
+        observables = []
+        for observable in submission.root.observables:
+            observables.append({
+                'type': observable.type,
+                'value': observable.value,
+                'time': observable.time,
+                'tags': [t.name for t in observable.tags],
+                'directives': observable.directives,
+                'limited_analysis': observable.limited_analysis,
+                #'pivot_links': observable.pivot_links,
+                #'file_path': observable.file_path,
+            })
+
         if args.submit_alerts is not None:
             result = ace_api.submit(
-                submission.description,
+                submission.root.description,
                 remote_host=args.submit_alerts,
                 ssl_verification=get_config()['SSL']['ca_chain_path'],
-                analysis_mode=submission.analysis_mode,
-                tool=submission.tool,
-                tool_instance=submission.tool_instance,
-                type=submission.type,
-                event_time=submission.event_time,
-                details=submission.details,
-                observables=submission.observables,
-                tags=submission.tags,
-                queue=submission.queue,
-                instructions=submission.instructions,
-                extensions=submission.extensions,
+                analysis_mode=submission.root.analysis_mode,
+                tool=submission.root.tool,
+                tool_instance=submission.root.tool_instance,
+                type=submission.root.alert_type,
+                event_time=submission.root.event_time,
+                details=submission.root.details,
+                observables=observables,
+                tags=[t.name for t in submission.root.tags],
+                queue=submission.root.queue,
+                instructions=submission.root.instructions,
+                extensions=submission.root.extensions,
                 files=[])
 
 hunt_parser = get_cli_subparsers().add_parser('hunt')
@@ -3117,7 +3130,8 @@ close_event_parser.set_defaults(func=close_event)
 
 def debug(args):
     # use this when you need it
-    sys.exit(0)
+    logging.info("HELLO WORLD")
+    return 0
 
 debug_parser = get_cli_subparsers().add_parser('debug')
 debug_parser.set_defaults(func=debug)

@@ -11,7 +11,7 @@ import threading
 import pytz
 
 from saq.configuration import get_config_value
-from saq.constants import CONFIG_SPLUNK_TIMEZONE, CONFIG_SPLUNK_URI
+from saq.constants import CONFIG_SPLUNK_APP_CONTEXT, CONFIG_SPLUNK_TIMEZONE, CONFIG_SPLUNK_URI, CONFIG_SPLUNK_USER_CONTEXT
 from saq.splunk import extract_event_timestamp, SplunkClient
 from saq.collectors.query_hunter import QueryHunt
 
@@ -38,8 +38,10 @@ class SplunkHunt(QueryHunt):
         self.timezone = get_config_value(self.splunk_config, CONFIG_SPLUNK_TIMEZONE)
 
         # splunk app/user context
-        self.namespace_user = None
-        self.namespace_app = None
+        self.default_namespace_user = get_config_value(self.splunk_config, CONFIG_SPLUNK_USER_CONTEXT)
+        self.default_namespace_app = get_config_value(self.splunk_config, CONFIG_SPLUNK_APP_CONTEXT)
+        self.namespace_user = self.default_namespace_user
+        self.namespace_app = self.default_namespace_app
 
     def extract_event_timestamp(self, event):
         return extract_event_timestamp(event)
@@ -93,6 +95,11 @@ class SplunkHunt(QueryHunt):
         # load user and app context
         self.namespace_user = section_rule.get('splunk_user_context')
         self.namespace_app = section_rule.get('splunk_app_context')
+
+        if not self.namespace_user:
+            self.namespace_user = self.default_namespace_user
+        if not self.namespace_app:
+            self.namespace_app = self.default_namespace_app
 
     def execute_query(self, start_time, end_time, unit_test_query_results=None, **kwargs):
         tz = pytz.timezone(self.timezone)

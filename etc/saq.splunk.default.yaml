@@ -1,4 +1,3 @@
-# [splunk]
 splunk:
   enabled: true
   # the splunk query server
@@ -6,13 +5,17 @@ splunk:
   # user account information for splunk
   username: ""
   password: ""
+  # (optiona) use token authentication instead of username/password
+  token: ""
   timezone: GMT
   # directory that contains splunk query performance data
   # leave this empty to disable
   # relative to DATA_DIR
   performance_logging_dir: splunk_perf
+  # default app and user context to use if not specified
+  user_context:
+  app_context:
 
-# [splunk_export]
 # settings for exporting for_detect observables into splunk lookup
 # a comma separated list of for_detect observables types to export to splunk lookup table
 # NOTE: these map directly to observable type string representations!
@@ -23,10 +26,15 @@ splunk_export:
   user_context: ""
   app: ""
 
-# [service_network_semaphore]
 service_network_semaphore:
   semaphore_splunk: 1
 
-# [config]
+hunt_type_splunk:
+  module: saq.collectors.splunk_hunter
+  class: SplunkHunt
+  rule_dirs: hunts/splunk
+  splunk_config: splunk
+  update_frequency: 60
+
 config:
   splunk_local: etc/saq.splunk.yaml
