@@ -61,7 +61,7 @@ def execute_hunt(args):
         sys.exit(1)
 
     hunter_service.hunt_managers[hunt_type].load_hunts_from_config()
-    hunt = hunter_service.hunt_managers[hunt_type].get_hunt(lambda hunt: hunt_name in hunt.ini_path)
+    hunt = hunter_service.hunt_managers[hunt_type].get_hunt(lambda hunt: hunt_name in hunt.file_path)
     if hunt is None:
         logging.error(f"unknown hunt {hunt_name} for type {hunt_type}")
         sys.exit(1)

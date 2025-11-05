@@ -237,10 +237,12 @@ class QueryHunt(Hunt):
         if 'offset' in rule_section:
             self.offset = create_timedelta(rule_section['offset'])
 
-        observable_mapping_section = config['observable_mapping']
+        observable_mapping_config = config.get("observable_mapping")
+        if not observable_mapping_config:
+            observable_mapping_config = {}
         
         self.observable_mapping = {}
-        for key, value in observable_mapping_section.items():
+        for key, value in observable_mapping_config.items():
 
             # TODO revisit this, we can support encoded file content
             if value == F_FILE:
@@ -251,23 +253,31 @@ class QueryHunt(Hunt):
             self.observable_mapping[key] = value
 
         self.tag_mapping = rule_section.get('tag_mapping', {})
+        if not self.tag_mapping:
+            self.tag_mapping = {}
+
         #if 'tag_mapping' in config:
             #tag_mapping_section = config['tag_mapping']
             #self.tag_mapping = {}
             #for key, value in tag_mapping_section.items():
                 #self.tag_mapping[key] = [_.strip() for _ in value.split(",")]
 
-        temporal_fields_section = config.get('temporal_fields', {})
-        self.temporal_fields = temporal_fields_section if temporal_fields_section is not None else {}
+        temporal_fields_config = config.get('temporal_fields', {})
+        self.temporal_fields = temporal_fields_config
+        if not self.temporal_fields:
+            self.temporal_fields = {}
+
         #for key in temporal_fields_section.keys():
             #self.temporal_fields[key] = temporal_fields_section.getboolean(key)
 
-        directives_section = config['directives']
-    
+        directives_config = config.get("directives")
+        if not directives_config:
+            directives_config = {}
+
         self.directives = {}
         self.directive_options = {}
 
-        for key, value in directives_section.items():
+        for key, value in directives_config.items():
             self.directives[key] = []
             directives = [_.strip() for _ in value.split(',')]
             for directive in directives:

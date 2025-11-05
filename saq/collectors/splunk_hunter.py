@@ -83,7 +83,7 @@ class SplunkHunt(QueryHunt):
     def load_from_yaml(self, path: str, *args, **kwargs) -> dict:
         config = super().load_from_yaml(path, *args, **kwargs)
 
-        section_rule = config['rule']
+        rule_config = config['rule']
 
         # make sure the time spec formatter is available
         # this should really be done at load time...
@@ -92,8 +92,8 @@ class SplunkHunt(QueryHunt):
             self.query = '{time_spec} ' + self.query
 
         # load user and app context
-        self.namespace_user = section_rule.get('splunk_user_context')
-        self.namespace_app = section_rule.get('splunk_app_context')
+        self.namespace_user = rule_config.get('splunk_user_context')
+        self.namespace_app = rule_config.get('splunk_app_context')
 
         if not self.namespace_user:
             self.namespace_user = self.default_namespace_user

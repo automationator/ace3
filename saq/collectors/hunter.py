@@ -257,7 +257,8 @@ class Hunt:
         if self.execution_thread:
             logging.debug(f"waiting for {self} to complete execution")
             if not self.execution_thread.join(5):
-                logging.error(f"timeout waiting for {self} to complete execution")
+                # NOTE this can also happen if the hunter is being shut down
+                logging.warning(f"timeout waiting for {self} to complete execution")
                 return False
 
         return result
