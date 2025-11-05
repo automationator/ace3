@@ -4,7 +4,7 @@ from typing import Optional, List, override
 
 from saq.analysis import Analysis
 from saq.analysis.observable import Observable
-from saq.constants import DIRECTIVE_CRAWL, DIRECTIVE_RENDER, F_URL, F_FILE, AnalysisExecutionResult
+from saq.constants import ANALYSIS_MODE_CORRELATION, DIRECTIVE_CRAWL, DIRECTIVE_RENDER, F_URL, F_FILE, AnalysisExecutionResult
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
 from saq.observables.file import FileObservable
@@ -196,6 +196,11 @@ class PhishkitAnalyzer(AnalysisModule):
     def execute_analysis(self, observable) -> AnalysisExecutionResult:
         # if the observable is a file, we need to check if the file type is enabled for scanning
         if observable.type == F_FILE:
+            # phishkit file rendering only meaningful in correlation mode
+            if self.get_root().analysis_mode != ANALYSIS_MODE_CORRELATION:
+                logging.debug(f"skipping file {observable} - phishkit file rendering only runs in correlation mode")
+                return AnalysisExecutionResult.COMPLETED
+
             if not observable.has_directive(DIRECTIVE_RENDER):
                 logging.debug(f"skipping file {observable} - render directive not found")
                 return AnalysisExecutionResult.COMPLETED

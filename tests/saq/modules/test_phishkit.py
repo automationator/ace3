@@ -263,7 +263,7 @@ def test_phishkit_analyzer_execute_analysis_url_error(monkeypatch, test_context)
 @pytest.mark.integration
 def test_phishkit_analyzer_execute_analysis_file_success(monkeypatch, test_context):
     """Test successful file analysis execution."""
-    root = create_root_analysis(analysis_mode='test_single')
+    root = create_root_analysis(analysis_mode='correlation')
     root.initialize_storage()
     
     # Create a test file
@@ -438,7 +438,7 @@ def test_phishkit_analyzer_execute_analysis_file_invalid_mime_type(monkeypatch, 
 @pytest.mark.integration
 def test_phishkit_analyzer_execute_analysis_file_error(monkeypatch, test_context):
     """Test file analysis with error."""
-    root = create_root_analysis(analysis_mode='test_single')
+    root = create_root_analysis(analysis_mode='correlation')
     root.initialize_storage()
     
     # Create a test file
