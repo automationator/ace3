@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 import simdjson as json
 import logging
 import os
@@ -15,12 +16,17 @@ from saq.environment import get_base_dir, get_data_dir
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
 
+from fluent import sender
+
 CONFIG_SPLUNK_LOGGING_ENABLED = "splunk_log_enabled"
 CONFIG_SPLUNK_LOG_SUBDIR = "splunk_log_subdir"
 CONFIG_JSON_LOGGING_ENABLED = "json_logging_enabled"
 CONFIG_JSON_LOG_PATH_FORMAT = "json_log_path_format"
 CONFIG_BROCESS_LOGGING_ENABLED = "brocess_logging_enabled"
-
+CONFIG_FLUENT_BIT_LOGGING_ENABLED = "fluent_bit_logging_enabled"
+CONFIG_FLUENT_BIT_HOSTNAME = "fluent_bit_hostname"
+CONFIG_FLUENT_BIT_PORT = "fluent_bit_port"
+CONFIG_FLUENT_BIT_TAG = "fluent_bit_tag"
 
 class EmailHistoryRecord:
     """Utility class to add extra fields not present in the splunk logs."""
@@ -58,6 +64,19 @@ class EmailLoggingAnalyzer(AnalysisModule):
 
         # brocess log settings
         self.brocess_logging_enabled = self.config.getboolean(CONFIG_BROCESS_LOGGING_ENABLED)
+
+        # fluent-bit log settings
+        self.fluent_bit_logging_enabled: bool = self.config.getboolean(CONFIG_FLUENT_BIT_LOGGING_ENABLED)
+        self.fluent_bit_hostname: Optional[str] = self.config.get(CONFIG_FLUENT_BIT_HOSTNAME)
+        self.fluent_bit_port: Optional[int] = self.config.get(CONFIG_FLUENT_BIT_PORT)
+        self.fluent_bit_tag: Optional[str] = self.config.get(CONFIG_FLUENT_BIT_TAG)
+        self.fluent_bit_sender: Optional[sender.FluentSender] = None
+
+        if self.fluent_bit_logging_enabled:
+            assert self.fluent_bit_hostname, "configuration setting {} is required".format(CONFIG_FLUENT_BIT_HOSTNAME)
+            assert self.fluent_bit_port, "configuration setting {} is required".format(CONFIG_FLUENT_BIT_PORT)
+            assert self.fluent_bit_tag, "configuration setting {} is required".format(CONFIG_FLUENT_BIT_TAG)
+            self.fluent_bit_sender = sender.FluentSender(self.fluent_bit_tag, host=self.fluent_bit_hostname, port=self.fluent_bit_port)
 
     def verify_environment(self):
         if self.splunk_log_enabled:
@@ -171,11 +190,17 @@ class EmailLoggingAnalyzer(AnalysisModule):
                 logging.error(f"unable to create brocess log export for {email_file}: {e}")
                 report_exception()
 
+        if self.fluent_bit_logging_enabled:
+            try:
+                self.export_to_fluent_bit(entry.copy())
+            except Exception as e:
+                logging.error(f"unable to create fluent-bit log export for {email_file}: {e}")
+                report_exception()
+
         return True
 
     def export_to_json(self, entry: dict) -> bool:
         """Exports the logging information to a JSON file."""
-
         # convert the date into a timestamp for splunk
         entry["timestamp"] = str(datetime.strptime(entry["date"], '%Y-%m-%d %H:%M:%S.%f %z').timestamp())
 
@@ -189,6 +214,12 @@ class EmailLoggingAnalyzer(AnalysisModule):
         with open(target_path, "a") as fp:
             fp.write(json.dumps(entry) + "\n")
 
+        return True
+
+    def export_to_fluent_bit(self, entry: dict) -> bool:
+        # convert the date into a timestamp for splunk
+        entry["timestamp"] = str(datetime.strptime(entry["date"], '%Y-%m-%d %H:%M:%S.%f %z').timestamp())
+        self.fluent_bit_sender.emit(None, entry)
         return True
 
     def export_to_splunk(self, entry):

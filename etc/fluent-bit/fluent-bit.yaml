@@ -14,15 +14,6 @@ pipeline:
       listen: 0.0.0.0
       port: 24224
 
-    # email scanner logs
-    - name: tail
-      tag: phishfinder
-      path: /data/logs/email/email-*.log.json
-      parser: phishfinder_json
-      db: /data/logs/tail-state-phishfinder.db
-      mem_buf_limit: 50MB
-      read_from_head: true
-
   filters:
     - name: parser
       match: ace-*
@@ -116,8 +107,8 @@ pipeline:
       format: out_file
       workers: 1
 
-    # in a standalone system we don't re-log the email logs because they are already logged to the file system
-    - name: null
-      match: phishfinder
-
-
+    - name: file
+      path: /data/logs
+      match: "phishfinder"
+      format: out_file
+      workers: 1
