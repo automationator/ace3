@@ -68,6 +68,7 @@ from saq.constants import (
     G_FORCED_ALERTS,
     G_GUI_WHITELIST_EXCLUDED_OBSERVABLE_TYPES,
     G_INSTANCE_TYPE,
+    G_INTEGRATION_CONFIG_PATHS,
     G_LOCAL_DOMAINS,
     G_LOCAL_TIMEZONE,
     G_LOCK_TIMEOUT_SECONDS,
@@ -272,6 +273,9 @@ GLOBAL_ENV = {
     G_EMAIL_ARCHIVE_SERVER_ID: GlobalEnvironmentSetting(
         name=G_EMAIL_ARCHIVE_SERVER_ID, value=None, description="archive server id for this server",
     ),
+    G_INTEGRATION_CONFIG_PATHS: GlobalEnvironmentSetting(
+        name=G_INTEGRATION_CONFIG_PATHS, value=[], description="list of integration configuration paths to be loaded by the integration loader",
+    ),
 }
 
 def g(name: str) -> str:
@@ -459,12 +463,12 @@ def initialize_environment(
         get_config_value_as_list,
         initialize_configuration,
     )
+    from saq.integration.integration_loader import load_integrations, initialize_integrations
 
     initialize_base_dir(saq_home=saq_home)
-    initialize_configuration(config_paths=config_paths)
-
-    from saq.integration.integration_loader import load_integrations
     load_integrations()
+    initialize_configuration(config_paths=config_paths)
+    initialize_integrations()
 
     set_g(
         G_DATA_DIR,

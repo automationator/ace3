@@ -3,8 +3,8 @@ import sys
 from typing import Optional
 
 
-from saq.environment import g_boolean, get_base_dir
-from saq.constants import G_UNIT_TESTING
+from saq.environment import g_boolean, g_list, get_base_dir
+from saq.constants import G_INTEGRATION_CONFIG_PATHS, G_UNIT_TESTING
 from saq.configuration.yaml_parser import YAMLConfig
 
 
@@ -16,11 +16,11 @@ def load_configuration(config_paths: Optional[list[str]] = None):
 
     Load order:
       1) etc/saq.default.yaml
+      2) integration configuration files (specified in G_INTEGRATION_CONFIG_PATHS)
       2) overrides from environment variables or command line
       3) Optional credential/config files
            - /docker-entrypoint-initdb.d/saq.database.passwords.yaml
-      4) etc/saq.yaml
-      5) etc/saq.unittest.default.yaml (when unit testing)
+      5) etc/saq.yaml or etc/saq.unittest.default.yaml (when unit testing)
       6) verify() and apply_path_references()
     """
 
@@ -28,6 +28,14 @@ def load_configuration(config_paths: Optional[list[str]] = None):
 
     config = YAMLConfig()
     config.load_file(default_yaml)
+
+    # load any (automatically loaded) integration configuration files
+    # these are autopopulated by the integration loader
+    for config_path in g_list(G_INTEGRATION_CONFIG_PATHS):
+        if not os.path.exists(config_path):
+            sys.stderr.write(f"WARNING: integration config path {config_path} specified in G_INTEGRATION_CONFIG_PATHS does not exist\n")
+        else:
+            config.load_file(config_path)
 
     # add any config files specified in SAQ_CONFIG_PATHS env var (command separated)
     if "SAQ_CONFIG_PATHS" in os.environ:

@@ -119,7 +119,6 @@ services:
     user: ${SAQ_USER_ID:-1000}:${SAQ_GROUP_ID:-1000}
     volumes:
       - ./etc/fluent-bit/fluent-bit.yaml:/fluent-bit/etc/fluent-bit.yaml:ro
-      - ./etc/fluent-bit/parsers.yaml:/fluent-bit/etc/parsers.yaml:ro
       - ace-data:/data
     networks: 
       - ace
@@ -311,7 +310,7 @@ services:
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       - ace
-    command: /bin/bash -c "/opt/ace/docker/startup/start_uwsgi_app.sh"
+    command: /bin/bash -c "/opt/ace/docker/startup/start.sh uwsgi --yaml etc/uwsgi_app.yaml"
     restart: always
     volumes: *common-volumes
     hostname: ace
@@ -330,7 +329,7 @@ services:
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       - ace
-    command: /bin/bash -c "/opt/ace/docker/startup/start_uwsgi_api.sh"
+    command: /bin/bash -c "/opt/ace/docker/startup/start.sh uwsgi --yaml etc/uwsgi_api.yaml"
     restart: always
     volumes: *common-volumes
     hostname: ace
@@ -379,7 +378,7 @@ services:
     image: ${ACE3_IMAGE_URL:-ace3:latest}
     depends_on:
       - ace
-    command: /bin/bash -c "/opt/ace/docker/startup/start_debug_gui.sh"
+    command: /bin/bash -c "/opt/ace/docker/startup/start.sh ace start-gui"
     restart: always
     volumes: *common-volumes
     hostname: ace
@@ -399,7 +398,7 @@ services:
     depends_on:
       ace-setup:
         condition: service_completed_successfully
-    command: /bin/bash -c "/opt/ace/docker/startup/start_network_semaphore.sh"
+    command: /bin/bash -c "/opt/ace/docker/startup/start.sh ace service start network_semaphore"
     restart: always
     volumes: *common-volumes
     hostname: ace
@@ -418,7 +417,7 @@ services:
     depends_on:
       - ace
     image: ${ACE3_IMAGE_URL:-ace3:latest}
-    command: /bin/bash -c "/opt/ace/docker/startup/start_git.sh"
+    command: /bin/bash -c "/opt/ace/docker/startup/start.sh ace service start git"
     volumes: *common-volumes
     hostname: ace
     cap_add:
@@ -434,7 +433,7 @@ services:
     depends_on:
       - ace
     image: ${ACE3_IMAGE_URL:-ace3:latest}
-    command: /bin/bash -c "/opt/ace/docker/startup/start_yacron.sh"
+    command: /bin/bash -c "/opt/ace/docker/startup/start.sh ace service start cron"
     volumes: *common-volumes
     hostname: ace
     cap_add:
@@ -451,7 +450,7 @@ services:
     depends_on:
       ace-setup:
         condition: service_completed_successfully
-    command: /bin/bash -c "/opt/ace/docker/startup/start_yara.sh"
+    command: /bin/bash -c "/opt/ace/docker/startup/start.sh ace service start yara"
     restart: always
     volumes: *common-volumes
     hostname: ace
@@ -471,7 +470,7 @@ services:
         condition: service_started
       redis:
         condition: service_started
-    command: /bin/bash -c "/opt/ace/docker/startup/start_background_executor.sh"
+    command: /bin/bash -c "/opt/ace/docker/startup/start.sh ace service start background_executor"
     restart: always
     volumes: *common-volumes
     hostname: ace
@@ -491,7 +490,7 @@ services:
         condition: service_started
       redis:
         condition: service_started
-    command: /bin/bash -c "/opt/ace/docker/startup/start_embedding_service.sh"
+    command: /bin/bash -c "/opt/ace/docker/startup/start.sh ace service start llm_embedding"
     restart: always
     volumes: *common-volumes
     hostname: ace
@@ -535,7 +534,7 @@ services:
         condition: service_started
       qdrant:
         condition: service_started
-    command: /bin/bash -c "/opt/ace/docker/startup/start_engine.sh"
+    command: /bin/bash -c "/opt/ace/docker/startup/start.sh ace service start engine"
     restart: always
     volumes: *common-volumes
     hostname: ace

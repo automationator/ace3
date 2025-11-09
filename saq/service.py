@@ -1,9 +1,11 @@
 import importlib
-from typing import Optional, Protocol
+import logging
+import threading
+from typing import Protocol
 
 
-from saq.configuration.config import get_config, get_config_value, get_config_value_as_list
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE, CONFIG_SERVICE_CLASS, CONFIG_SERVICE_INSTANCE_TYPES, CONFIG_SERVICE_MODULE
+from saq.configuration.config import get_config, get_config_value, get_config_value_as_boolean, get_config_value_as_list
+from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE, CONFIG_SERVICE_CLASS, CONFIG_SERVICE_ENABLED, CONFIG_SERVICE_INSTANCE_TYPES, CONFIG_SERVICE_MODULE
 
 class ACEServiceInterface(Protocol):
     def start(self):
@@ -40,6 +42,30 @@ class ACEServiceAdapter(ACEServiceInterface):
     def wait(self):
         self.service.wait()
 
+class DisabledService(ACEServiceInterface):
+    """This is a placeholder service that is used to indicate that a service is disabled by configuration.
+    It is used to prevent the service from being started if it is disabled by configuration."""
+
+    def __init__(self, name: str):
+        self.name = name
+        self.shutdown_event = threading.Event()
+
+    def start(self):
+        pass
+
+    def wait_for_start(self, timeout: float = 5) -> bool:
+        return True
+
+    def start_single_threaded(self):
+        pass
+
+    def stop(self):
+        self.shutdown_event.set()
+
+    def wait(self):
+        while not self.shutdown_event.is_set():
+            self.shutdown_event.wait()
+
 def _get_service_section_name(service_name: str) -> str:
     return f"service_{service_name}"
 
@@ -60,6 +86,14 @@ def service_valid_for_instance(name: str) -> bool:
         return True
 
     return instance_type in valid_service_instance_types
+
+def service_enabled(name: str) -> bool:
+    """Returns True if the service (specified by name) is enabled, False otherwise."""
+    service_section_name = _get_service_section_name(name)
+    if service_section_name not in get_config():
+        raise RuntimeError(f"configuration section {service_section_name} not found")
+
+    return get_config_value_as_boolean(service_section_name, CONFIG_SERVICE_ENABLED, default=False)
         
 def load_service(_module: str, _class: str) -> ACEServiceInterface:
     module = importlib.import_module(_module)
@@ -72,6 +106,11 @@ def load_service_by_name(name: str) -> ACEServiceInterface:
         raise RuntimeError(f"configuration section {service_section_name} not found")
 
     if not service_valid_for_instance(name):
-        raise RuntimeError(f"service {name} is not valid for the current instance type")
+        logging.info(f"service {name} is not valid for the current instance type")
+        return DisabledService(name)
+
+    if not service_enabled(name):
+        logging.info(f"service {name} is disabled by configuration")
+        return DisabledService(name)
 
     return load_service(get_config_value(service_section_name, CONFIG_SERVICE_MODULE), get_config_value(service_section_name, CONFIG_SERVICE_CLASS))

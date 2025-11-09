@@ -2,6 +2,8 @@
 from datetime import datetime
 import json
 
+from pydantic import BaseModel
+
 from saq.constants import EVENT_TIME_FORMAT_JSON_TZ, AnalysisExecutionResult
 
 import yara
@@ -16,6 +18,8 @@ class _JSONEncoder(json.JSONEncoder):
             return obj.decode('unicode_escape', 'replace')
         elif isinstance(obj, RootAnalysis):
             return obj.json
+        elif isinstance(obj, BaseModel):
+            return obj.model_dump()
         elif hasattr(obj, 'json'):
             return obj.json
         elif isinstance(obj, yara.StringMatch):

@@ -23,3 +23,6 @@ done
 echo 
 echo "starting ace..."
 echo
+
+# run the command passed to this script
+"$@"

@@ -4,6 +4,8 @@ import os
 import sys
 
 from saq.configuration.config import get_config, get_config_value
+from saq.constants import G_INTEGRATION_CONFIG_PATHS
+from saq.environment import g_list
 from saq.error import report_exception
 from saq.integration.integration_manager import is_integration_enabled
 from saq.integration.integration_util import get_integration_base_dir, get_integration_name_from_path
@@ -70,7 +72,7 @@ def load_integrations() -> bool:
             report_exception()
             result = False
 
-    initialize_integrations()
+    #initialize_integrations()
     return result
 
 def load_integration_component_src(dir_path: str) -> bool:
@@ -124,12 +126,14 @@ def load_integration_component_etc(dir_path: str) -> bool:
         auto_load_config_file = os.path.join(etc_path, "saq.integration.yaml")
         if os.path.exists(auto_load_config_file):
             logging.debug(f"auto loading integration configuration file {auto_load_config_file}")
-            get_config().load_file(auto_load_config_file)
+            g_list(G_INTEGRATION_CONFIG_PATHS).append(auto_load_config_file)
+            #get_config().load_file(auto_load_config_file)
 
     return True
 
 def initialize_integrations():
-    """Initializes all integrations."""
+    """Initializes all integrations. 
+    This simply imports the module as defined by each integration, giving the module a chance to initialize itself."""
     for section in get_config().sections():
         if not section.startswith("integration_"):
             continue

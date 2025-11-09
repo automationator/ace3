@@ -269,36 +269,36 @@ class TestLoadIntegrationComponentEtc:
         result = load_integration_component_etc(str(tmpdir))
         assert result is True
 
-    @patch('saq.integration.integration_loader.get_config')
-    def test_load_integration_component_etc_with_ini_files(self, mock_get_config, tmpdir):
+    @patch('saq.integration.integration_loader.g_list')
+    def test_load_integration_component_etc_with_ini_files(self, mock_g_list, tmpdir):
         """Test loading etc component with ini files."""
         etc_dir = tmpdir.mkdir("etc")
         config_file = etc_dir.join("saq.integration.yaml")
         config_file.write("section:\n  key: value")
         
-        mock_config = MagicMock()
-        mock_get_config.return_value = mock_config
+        integration_config_paths = []
+        mock_g_list.return_value = integration_config_paths
         
         result = load_integration_component_etc(str(tmpdir))
         assert result is True
-        mock_config.load_file.assert_called_once_with(str(config_file))
+        assert integration_config_paths == [str(config_file)]
 
-    @patch('saq.integration.integration_loader.get_config')
-    def test_load_integration_component_etc_non_ini_files_ignored(self, mock_get_config, tmpdir):
+    @patch('saq.integration.integration_loader.g_list')
+    def test_load_integration_component_etc_non_ini_files_ignored(self, mock_g_list, tmpdir):
         """Test loading etc component ignores non-ini files."""
         etc_dir = tmpdir.mkdir("etc")
         txt_file = etc_dir.join("test.txt")
         txt_file.write("some content")
         
-        mock_config = MagicMock()
-        mock_get_config.return_value = mock_config
+        integration_config_paths = []
+        mock_g_list.return_value = integration_config_paths
         
         result = load_integration_component_etc(str(tmpdir))
         assert result is True
-        mock_config.load_file.assert_not_called()
+        assert integration_config_paths == []
 
-    @patch('saq.integration.integration_loader.get_config')
-    def test_load_integration_component_etc_multiple_ini_files(self, mock_get_config, tmpdir):
+    @patch('saq.integration.integration_loader.g_list')
+    def test_load_integration_component_etc_multiple_ini_files(self, mock_g_list, tmpdir):
         """Test loading etc component with multiple ini files."""
         etc_dir = tmpdir.mkdir("etc")
         config1 = etc_dir.join("saq.integration.yaml")
@@ -306,12 +306,12 @@ class TestLoadIntegrationComponentEtc:
         config2 = etc_dir.join("config2.yaml")
         config2.write("section2:\n  key2: value2")
         
-        mock_config = MagicMock()
-        mock_get_config.return_value = mock_config
+        integration_config_paths = []
+        mock_g_list.return_value = integration_config_paths
         
         result = load_integration_component_etc(str(tmpdir))
         assert result is True
-        assert mock_config.load_file.call_count == 1
+        assert integration_config_paths == [str(config1)]
 
 
 @pytest.mark.unit

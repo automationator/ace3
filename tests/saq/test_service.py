@@ -3,6 +3,7 @@ import pytest
 from saq.configuration.config import get_config
 from saq.constants import (
     CONFIG_SERVICE_CLASS,
+    CONFIG_SERVICE_ENABLED,
     CONFIG_SERVICE_INSTANCE_TYPES,
     CONFIG_SERVICE_MODULE,
     INSTANCE_TYPE_PRODUCTION,
@@ -10,6 +11,7 @@ from saq.constants import (
 )
 from saq.service import (
     ACEServiceInterface,
+    DisabledService,
     load_service,
     load_service_by_name,
     service_valid_for_instance,
@@ -180,11 +182,9 @@ class TestLoadServiceByName:
         config["service_invalid_service"][CONFIG_SERVICE_MODULE] = "tests.saq.test_service"
         config["service_invalid_service"][CONFIG_SERVICE_CLASS] = "MockService"
         config["service_invalid_service"][CONFIG_SERVICE_INSTANCE_TYPES] = [INSTANCE_TYPE_PRODUCTION]
+        config["service_invalid_service"][CONFIG_SERVICE_ENABLED] = True
 
-        with pytest.raises(
-            RuntimeError, match="service invalid_service is not valid for the current instance type"
-        ):
-            load_service_by_name("invalid_service")
+        assert isinstance(load_service_by_name("invalid_service"), DisabledService)
 
     def test_load_service_by_name_nonexistent_service(self):
         """test that load_service_by_name raises error for non-existent service"""
@@ -197,6 +197,7 @@ class TestLoadServiceByName:
         config.add_section("service_bad_module")
         config["service_bad_module"][CONFIG_SERVICE_MODULE] = "invalid.module"
         config["service_bad_module"][CONFIG_SERVICE_CLASS] = "TestClass"
+        config["service_bad_module"][CONFIG_SERVICE_ENABLED] = True
 
         with pytest.raises(ModuleNotFoundError):
             load_service_by_name("bad_module")
@@ -207,6 +208,7 @@ class TestLoadServiceByName:
         config.add_section("service_bad_class")
         config["service_bad_class"][CONFIG_SERVICE_MODULE] = "tests.saq.test_service"
         config["service_bad_class"][CONFIG_SERVICE_CLASS] = "NonExistentClass"
+        config["service_bad_class"][CONFIG_SERVICE_ENABLED] = True
 
         with pytest.raises(AttributeError):
             load_service_by_name("bad_class")

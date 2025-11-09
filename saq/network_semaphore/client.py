@@ -54,7 +54,7 @@ class NetworkSemaphoreClient:
             logging.debug("attempting connection to {} port {}".format(self.config['remote_address'], self.config.getint('remote_port')))
 
             self.socket.connect((self.config['remote_address'], self.config.getint('remote_port')))
-            logging.debug(f"requesting semaphore {semaphore_name}")
+            logging.info(f"requesting semaphore {semaphore_name}")
 
             # request the semaphore
             self.socket.sendall('acquire:{}|'.format(semaphore_name).encode('ascii'))
@@ -73,7 +73,7 @@ class NetworkSemaphoreClient:
                 # (remember to strip the last pipe)
                 commands = command[:-1].split('|')
                 if 'locked' in commands:
-                    logging.debug(f"semaphore {semaphore_name} locked")
+                    logging.info(f"semaphore {semaphore_name} locked")
                     self.semaphore_acquired = True
                     self.semaphore_name = semaphore_name
                     self.release_event = Event()
@@ -204,7 +204,7 @@ class NetworkSemaphoreClient:
 
         try:
             # send the command for release
-            logging.debug(f"releasing semaphore {self.semaphore_name}")
+            logging.info(f"releasing semaphore {self.semaphore_name}")
             self.socket.sendall("release|".encode('ascii'))
 
             # wait for the ok
