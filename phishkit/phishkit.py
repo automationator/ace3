@@ -183,7 +183,7 @@ def scan_url(url: str) -> str:
             "--rm",
             "-v",
             "ace-phishkit:/phishkit",
-            "phishkit",
+            os.environ.get("ACE3_PHISHKIT_IMAGE_URL", "phishkit"),
             "/opt/venv/bin/python",
             "/opt/app/scanner.py",
             url,

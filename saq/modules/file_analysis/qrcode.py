@@ -148,7 +148,7 @@ class QRCodeAnalyzer(AnalysisModule):
             image = Image.open(target_file_path).convert("RGB")
             image_inverted = ImageOps.invert(image)
             image_inverted.save(inverted_target_file_path)
-        except Exception:
+        except Exception as e:
             logging.warning(f"unable to invert image {target_file_path}: {e}")
 
         _stdout_inverted = None
