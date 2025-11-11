@@ -391,7 +391,10 @@ class Worker:
         # at this point the thing to work on is locked (using the locks database table)
         # start a secondary thread that just keeps the lock open
         if not self.config.single_threaded_mode:
-            self.lock_manager.start_keepalive(work_item.uuid)
+            if not self.lock_manager.start_keepalive(work_item.uuid):
+                logging.error("detected lock failure for work item {}".format(work_item))
+                self.current_execution_context = None
+                return
 
         try:
             # Use the AnalysisOrchestrator to handle the complete analysis lifecycle

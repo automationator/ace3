@@ -28,6 +28,7 @@ def acquire_lock(uuid: str, lock_uuid: str, lock_owner: Optional[str] = None) ->
     try:
         with get_db_connection() as db:
             cursor = db.cursor()
+            logging.info("requesting lock on {} with lock uuid {} owned by {}".format(uuid, lock_uuid, lock_owner))
             execute_with_retry(db, cursor, "INSERT INTO locks ( uuid, lock_uuid, lock_owner, lock_time ) VALUES ( %s, %s, %s, NOW() )", 
                               ( uuid, lock_uuid, lock_owner ), commit=True)
 
@@ -39,6 +40,17 @@ def acquire_lock(uuid: str, lock_uuid: str, lock_owner: Optional[str] = None) ->
         try:
             with get_db_connection() as db:
                 cursor = db.cursor()
+                execute_with_retry(db, cursor, "SELECT lock_uuid, lock_owner, TIMESTAMPDIFF(SECOND, lock_time, NOW()) FROM locks WHERE uuid = %s", (uuid,))
+                row = cursor.fetchone()
+                if row:
+                    current_lock_uuid, current_lock_owner, current_lock_timeout = row
+                    logging.info("lock on {} already exists with lock uuid {} owned by {} (lock timeout: {} seconds) (global lock timeout: {} seconds)".format(
+                        uuid,
+                        current_lock_uuid,
+                        current_lock_owner,
+                        current_lock_timeout,
+                        g_int(G_LOCK_TIMEOUT_SECONDS)))
+
                 # assume we already own the lock -- this will be true in subsequent calls
                 # to acquire the lock
                 execute_with_retry(db, cursor, """
