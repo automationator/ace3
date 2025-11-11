@@ -1,14 +1,6 @@
-import logging
-import os
-import threading
-import uuid
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from saq.configuration.config import get_config_value_as_int
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_LOCK_KEEPALIVE_FREQUENCY
-from saq.database.util.locking import acquire_lock, release_lock
-from saq.error import report_exception
 
 class LockManagerInterface(ABC):
     """Interface for distributed lock managers."""
@@ -43,7 +35,7 @@ class LockManagerInterface(ABC):
         pass
         
     @abstractmethod
-    def release_lock(self, target_uuid: str) -> bool:
+    def release_lock(self, target_uuid: str, ignore_lock_failure: bool = False) -> bool:
         """Release a lock on the given target UUID.
         
         Args:

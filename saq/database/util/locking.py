@@ -93,7 +93,7 @@ WHERE
         report_exception()
         return False
 
-def release_lock(uuid: str, lock_uuid: str) -> bool:
+def release_lock(uuid: str, lock_uuid: str, ignore_lock_failure: bool = False) -> bool:
     """Releases a lock acquired by acquire_lock.
 
     Parameters:
@@ -118,7 +118,8 @@ def release_lock(uuid: str, lock_uuid: str) -> bool:
             if cursor.rowcount == 1:
                 logging.info("released lock on {}".format(uuid))
             else:
-                logging.warning("failed to release lock on {} with lock uuid {}".format(uuid, lock_uuid))
+                if not ignore_lock_failure:
+                    logging.warning("failed to release lock on {} with lock uuid {}".format(uuid, lock_uuid))
 
             return cursor.rowcount == 1
     except Exception as e:
@@ -135,9 +136,9 @@ def force_release_lock(uuid: str) -> bool:
             execute_with_retry(db, cursor, "DELETE FROM locks WHERE uuid = %s", (uuid,))
             db.commit()
             if cursor.rowcount == 1:
-                logging.info("released lock on {}".format(uuid))
+                logging.info("forced released lock on {}".format(uuid))
             else:
-                logging.warning("failed to force release lock on {}".format(uuid))
+                logging.info("failed to force release lock on {}".format(uuid))
 
             return cursor.rowcount == 1
     except Exception as e:

@@ -62,7 +62,6 @@ class EngineConfiguration:
         default_analysis_mode: Optional[str] = None,
         analysis_mode_priority: Optional[str] = None,
         engine_type: EngineType = EngineType.DISTRIBUTED,
-        service_config: Optional[dict] = None,
     ):
         """Initialize engine configuration.
         
@@ -104,7 +103,7 @@ class EngineConfiguration:
         self._validate_analysis_mode_configuration()
         
         # Analysis pool configuration
-        self.analysis_pools = self._get_analysis_pools(analysis_pools, service_config)
+        self.analysis_pools = self._get_analysis_pools(analysis_pools)
         self.pool_size_limit = self._get_pool_size_limit(pool_size_limit)
         
         # Time-related configuration
@@ -288,20 +287,19 @@ class EngineConfiguration:
 
         return result
     
-    def _get_analysis_pools(self, analysis_pools: Optional[dict[str, int]], service_config: Optional[dict]) -> dict[str, int]:
+    def _get_analysis_pools(self, analysis_pools: Optional[dict[str, int]]) -> dict[str, int]:
         """Get the analysis pools configuration."""
         if analysis_pools is not None:
             result = dict(analysis_pools)
         else:
             result = {}
-            if service_config:
-                for key in service_config.keys():
-                    if not key.startswith("analysis_pool_size_"):
-                        continue
-                    
-                    analysis_mode = key[len("analysis_pool_size_"):]
-                    result[analysis_mode] = service_config.getint(key)
-                    logging.debug(f"added analysis pool mode {analysis_mode} count {result[analysis_mode]}")
+            for key in get_config()[CONFIG_ENGINE].keys():
+                if not key.startswith("analysis_pool_size_"):
+                    continue
+                
+                analysis_mode = key[len("analysis_pool_size_"):]
+                result[analysis_mode] = get_config_value_as_int(CONFIG_ENGINE, key)
+                logging.debug(f"added analysis pool mode {analysis_mode} count {result[analysis_mode]}")
 
         return self._filter_valid_analysis_pools(result)
     

@@ -1,16 +1,7 @@
-import logging
-import os
-import threading
-import uuid
-from abc import ABC, abstractmethod
 from typing import Optional
 
-from saq.configuration.config import get_config_value_as_int
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_LOCK_KEEPALIVE_FREQUENCY
-from saq.database.util.locking import acquire_lock, release_lock
 from saq.engine.lock_manager.distributed import DistributedLockManager
 from saq.engine.lock_manager.interface import LockManagerInterface
-from saq.error import report_exception
 
 class LockManagerAdapter(LockManagerInterface):
     """Adapter that provides the LockManagerInterface interface using any LockManagerInterface implementation."""
@@ -43,9 +34,9 @@ class LockManagerAdapter(LockManagerInterface):
         """Acquire a lock on the given target UUID."""
         return self._lock_manager.acquire_lock(target_uuid)
         
-    def release_lock(self, target_uuid: str) -> bool:
+    def release_lock(self, target_uuid: str, ignore_lock_failure: bool = False) -> bool:
         """Release a lock on the given target UUID."""
-        return self._lock_manager.release_lock(target_uuid)
+        return self._lock_manager.release_lock(target_uuid, ignore_lock_failure)
 
     def force_release_lock(self, target_uuid: str) -> bool:
         """Force release a lock on the given target UUID."""

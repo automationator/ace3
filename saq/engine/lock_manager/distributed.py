@@ -2,7 +2,6 @@ import logging
 import os
 import threading
 import uuid
-from abc import ABC, abstractmethod
 from typing import Optional
 
 from saq.configuration.config import get_config_value_as_int
@@ -112,7 +111,7 @@ class DistributedLockManager(LockManagerInterface):
         """Force release a lock on the given target UUID."""
         return force_release_lock(target_uuid)
         
-    def release_lock(self, target_uuid: str) -> bool:
+    def release_lock(self, target_uuid: str, ignore_lock_failure: bool = False) -> bool:
         """Release a lock on the given target UUID.
         
         Args:
@@ -121,7 +120,7 @@ class DistributedLockManager(LockManagerInterface):
         Returns:
             True if the lock was released, False otherwise.
         """
-        return release_lock(target_uuid, self.lock_uuid)
+        return release_lock(target_uuid, self.lock_uuid, ignore_lock_failure)
         
     def _keepalive_loop(self, target_uuid: str) -> None:
         """Main loop for maintaining the lock on the target UUID."""

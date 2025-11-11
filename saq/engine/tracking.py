@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 import os
 import pickle
 import shutil
@@ -79,6 +80,10 @@ class AnalysisModuleTrackingMessage(TrackingMessage):
             f"observable_type={self.observable_type}"
             f"observable_value={self.observable_value})"
         )
+
+#
+# XXX there are race conditions here that need to be addressed
+#
     
 class TrackingMessageManager:
 
@@ -107,8 +112,13 @@ class TrackingMessageManager:
         if not os.path.exists(self.target_tracking_path):
             return None
 
-        with open(self.target_tracking_path, "rb") as fp:
-            return pickle.load(fp)
+        try:
+            with open(self.target_tracking_path, "rb") as fp:
+                return pickle.load(fp)
+        except Exception as e:
+            # race condition here
+            logging.info(f"unable to load target tracking from {self.target_tracking_path} (ignoring): {e}")
+            return None
 
     def clear_target_tracking(self):
         if os.path.exists(self.target_tracking_path):
@@ -131,8 +141,13 @@ class TrackingMessageManager:
         if not os.path.exists(self.module_tracking_path):
             return None
 
-        with open(self.module_tracking_path, "rb") as fp:
-            return pickle.load(fp)
+        try:
+            # race condition here
+            with open(self.module_tracking_path, "rb") as fp:
+                return pickle.load(fp)
+        except Exception as e:
+            logging.info(f"unable to load module tracking from {self.module_tracking_path} (ignoring): {e}")
+            return None
 
     def clear_module_tracking(self):
         if os.path.exists(self.module_tracking_path):

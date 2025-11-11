@@ -81,7 +81,8 @@ class AnalysisOrchestrator:
         """
         try:
             # process the work item and set up the root analysis
-            self._process_work_item(execution_context)
+            if not self._process_work_item(execution_context):
+                return False
             
             if execution_context.root is None:
                 logging.warning(f"unable to process work item {execution_context.work_item} (root was None)")
@@ -146,6 +147,8 @@ class AnalysisOrchestrator:
         logging.info(
             f"processing {execution_context.root.description} mode {execution_context.root.analysis_mode} ({execution_context.root.uuid})"
         )
+
+        return True
 
     def _check_disposition(self, execution_context: EngineExecutionContext) -> bool:
         """

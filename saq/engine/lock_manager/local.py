@@ -126,7 +126,7 @@ class LocalLockManager(LockManagerInterface):
         target_lock = self._get_or_create_lock(target_uuid)
         return target_lock.acquire(blocking=False)
 
-    def release_lock(self, target_uuid: str) -> bool:
+    def release_lock(self, target_uuid: str, ignore_lock_failure: bool = False) -> bool:
         """Release a lock on the given target UUID.
         
         Args:
@@ -146,7 +146,8 @@ class LocalLockManager(LockManagerInterface):
             target_lock.release()
             return True
         except Exception as e:
-            logging.error(f"Failed to release lock on {target_uuid}: {e}")
+            if not ignore_lock_failure:
+                logging.error(f"Failed to release lock on {target_uuid}: {e}")
             return False
 
     def force_release_lock(self, target_uuid: str) -> bool:

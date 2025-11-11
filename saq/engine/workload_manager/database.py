@@ -461,9 +461,10 @@ LIMIT 128""".format(
                         (target.uuid, target.original_analysis_mode),
                     )
 
-                # Release the lock using the lock manager
-                self.lock_manager.release_lock(target.uuid)
                 db.commit()
+
+                # this is more of a fail-safe so we ignore the lock failure if it's already been released
+                self.lock_manager.release_lock(target.uuid, ignore_lock_failure=True)
                     
                 logging.debug(f"cleared work target {target}")
 
