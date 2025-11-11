@@ -196,8 +196,8 @@ class URLExtractionAnalyzer(AnalysisModule):
                 # XXX this can hang hard
                 extracted_urls = find_urls(fp.read(), base_url=base_url, domain_as_url=domain_as_url)
                 logging.debug("extracted {} urls from {}".format(len(extracted_urls), local_file_path))
-            except:
-                logging.warning(f"failed to extract urls from {local_file_path}")
+            except Exception as e:
+                logging.warning(f"failed to extract urls from {local_file_path}: {e}")
                 return AnalysisExecutionResult.COMPLETED
 
         extracted_urls = list(filter(self.filter_excluded_domains, extracted_urls))

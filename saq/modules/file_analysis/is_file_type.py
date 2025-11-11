@@ -128,6 +128,11 @@ def is_rtf_file(path):
         return data[:3] == b'\\rt' or data == b'{\\rt'
 
 def is_pdf_file(path):
+    # .pdfparser is an output of the pdf analyzer
+    # these are not actual PDF files
+    if path.endswith('.pdfparser'):
+        return False
+
     with open(path, 'rb') as fp:
         return b'%PDF-' in fp.read(1024)
 

@@ -299,6 +299,12 @@ def test_is_pdf_file(tmp_path):
 
     assert is_pdf_file(target) is False
 
+    # test pdfparser output
+    target = str(tmp_path / 'test.pdfparser')
+    with open(target, 'wb') as fp:
+        fp.write(b'%PDF-1.4\n')
+
+    assert is_pdf_file(target) is False
 
 @pytest.mark.unit
 def test_is_zip_file(datadir, tmp_path):
