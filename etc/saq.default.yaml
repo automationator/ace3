@@ -1907,9 +1907,15 @@ service_engine:
   class: EngineService
   description: Analysis Correlation Engine - core analysis engine
   enabled: true
-  # analysis pool settings: see INI for detailed documentation
+  # analysis pool settings
   # if NO analysis pools are specified then a single pool with no equal priority will be created with a size equal to the number of CPU cores
+  # analysis_pool_size_correlation = 8
+  # analysis_pool_size_email = 8
   # in a multi-node configuration nodes are free to pull work from other nodes (target_nodes)
+  # this setting is OPTIONAL and controls which nodes this node will pull work from
+  # you can specify the special value of LOCAL to only pull work from the local node
+  # target_nodes:
+  #   - node1
   # how often to discard the worker processes and create new ones (in seconds) (disabled until restart issue resolved)
   auto_refresh_frequency: 0
   # the default analysis mode if none is specified, or an unknown analysis mode is specified
@@ -1969,9 +1975,9 @@ analysis_mode_yara:
   module_groups:
     - yara
   cleanup: true
-  maximum_cumulative_analysis_warning_time: 30
-  maximum_cumulative_analysis_fail_time: 120
-  maximum_analysis_time: 20
+  maximum_cumulative_analysis_warning_time: 150
+  maximum_cumulative_analysis_fail_time: 300
+  maximum_analysis_time: 60
 
 analysis_mode_email:
   # mode used for email (rfc822 and SMTP stream) analysis
@@ -1982,9 +1988,9 @@ analysis_mode_email:
   cleanup: true
   analysis_module_email_archiver: true
   analysis_module_email_logger: true
-  maximum_cumulative_analysis_warning_time: 30
-  maximum_cumulative_analysis_fail_time: 120
-  maximum_analysis_time: 20
+  maximum_cumulative_analysis_warning_time: 150
+  maximum_cumulative_analysis_fail_time: 300
+  maximum_analysis_time: 60
 
 analysis_mode_binary:
   # default mode for binary (executable) file analysis
@@ -1992,9 +1998,9 @@ analysis_mode_binary:
     - common
     - file
   cleanup: true
-  maximum_cumulative_analysis_warning_time: 30
-  maximum_cumulative_analysis_fail_time: 120
-  maximum_analysis_time: 20
+  maximum_cumulative_analysis_warning_time: 150
+  maximum_cumulative_analysis_fail_time: 300
+  maximum_analysis_time: 60
 
 analysis_mode_file:
   # mode used for generic file analysis
@@ -2002,9 +2008,9 @@ analysis_mode_file:
     - common
     - file
   cleanup: true
-  maximum_cumulative_analysis_warning_time: 30
-  maximum_cumulative_analysis_fail_time: 120
-  maximum_analysis_time: 20
+  maximum_cumulative_analysis_warning_time: 150
+  maximum_cumulative_analysis_fail_time: 300
+  maximum_analysis_time: 60
 
 analysis_mode_correlation:
   # mode used for analyzing alerts
@@ -2044,9 +2050,9 @@ analysis_mode_dispositioned:
   cleanup: false
   analysis_module_alert_added_to_event: true
   # faster cumulative timeouts for dispositioned mode
-  maximum_cumulative_analysis_warning_time: 3
-  maximum_cumulative_analysis_fail_time: 8
-  maximum_analysis_time: 20
+  maximum_cumulative_analysis_warning_time: 150
+  maximum_cumulative_analysis_fail_time: 300
+  maximum_analysis_time: 60
 
 analysis_mode_event:
   # mode used for when alerts are added to an event; allows more in-depth or time consuming analysis only for things inside of events
