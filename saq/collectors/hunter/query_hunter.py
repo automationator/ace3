@@ -13,12 +13,12 @@ from typing import Optional
 
 from glom import PathAccessError
 from pydantic import BaseModel, Field
-import yaml
 
 from saq.analysis.observable import Observable
 from saq.analysis.root import RootAnalysis, Submission
 from saq.collectors.hunter.base_hunter import HuntConfig
 from saq.collectors.hunter.event_processing import FIELD_LOOKUP_TYPE_KEY, extract_event_value, interpolate_event_value
+from saq.collectors.hunter.loader import load_from_yaml
 from saq.configuration import get_config_value, get_config_value_as_int
 from saq.constants import CONFIG_QUERY_HUNTER, CONFIG_QUERY_HUNTER_MAX_RESULT_COUNT, CONFIG_QUERY_HUNTER_QUERY_TIMEOUT, F_HUNT, G_TEMP_DIR
 from saq.environment import g
@@ -231,15 +231,16 @@ class QueryHunt(Hunt):
 
         return result
     
-    def load_from_yaml(self, path: str) -> QueryHuntConfig:
-        with open(path, "r") as fp:
-            config_dict = yaml.safe_load(fp)
+    def load_hunt_config(self, path: str) -> QueryHuntConfig:
+        return load_from_yaml(path, QueryHuntConfig)
 
-        self.config = QueryHuntConfig.model_validate(config_dict["rule"])
+    def load_hunt(self, path: str) -> QueryHuntConfig:
+        self.config = self.load_hunt_config(path)
+
         if self.config.query_file_path:
             self.loaded_query = self.load_query_from_file(self.config.query_file_path)
 
-        return self.config
+        return self.config    
 
     @property
     def is_modified(self):

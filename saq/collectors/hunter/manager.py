@@ -455,9 +455,9 @@ class HuntManager:
            This is useful for unit testing."""
         for hunt_config in self._list_hunt_yaml():
             hunt = self.hunt_cls(manager=self)
-            logging.debug(f"loading hunt from {hunt_config}")
+            logging.info(f"loading hunt from {hunt_config}")
             try:
-                hunt.load_from_yaml(hunt_config)
+                hunt.load_hunt(hunt_config)
 
                 if hunt_filter(hunt):
                     logging.debug(f"loaded {hunt} from {hunt_config}")
@@ -468,7 +468,7 @@ class HuntManager:
             except InvalidHuntTypeError as e:
                 report_exception()
                 self.skipped_yaml_files.add(hunt_config)
-                logging.debug(f"skipping {hunt_config} for {self}: {e}")
+                logging.warning(f"skipping {hunt_config} for {self}: {e}")
                 continue
             except Exception as e:
                 logging.error(f"unable to load hunt from {hunt_config}: {e}")
@@ -520,7 +520,7 @@ class HuntManager:
         self.wait_control_event.set()
         return hunt
 
-    def _list_hunt_yaml(self):
+    def _list_hunt_yaml(self) -> list[str]:
         """Returns the list of yaml files for hunts in self.rule_dirs."""
         result = []
         for rule_dir in self.rule_dirs:
@@ -538,6 +538,10 @@ class HuntManager:
 
                     # skip the template.yaml file
                     if hunt_config == "template.yaml":
+                        continue
+
+                    # skip include files
+                    if hunt_config.endswith('.include.yaml'):
                         continue
 
                     result.append(os.path.join(root, hunt_config))

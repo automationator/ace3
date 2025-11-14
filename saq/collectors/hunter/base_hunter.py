@@ -32,10 +32,10 @@ import threading
 from typing import TYPE_CHECKING, Optional
 from croniter import croniter
 from pydantic import BaseModel, Field, field_validator
-import yaml
 
 import pytz
 
+from saq.collectors.hunter.loader import load_from_yaml
 from saq.configuration import get_config_value
 from saq.constants import ANALYSIS_MODE_CORRELATION, CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR, QUEUE_DEFAULT, ExecutionMode
 from saq.environment import get_data_dir
@@ -367,23 +367,16 @@ class Hunt:
 
         return True
 
-    def load_from_yaml(self, path: str) -> HuntConfig:
-        """loads the settings for the hunt from a yaml formatted file. this function must return the 
-           dictionary object used to load the settings."""
-        with open(path, 'r') as fp:
-            config_dict = yaml.safe_load(fp)
+    def load_hunt_config(self, path: str) -> HuntConfig:
+        return load_from_yaml(path, HuntConfig)
 
-        rule_config = HuntConfig.model_validate(config_dict["rule"])
-
-        # is this a supported type?
-        #if rule_config['type'] != self.type:
-            #raise InvalidHuntTypeError(rule_config['type'])
+    def load_hunt(self, path: str) -> HuntConfig:
+        self.config = self.load_hunt_config(path)
 
         self.file_path = path
         self.last_mtime = os.path.getmtime(path)
 
-        self.config = rule_config
-        return rule_config
+        return self.config
 
     @property
     def is_modified(self):

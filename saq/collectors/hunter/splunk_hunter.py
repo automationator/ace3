@@ -12,8 +12,8 @@ from typing import Optional
 
 from pydantic import Field
 import pytz
-import yaml
 
+from saq.collectors.hunter.loader import load_from_yaml
 from saq.configuration import get_config_value
 from saq.constants import CONFIG_SPLUNK, CONFIG_SPLUNK_APP_CONTEXT, CONFIG_SPLUNK_TIMEZONE, CONFIG_SPLUNK_URI, CONFIG_SPLUNK_USER_CONTEXT
 from saq.splunk import extract_event_timestamp, SplunkClient
@@ -83,11 +83,11 @@ class SplunkHunt(QueryHunt):
     def extract_event_timestamp(self, event):
         return extract_event_timestamp(event)
 
-    def load_from_yaml(self, path: str) -> SplunkHuntConfig:
-        with open(path, "r") as fp:
-            config_dict = yaml.safe_load(fp)
+    def load_hunt_config(self, path: str) -> SplunkHuntConfig:
+        return load_from_yaml(path, SplunkHuntConfig)
 
-        self.config = SplunkHuntConfig.model_validate(config_dict["rule"])
+    def load_hunt(self, path: str) -> SplunkHuntConfig:
+        self.config = self.load_hunt_config(path)
         return self.config
 
     def execute_query(self, start_time, end_time, unit_test_query_results=None, **kwargs):
