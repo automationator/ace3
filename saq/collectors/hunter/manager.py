@@ -73,7 +73,7 @@ class HuntManager:
         self.config = config
 
         # the list of Hunt objects that are being managed
-        self._hunts = []
+        self._hunts: list[Hunt] = []
 
         # acquire this lock before making any modifications to the hunts
         self.hunt_lock = threading.RLock()
@@ -143,7 +143,6 @@ class HuntManager:
         """Returns True if the given hunt is valid for the current instance type (ignoring case)."""
         instance_type = get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE)
         return (
-            not hunt.instance_types or
             any(instance_type.lower() == t.lower() for t in hunt.instance_types)
         )
 

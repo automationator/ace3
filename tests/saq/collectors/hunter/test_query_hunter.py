@@ -39,13 +39,14 @@ class TestQueryHunt(QueryHunt):
 def default_hunt(
     # base hunter
     uuid="cb7ec70f-0e81-4d84-b8bc-e5a3907dd4f7",
-    name="test_hunt", 
+    name="test_hunt",
     type="test_query",
-    enabled=True, 
-    description="Test Hunt", 
+    enabled=True,
+    description="Test Hunt",
     alert_type="test - query",
-    frequency="00:10", 
+    frequency="00:10",
     tags=[ "test_tag" ],
+    instance_types=["unittest"],
 
     # query hunter
     time_range="00:10",
@@ -65,6 +66,7 @@ def default_hunt(
         alert_type=alert_type,
         frequency=frequency,
         tags=tags,
+        instance_types=instance_types,
         query=query,
         time_range=time_range,
         max_time_range=max_time_range,
@@ -122,7 +124,8 @@ def setup(rules_dir):
                 'full_coverage': 'yes',
                 'group_by': 'field1',
                 'search': f'{rules_dir}/test_1.query',
-                'use_index_time': 'yes'
+                'use_index_time': 'yes',
+                'instance_types': ['unittest']
             },
             'observable_mapping': [
                 {
@@ -185,7 +188,8 @@ def test_load_query_inline(rules_dir, manager_kwargs):
                 'full_coverage': 'yes',
                 'group_by': 'field1',
                 'query': 'Test query.',
-                'use_index_time': 'yes'
+                'use_index_time': 'yes',
+                'instance_types': ['unittest']
             },
             'observable_mapping': {
                 'src_ip': 'ipv4',
@@ -224,7 +228,8 @@ def test_load_multi_line_query_inline(rules_dir, manager_kwargs):
                 'full_coverage': 'yes',
                 'group_by': 'field1',
                 'query': 'This is a multi line query.\nHow about that?',
-                'use_index_time': 'yes'
+                'use_index_time': 'yes',
+                'instance_types': ['unittest']
             },
             'observable_mapping': [
                 {
@@ -232,7 +237,7 @@ def test_load_multi_line_query_inline(rules_dir, manager_kwargs):
                     'type': 'ipv4',
                     'time': True,
                 },
-                {   
+                {
                     'fields': ['dst_ip'],
                     'type': 'ipv4',
                     'time': True,

@@ -27,6 +27,7 @@ def default_hunt_config(**kwargs):
         "alert_type": kwargs.get("alert_type", 'test - alert'),
         "frequency": kwargs.get("frequency", '00:10'),
         "tags": kwargs.get("tags", [ 'test_tag' ]),
+        "instance_types": kwargs.get("instance_types", ["unittest"]),
         **kwargs
     }
     return HuntConfig(**config_kwargs)
@@ -40,6 +41,7 @@ def default_hunt(
     alert_type='test - alert',
     frequency='00:10',
     tags=[ 'test_tag' ],
+    instance_types=["unittest"],
     **kwargs):
 
     return TestHunt(manager=manager, config=HuntConfig(
@@ -51,6 +53,7 @@ def default_hunt(
         alert_type=alert_type,
         frequency=frequency,
         tags=tags,
+        instance_types=instance_types,
         **kwargs))
 
 class TestHunt(Hunt):
@@ -240,6 +243,8 @@ def test_fix_invalid_hunt(rules_dir, manager_kwargs):
   type: test
   alert_type: test - alert
   #frequency: '00:00:01' <-- missing frequency
+  instance_types:
+    - unittest
   tags:
     - tag1
     - tag2
@@ -267,6 +272,8 @@ def test_fix_invalid_hunt(rules_dir, manager_kwargs):
   type: test
   alert_type: test - alert
   frequency: '00:00:01'
+  instance_types:
+    - unittest
   tags:
     - tag1
     - tag2
@@ -306,6 +313,8 @@ def test_load_hunts_wrong_type(rules_dir, manager_kwargs):
   type: test
   alert_type: test - alert
   frequency: '00:00:01'
+  instance_types:
+    - unittest
   tags:
     - tag1
     - tag2
@@ -396,6 +405,8 @@ def test_reload_hunts_on_new(rules_dir, hunter_service_multi_threaded):
   type: test
   alert_type: test - alert
   frequency: '00:00:10'
+  instance_types:
+    - unittest
   tags:
     - tag1
     - tag2
@@ -421,6 +432,8 @@ def test_valid_cron_schedule(rules_dir, manager_kwargs):
   type: test
   alert_type: test - alert
   frequency: '*/1 * * * *'
+  instance_types:
+    - unittest
   tags:
     - tag1
     - tag2
@@ -446,6 +459,8 @@ def test_invalid_cron_schedule(rules_dir, manager_kwargs):
   type: test
   alert_type: test - alert
   frequency: '*/1 * * *'
+  instance_types:
+    - unittest
   tags:
     - tag1
     - tag2
@@ -470,6 +485,8 @@ def test_hunt_suppression(rules_dir, manager_kwargs):
   alert_type: test - alert
   frequency: '00:00:01'
   suppression: '00:01:00'
+  instance_types:
+    - unittest
   tags:
     - tag1
     - tag2
@@ -612,13 +629,13 @@ def test_load_hunt_without_instance_types(rules_dir, manager_kwargs):
 
 @pytest.mark.integration
 def test_is_valid_instance_type_empty(manager_kwargs, monkeypatch):
-    # when instance_types is empty, hunt should be valid for any instance type
+    # when instance_types is empty, hunt should not be valid (instance type must be specified)
     monkeypatch.setitem(get_config()["global"], "instance_type", "production")
 
     hunter = HuntManager(**manager_kwargs)
     hunt = default_hunt(manager=hunter, instance_types=[])
 
-    assert hunter.is_valid_instance_type(hunt)
+    assert not hunter.is_valid_instance_type(hunt)
 
 @pytest.mark.integration
 def test_is_valid_instance_type_matching(manager_kwargs, monkeypatch):
@@ -665,9 +682,9 @@ def test_hunt_execution_skips_invalid_instance_type(manager_kwargs, monkeypatch)
     invalid_hunt = default_hunt(manager=hunter, name='invalid_hunt', instance_types=['development'])
     hunter.add_hunt(invalid_hunt)
 
-    # add a hunt with no instance type restriction
-    unrestricted_hunt = default_hunt(manager=hunter, name='unrestricted_hunt', instance_types=[])
-    hunter.add_hunt(unrestricted_hunt)
+    # add a hunt with empty instance types (should also be invalid now that instance types must be specified)
+    empty_instance_hunt = default_hunt(manager=hunter, name='empty_instance_hunt', instance_types=[])
+    hunter.add_hunt(empty_instance_hunt)
 
     # execute all hunts
     hunter.execute()
@@ -675,9 +692,9 @@ def test_hunt_execution_skips_invalid_instance_type(manager_kwargs, monkeypatch)
     hunter.wait_control_event.set()
     hunter.wait()
 
-    # valid_hunt and unrestricted_hunt should have executed
+    # only valid_hunt should have executed
     assert valid_hunt.executed
-    assert unrestricted_hunt.executed
 
-    # invalid_hunt should not have executed
+    # invalid_hunt and empty_instance_hunt should not have executed
     assert not invalid_hunt.executed
+    assert not empty_instance_hunt.executed

@@ -243,7 +243,7 @@ class QueryHunt(Hunt):
         return load_from_yaml(path, QueryHuntConfig)
 
     def load_hunt(self, path: str) -> QueryHuntConfig:
-        self.config = self.load_hunt_config(path)
+        super().load_hunt(path)
 
         if self.config.query_file_path:
             self.loaded_query = self.load_query_from_file(self.config.query_file_path)
