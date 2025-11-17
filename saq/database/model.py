@@ -360,7 +360,7 @@ class Alert(Base):
 
 
     @property
-    def icon(self):
+    def icon(self) -> str:
         # use alert type as icon name if it exists
         icon_files = os.listdir(os.path.join(get_base_dir(), 'app', 'static', 'images', 'alert_icons'))
         if f'{self.alert_type}.png' in icon_files:
