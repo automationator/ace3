@@ -52,7 +52,7 @@ def test_complete():
         complete = splunk.complete(mock_job)
 
     # verify
-    assert complete == True
+    assert complete is True
     mock_job.refresh.assert_called_once()
 
 
@@ -80,7 +80,7 @@ def test_incomplete():
         complete = splunk.complete(mock_job)
 
     # verify
-    assert complete == False
+    assert complete is False
     mock_job.refresh.assert_called_once()
 
 
@@ -153,7 +153,7 @@ def test_cancel():
         splunk = SplunkQueryObject(host="test.com", port=8089, username="user", password="pass", user_context="o", app="o")
         cancelled = splunk.cancel(mock_job)
 
-    assert cancelled == True
+    assert cancelled is True
     mock_job.cancel.assert_called_once()
 
 
@@ -172,7 +172,7 @@ def test_cancel_error():
         splunk = SplunkQueryObject(host="test.com", port=8089, username="user", password="pass", user_context="o", app="o")
         cancelled = splunk.cancel(mock_job)
 
-    assert cancelled == False
+    assert cancelled is False
 
 
 @pytest.mark.unit
@@ -184,7 +184,7 @@ def test_cancel_none():
         splunk = SplunkQueryObject(host="test.com", port=8089, username="user", password="pass", user_context="o", app="o")
         cancelled = splunk.cancel(None)
 
-    assert cancelled == True
+    assert cancelled is True
 
 
 @pytest.mark.unit
@@ -235,20 +235,74 @@ def test_link():
 
         # make sure special chars get encoded
         link = splunk.encoded_query_link('search index=test field!=":&+*" | table field')
-        assert link == 'https://test.com:8089/en-US/app/search/search?q=search+index%3Dtest+field%21%3D%22%3A%26%2B%2A%22+%7C+table+field'
+        assert link == 'https://test.com/en-US/app/search/search?q=search+index%3Dtest+field%21%3D%22%3A%26%2B%2A%22+%7C+table+field'
 
         # make sure search is prepended when missing
         link = splunk.encoded_query_link('index=test field!=":&+*" | table field')
-        assert link == 'https://test.com:8089/en-US/app/search/search?q=search+index%3Dtest+field%21%3D%22%3A%26%2B%2A%22+%7C+table+field'
+        assert link == 'https://test.com/en-US/app/search/search?q=search+index%3Dtest+field%21%3D%22%3A%26%2B%2A%22+%7C+table+field'
 
         # test optional time range
         link = splunk.encoded_query_link('index=test', start_time=MOCK_NOW, end_time=MOCK_NOW)
-        assert link == 'https://test.com:8089/en-US/app/search/search?q=search+index%3Dtest&earliest=1510385761&latest=1510385761'
+        assert link == 'https://test.com/en-US/app/search/search?q=search+index%3Dtest&earliest=1510385761&latest=1510385761'
 
         # test app namespace
         splunk = SplunkQueryObject(host="test.com", port=8089, username="test", password="test", app="myapp")
         link = splunk.encoded_query_link('search index=test field!=":&+*" | table field')
-        assert link == 'https://test.com:8089/en-US/app/myapp/search?q=search+index%3Dtest+field%21%3D%22%3A%26%2B%2A%22+%7C+table+field'
+        assert link == 'https://test.com/en-US/app/myapp/search?q=search+index%3Dtest+field%21%3D%22%3A%26%2B%2A%22+%7C+table+field'
+
+
+@pytest.mark.unit
+def test_link_with_use_index_time():
+    # create mock client
+    mock_client = Mock()
+
+    with patch("saq.splunk.client.connect", return_value=mock_client):
+        # init splunk
+        splunk = SplunkQueryObject(host="test.com", port=8089, username="test", password="test")
+
+        # test use_index_time with both start and end times
+        link = splunk.encoded_query_link('index=test', start_time=MOCK_NOW, end_time=MOCK_NOW, use_index_time=True)
+        # verify the query includes _index_earliest and _index_latest
+        assert '_index_earliest%3D11%2F11%2F2017%3A07%3A36%3A01' in link
+        assert '_index_latest%3D11%2F11%2F2017%3A07%3A36%3A01' in link
+        # verify the earliest and latest params are extended by 30 days
+        # MOCK_NOW - 30 days = 1507793761, MOCK_NOW + 30 days = 1512977761
+        assert 'earliest=1507793761' in link
+        assert 'latest=1512977761' in link
+
+        # test use_index_time with only start time
+        link = splunk.encoded_query_link('index=test', start_time=MOCK_NOW, use_index_time=True)
+        assert '_index_earliest%3D11%2F11%2F2017%3A07%3A36%3A01' in link
+        assert '_index_latest%3D' in link
+        assert '&earliest=1507793761' in link
+        assert '&latest=' not in link
+
+        # test use_index_time with only end time
+        link = splunk.encoded_query_link('index=test', end_time=MOCK_NOW, use_index_time=True)
+        assert '_index_earliest%3D' in link
+        assert '_index_latest%3D11%2F11%2F2017%3A07%3A36%3A01' in link
+        assert '&earliest=' not in link
+        assert '&latest=1512977761' in link
+
+        # test use_index_time without any times
+        link = splunk.encoded_query_link('index=test', use_index_time=True)
+        assert '_index_earliest%3D' in link
+        assert '_index_latest%3D' in link
+        assert '&earliest=' not in link
+        assert '&latest=' not in link
+
+        # test use_index_time with 'search' already in query
+        link = splunk.encoded_query_link('search index=test | stats count', start_time=MOCK_NOW, end_time=MOCK_NOW, use_index_time=True)
+        assert '_index_earliest%3D11%2F11%2F2017%3A07%3A36%3A01' in link
+        assert '_index_latest%3D11%2F11%2F2017%3A07%3A36%3A01' in link
+        assert 'earliest=1507793761' in link
+        assert 'latest=1512977761' in link
+
+        # test use_index_time with special characters in query
+        link = splunk.encoded_query_link('index=test field!=":&+*"', start_time=MOCK_NOW, end_time=MOCK_NOW, use_index_time=True)
+        assert '_index_earliest%3D11%2F11%2F2017%3A07%3A36%3A01' in link
+        assert '_index_latest%3D11%2F11%2F2017%3A07%3A36%3A01' in link
+        assert 'field%21%3D%22%3A%26%2B%2A%22' in link
 
 
 @pytest.mark.unit

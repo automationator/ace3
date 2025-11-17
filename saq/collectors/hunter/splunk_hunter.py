@@ -116,7 +116,7 @@ class SplunkHunt(QueryHunt):
         searcher = SplunkClient(self.splunk_config, user_context=self.namespace_user, app=self.namespace_app)
 
         # set search link
-        self.search_link = searcher.encoded_query_link(self.formatted_query_timeless(), start_time.astimezone(tz), end_time.astimezone(tz))
+        self.search_link = searcher.encoded_query_link(self.formatted_query_timeless(), start_time.astimezone(tz), end_time.astimezone(tz), use_index_time=self.use_index_time)
 
         # reset search_id before searching so we don't get previous run results
         self.job = None

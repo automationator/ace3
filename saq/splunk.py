@@ -3,10 +3,11 @@ import csv
 import logging
 import os
 import os.path
+import re
 import time
 import urllib.parse
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from requests.exceptions import HTTPError, Timeout, ProxyError, ConnectionError
 from typing import Optional, Tuple, List
 
@@ -190,7 +191,7 @@ class SplunkQueryObject:
     def search_failed(self) -> bool:
         return self.is_failed is not None and self.is_failed != "0"
 
-    def encoded_query_link(self, query:str, start_time:Optional[datetime]=None, end_time:Optional[datetime]=None) -> str:
+    def encoded_query_link(self, query:str, start_time:Optional[datetime] = None, end_time:Optional[datetime] = None, use_index_time: bool = False) -> str:
         """Returns a gui link for the query over the given time range
 
         Args:
@@ -205,17 +206,40 @@ class SplunkQueryObject:
         if not query.lstrip().lower().startswith('search'):
             query = 'search ' + query
 
+        # add index time filter if index time is being used
+        if use_index_time:
+            index_end_time_str = ""
+            if end_time is not None:
+                index_end_time_str = end_time.strftime("%m/%d/%Y:%H:%M:%S")
+
+            index_start_time_str = ""
+            if start_time is not None:
+                index_start_time_str = start_time.strftime("%m/%d/%Y:%H:%M:%S")
+
+            replacement = f"search _index_earliest={index_start_time_str} _index_latest={index_end_time_str} "
+            query = re.sub(r'^\s*search\s+', replacement, query, flags=re.IGNORECASE)
+
+
         # build params
         params = {'q': query}
         if start_time:
-            params['earliest'] = int(time.mktime(start_time.timetuple()))
+            # if we're using index time then the event time ranges needs to completely overlap with the index time range
+            if use_index_time:
+                params['earliest'] = int(time.mktime((start_time - timedelta(days=30)).timetuple())) # hardcoded to 30 days before the start time
+            else:
+                params['earliest'] = int(time.mktime(start_time.timetuple()))
+
         if end_time:
-            params['latest'] = int(time.mktime(end_time.timetuple()))
+            if use_index_time:
+                params['latest'] = int(time.mktime((end_time + timedelta(days=30)).timetuple())) # hardcoded to 30 days after the end time
+            else:
+                params['latest'] = int(time.mktime(end_time.timetuple()))
 
         # build link
         uri = (
             "https",
-            f"{self.host}:{self.port}",
+            # NOTE we don't specify the port here (API calls are on a different port than the UI)
+            f"{self.host}",
             self.gui_path,
             '',
             urllib.parse.urlencode(params),
