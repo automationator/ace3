@@ -16,7 +16,7 @@ from glom import PathAccessError
 from pydantic import BaseModel, Field
 
 from saq.analysis.observable import Observable
-from saq.analysis.root import RootAnalysis, Submission
+from saq.analysis.root import KEY_PLAYBOOK_URL, RootAnalysis, Submission
 from saq.collectors.hunter.base_hunter import HuntConfig
 from saq.collectors.hunter.decoder import DecoderType, decode_value
 from saq.collectors.hunter.event_processing import FIELD_LOOKUP_TYPE_KEY, extract_event_value, interpolate_event_value
@@ -24,6 +24,7 @@ from saq.collectors.hunter.loader import load_from_yaml
 from saq.configuration import get_config_value, get_config_value_as_int
 from saq.constants import CONFIG_QUERY_HUNTER, CONFIG_QUERY_HUNTER_MAX_RESULT_COUNT, CONFIG_QUERY_HUNTER_QUERY_TIMEOUT, F_FILE, F_HUNT, F_SIGNATURE_ID, G_TEMP_DIR
 from saq.environment import g
+from saq.gui.alert import KEY_ICON_CONFIGURATION
 from saq.observables.generator import create_observable
 
 import pytz
@@ -143,14 +144,13 @@ class QueryHunt(Hunt):
         else:
             return None
 
-    def execute_query(self, start_time, end_time, *args, **kwargs):
+    def execute_query(self, start_time: datetime.datetime, end_time: datetime.datetime, *args, **kwargs) -> Optional[list[Submission]]:
         """Called to execute the query over the time period given by the start_time and end_time parameters.
            Returns a list of zero or more Submission objects."""
         raise NotImplementedError()
 
-    # XXX copy pasta from lib/saq/collectors/hunter.py
     @property
-    def last_end_time(self):
+    def last_end_time(self) -> Optional[datetime.datetime]:
         """The last end_time value we used as the ending point of our search range.
            Note that this is different than the last_execute_time, which was the last time we executed the search."""
         # if we don't already have this value then load it from the sqlite db
@@ -163,7 +163,7 @@ class QueryHunt(Hunt):
             return self._last_end_time
 
     @last_end_time.setter
-    def last_end_time(self, value):
+    def last_end_time(self, value: datetime.datetime):
         if value.tzinfo is None:
             value = pytz.utc.localize(value)
 
@@ -173,7 +173,7 @@ class QueryHunt(Hunt):
         write_persistence_data(self.type, self.name, 'last_end_time', value)
 
     @property
-    def start_time(self):
+    def start_time(self) -> datetime.datetime:
         """Returns the starting time of this query based on the last time we searched."""
         # if this hunt is configured for full coverage, then the starting time for the search
         # will be equal to the ending time of the last executed search
@@ -188,7 +188,7 @@ class QueryHunt(Hunt):
             return local_time() - self.time_range
 
     @property
-    def end_time(self):
+    def end_time(self) -> datetime.datetime:
         """Returns the ending time of this query based on the start time and the hunt configuration."""
         # if this hunt is configured for full coverage, then the ending time for the search
         # will be equal to the ending time of the last executed search plus the total range of the search
@@ -210,7 +210,7 @@ class QueryHunt(Hunt):
             return now
 
     @property
-    def ready(self):
+    def ready(self) -> bool:
         """Returns True if the hunt is ready to execute, False otherwise."""
         # if it's already running then it's not ready to run again
         if self.running:
@@ -230,7 +230,7 @@ class QueryHunt(Hunt):
         logging.debug(f"hunt {self} local time {local_time()} last execution time {self.last_executed_time} next execution time {self.next_execution_time}")
         return local_time() >= self.next_execution_time
 
-    def load_query_from_file(self, path: str):
+    def load_query_from_file(self, path: str) -> str:
         with open(abs_path(self.query_file_path), 'r') as fp:
             result = fp.read()
 
@@ -251,11 +251,11 @@ class QueryHunt(Hunt):
         return self.config    
 
     @property
-    def is_modified(self):
+    def is_modified(self) -> bool:
         return self.yaml_is_modified or self.query_is_modified
 
     @property
-    def query_is_modified(self):
+    def query_is_modified(self) -> bool:
         """Returns True if this query was loaded from file and that file has been modified since we loaded it."""
         if self.query_file_path is None:
             return False
@@ -296,7 +296,7 @@ class QueryHunt(Hunt):
            Return None if one cannot be extracted."""
         return None
 
-    def extract_event_timestamp(self, query_result):
+    def extract_event_timestamp(self, query_result: dict) -> Optional[datetime.datetime]:
         """Given a JSON object that represents a single row/entry from a query result, return a datetime.datetime
            object that represents the actual time of the event.
            Return None if one cannot be extracted."""
@@ -310,6 +310,13 @@ class QueryHunt(Hunt):
     def create_root_analysis(self, event: dict) -> RootAnalysis:
         import uuid as uuidlib
         root_uuid = str(uuidlib.uuid4())
+        extensions = {
+            KEY_PLAYBOOK_URL: interpolate_event_value(self.playbook_url, event),
+        }
+
+        if self.icon_configuration:
+            extensions[KEY_ICON_CONFIGURATION] = self.icon_configuration.model_dump()
+
         root = RootAnalysis(
             uuid=root_uuid,
             storage_dir=os.path.join(g(G_TEMP_DIR), root_uuid),
@@ -324,7 +331,7 @@ class QueryHunt(Hunt):
             event_time=None,
             queue=self.queue,
             instructions=interpolate_event_value(self.description, event),
-            extensions={ "playbook_url": interpolate_event_value(self.playbook_url, event) })
+            extensions=extensions)
 
         root.initialize_storage()
 

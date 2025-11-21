@@ -358,33 +358,6 @@ class Alert(Base):
             )
         ]
 
-
-    @property
-    def icon(self) -> str:
-        # use alert type as icon name if it exists
-        icon_files = os.listdir(os.path.join(get_base_dir(), 'app', 'static', 'images', 'alert_icons'))
-        if f'{self.alert_type}.png' in icon_files:
-            return self.alert_type
-
-        # otherwise do this old thing that is wildly over complicated
-        description_tokens = {token.lower() for token in re.split('[ _]', self.description)}
-        tool_tokens = {token.lower() for token in self.tool.split(' ')}
-        type_tokens = {token.lower() for token in self.alert_type.split(' ')}
-
-        available_favicons = set([k for k in get_config()['gui_favicons']])
-
-        result = available_favicons.intersection(description_tokens)
-        if not result:
-            result = available_favicons.intersection(tool_tokens)
-            if not result:
-                result = available_favicons.intersection(type_tokens)
-
-        if not result:
-            return 'default'
-        else:
-            return result.pop()
-
-
     @validates('description')
     def validate_description(self, key, value):
         max_length = getattr(self.__class__, key).prop.columns[0].type.length

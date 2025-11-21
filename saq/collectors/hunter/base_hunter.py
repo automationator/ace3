@@ -40,6 +40,7 @@ from saq.configuration import get_config_value
 from saq.constants import ANALYSIS_MODE_CORRELATION, CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR, QUEUE_DEFAULT, ExecutionMode
 from saq.environment import get_data_dir
 from saq.error import report_exception
+from saq.gui.icon import IconConfiguration
 from saq.util import local_time, create_timedelta
 from saq.util.time import is_timedelta_string
 
@@ -61,6 +62,7 @@ class HuntConfig(BaseModel):
     playbook_url: Optional[str] = Field(default=None, description="This is the url of the playbook that will be used to investigate the alert.")
     tags: list[str] = Field(default_factory=list, description="These are tags that will be added to the alert in ACE when it is displayed.")
     pivot_links: list[dict] = Field(default_factory=list, description="These are links that will be displayed in ACE when the alert is displayed.")
+    icon_configuration: Optional[IconConfiguration] = Field(default=None, description="The icon to use for the hunt.")
 
     @field_validator("frequency")
     @classmethod
@@ -222,6 +224,10 @@ class Hunt:
     @property
     def pivot_links(self) -> list[dict]:
         return self.config.pivot_links
+
+    @property
+    def icon_configuration(self) -> Optional[IconConfiguration]:
+        return self.config.icon_configuration
 
     #
     # runtime state

@@ -1,13 +1,19 @@
 import logging
 import os
+import re
+from flask import url_for
 import pytz
+from typing import Optional
 from saq import RootAnalysis
 from saq.analysis.presenter import register_analysis_presenter, AnalysisPresenter
-from saq.configuration.config import get_config_value, get_config_value_as_list
+from saq.configuration.config import get_config, get_config_value, get_config_value_as_list
 from saq.constants import CONFIG_CUSTOM_ALERTS, CONFIG_CUSTOM_ALERTS_BACKWARDS_COMPAT, CONFIG_CUSTOM_ALERTS_DIR, CONFIG_CUSTOM_ALERTS_TEMPLATE_DIR, EVENT_TIME_FORMAT_TZ
 from saq.database.model import Alert
 from saq.environment import get_base_dir
+from saq.gui.icon import IconConfiguration
 
+# supported extension keys
+KEY_ICON_CONFIGURATION = 'icon_configuration'
 
 class GUIAlert(Alert):
 
@@ -111,6 +117,53 @@ class GUIAlert(Alert):
         """Returns the time the alert was observed (which may be different from when the alert was inserted
            into the database."""
         return self.event_time.astimezone(self.display_timezone).strftime(EVENT_TIME_FORMAT_TZ)
+
+    @property
+    def icon(self) -> str:
+        if self.icon_configuration:
+            if self.icon_configuration.blueprint_file_location:
+                return url_for(self.icon_configuration.blueprint_file_location.name, filename=self.icon_configuration.blueprint_file_location.path)
+            elif self.icon_configuration.url:
+                return self.icon_configuration.url
+
+        return url_for("static", filename=f"images/alert_icons/{self.legacy_icon}.png")
+
+    @property
+    def icon_configuration(self) -> Optional[IconConfiguration]:
+        icon_configuration_dict = self.root_analysis.extensions.get(KEY_ICON_CONFIGURATION, None)
+        if not icon_configuration_dict:
+            return None
+
+        return IconConfiguration.model_validate(icon_configuration_dict)
+
+    @icon_configuration.setter
+    def icon_configuration(self, value: IconConfiguration):
+        self.root_analysis.set_extension(KEY_ICON_CONFIGURATION, value.model_dump())
+
+    @property
+    def legacy_icon(self) -> str:
+        # use alert type as icon name if it exists
+        icon_files = os.listdir(os.path.join(get_base_dir(), 'app', 'static', 'images', 'alert_icons'))
+        if f'{self.alert_type}.png' in icon_files:
+            return self.alert_type
+
+        # otherwise do this old thing that is wildly over complicated
+        description_tokens = {token.lower() for token in re.split('[ _]', self.description)}
+        tool_tokens = {token.lower() for token in self.tool.split(' ')}
+        type_tokens = {token.lower() for token in self.alert_type.split(' ')}
+
+        available_favicons = set([k for k in get_config()['gui_favicons']])
+
+        result = available_favicons.intersection(description_tokens)
+        if not result:
+            result = available_favicons.intersection(tool_tokens)
+            if not result:
+                result = available_favicons.intersection(type_tokens)
+
+        if not result:
+            return 'default'
+        else:
+            return result.pop()
 
 class GUIAlertPresenter(AnalysisPresenter):
     """Presenter for GUIAlert that handles complex template logic."""

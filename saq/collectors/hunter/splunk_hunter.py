@@ -3,6 +3,7 @@
 # ACE Splunk Hunting System
 #
 
+import datetime
 import re
 import logging
 import os
@@ -92,7 +93,7 @@ class SplunkHunt(QueryHunt):
         #self.config = self.load_hunt_config(path)
         #return self.config
 
-    def execute_query(self, start_time, end_time, unit_test_query_results=None, **kwargs):
+    def execute_query(self, start_time: datetime.datetime, end_time: datetime.datetime, unit_test_query_results=None, **kwargs) -> Optional[list[dict]]:
         tz = pytz.timezone(self.timezone)
 
         earliest = start_time.astimezone(tz).strftime('%m/%d/%Y:%H:%M:%S')

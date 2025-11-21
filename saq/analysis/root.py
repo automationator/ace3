@@ -231,16 +231,16 @@ class RootAnalysis(Analysis):
         self._instructions = value
 
     @property
-    def extensions(self):
+    def extensions(self) -> dict:
         """Free form dictionary that can contain anything. Used to extend data contained in ice alerts."""
         return self._extensions
 
     @extensions.setter
-    def extensions(self, value):
+    def extensions(self, value: dict):
         assert value is None or isinstance(value, dict)
         self._extensions = value
 
-    def set_extension(self, name, value):
+    def set_extension(self, name: str, value):
         if self._extensions is None:
             self._extensions = {}
 
