@@ -118,6 +118,16 @@ RUN apt-get update && \
     && apt-get clean  \
     && rm -rf /var/lib/apt/lists/*
 
+# install microsoft's official package signing key
+RUN curl -fsSLk https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -o /tmp/packages-microsoft-prod.deb && \
+    dpkg -i /tmp/packages-microsoft-prod.deb && \
+    rm -f /tmp/packages-microsoft-prod.deb
+
+# install dotnet sdk
+RUN apt-get update && \
+    apt-get install -y dotnet-sdk-8.0
+
+
 # create necessary directories
 RUN mkdir -p /opt/signatures /opt/ace /venv /opt/tools && \
     chown -R ace:ace /opt/signatures /opt/ace /venv /opt/tools
@@ -175,12 +185,16 @@ RUN . /venv/bin/activate && \
         https://github.com/DissectMalware/pyxlsb2/archive/master.zip \
         https://github.com/DissectMalware/XLMMacroDeobfuscator/archive/master.zip
 
+# install john the ripper
 USER ace
 RUN cd /opt/tools && \
     git clone https://github.com/openwall/john.git john-1.9.0-jumbo-1 && \
     cd john-1.9.0-jumbo-1/src && \
     ./configure && \
     make -s -j $(nproc)
+
+# install ilspycmd
+RUN dotnet tool install --global ilspycmd
 
 # the olevba library wants to reset the logging levels you set
 # so we patch it so that it doesn't do that

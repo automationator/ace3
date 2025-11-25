@@ -1373,6 +1373,13 @@ analysis_module_de4dot:
   class: De4dotAnalyzer
   enabled: true
 
+analysis_module_ilspy:
+  id: ilspy
+  module: saq.modules.file_analysis.dotnet
+  class: IlspyAnalyzer
+  enabled: true
+  binary_path: /home/ace/.dotnet/tools/ilspycmd
+
 analysis_module_ocr:
   id: ocr
   module: saq.modules.file_analysis.ocr
@@ -1847,6 +1854,7 @@ module_group_file:
   analysis_module_file_type: true
   analysis_module_hidden_mime: true
   analysis_module_html_data_url_extraction: true
+  analysis_module_ilspy: true
   analysis_module_java_class_decompiler: true
   analysis_module_lnk_parser: true
   analysis_module_mhtml: true

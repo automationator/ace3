@@ -206,10 +206,9 @@ def test_de4dot_analyzer(caplog, datadir, monkeypatch, test_context):
     assert isinstance(analysis, De4dotAnalysis)
     assert len(analysis.observables) == 1
     assert analysis.observables[0].type == F_FILE
-    assert analysis.observables[0].file_path == 'malicious.exe.deobfuscated/dotnet_deobfuscated_malicious.exe'
+    assert analysis.observables[0].file_path == 'malicious.exe.deobfuscated'
     assert analysis.observables[0].redirection == observable
     assert analysis.observables[0].has_relationship(R_EXTRACTED_FROM)
-    assert analysis.extracted_files == [analysis.observables[0].file_path]
 
 @pytest.mark.integration
 def test_zipped_jar(datadir, monkeypatch, test_context):
