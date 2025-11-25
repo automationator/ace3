@@ -1022,9 +1022,9 @@ class EmailAnalyzer(AnalysisModule):
                     else:
                         extracted_file.add_directive(DIRECTIVE_RENDER)
 
-                # XXX I can't remember why we are still doing the attachment thing
+                # tracking attachments for logging purposes
                 attachments.append((len(payload), target.get_content_type(), 
-                                    _file.file_path, hashlib.sha256(payload).hexdigest()))
+                                    extracted_file.file_path, hashlib.sha256(payload).hexdigest()))
                  
             # otherwise, if it's a multi-part then we want to recurse into it
             elif target.is_multipart():
