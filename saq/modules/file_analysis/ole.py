@@ -5,6 +5,7 @@ from typing import override
 from saq.analysis.analysis import Analysis
 from saq.constants import AnalysisExecutionResult, F_FILE
 from saq.modules import AnalysisModule
+from saq.modules.file_analysis.is_file_type import is_javascript_file
 from saq.observables.file import FileObservable
 from saq.util.strings import format_item_list_for_summary
 
@@ -98,14 +99,9 @@ class ExtractedOLEAnalyzer(AnalysisModule):
             # one last check -- see if this file compiles as javascript
             # the file command may return plain text for some js files without extension
             if not suspect:
-                # avoid super small files that compile as javascript because there's almost nothing in them
-                if os.path.getsize(local_file_path) > 150:
-                    p = Popen(['esvalidate', local_file_path], stdout=DEVNULL, stderr=DEVNULL)
-                    p.wait()
-
-                    if p.returncode == 0:
-                        _file.add_detection_point("OLE attachment {} compiles as JavaScript".format(_file))
-                        suspect = True
+                if is_javascript_file(local_file_path):
+                    _file.add_detection_point("OLE attachment {} is a javascript file".format(_file))
+                    suspect = True
 
             if suspect:
                 logging.info("found suspect ole attachment {} in {}".format(suspect_file_type, _file))

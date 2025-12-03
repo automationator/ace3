@@ -177,6 +177,48 @@ def test_is_javascript_file(datadir, file_name, expected_result):
     assert is_javascript_file(str(datadir / file_name)) == expected_result
 
 
+@pytest.mark.parametrize('js_code,expected_result', [
+    ('function hello() { console.log("hello"); }', True),
+    ('var x = 5;', True),
+    ('let count = 0;', True),
+    ('const API_KEY = "abc123";', True),
+    ('class MyClass { constructor() {} }', True),
+    ('async function getData() { return data; }', True),
+    ('const result = await fetchData();', True),
+    ('const add = (a, b) => a + b;', True),
+    ('fetch(url).then(response => response.json());', True),
+    ('return 42;', True),
+    ('if (x > 0) { doSomething(); }', True),
+    ('for (let i = 0; i < 10; i++) { sum += i; }', True),
+    ('while (running) { processQueue(); }', True),
+    ('try { riskyOperation(); } catch (err) { handleError(err); }', True),
+    ('import { Component } from "react";', True),
+    ('export default MyModule;', True),
+    ('const message = "hello"; console.log(message);', True),
+    ('{}', False),
+    ('{"name": "test", "value": 123}', False),
+    ('this is not valid javascript syntax at all!!!', False),
+])
+@pytest.mark.unit
+def test_is_javascript_file_heuristic(tmp_path, js_code, expected_result):
+    """test javascript detection heuristic with various code patterns"""
+    target = str(tmp_path / 'test.js')
+    with open(target, 'w') as fp:
+        fp.write(js_code)
+
+    assert is_javascript_file(target) is expected_result
+
+
+@pytest.mark.unit
+def test_is_javascript_file_without_js_extension(tmp_path):
+    """test that valid javascript without .js extension is still detected"""
+    target = str(tmp_path / 'script')
+    with open(target, 'w') as fp:
+        fp.write('const message = "hello"; console.log(message);')
+
+    assert is_javascript_file(target) is True
+
+
 @pytest.mark.unit
 def test_is_office_ext():
     assert is_office_ext("test.docx") is True

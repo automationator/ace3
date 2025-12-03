@@ -173,6 +173,11 @@ def is_javascript_file(path):
         except Exception as e:
             logging.warning(f"unable to unlink {target}: {e}")
 
+    if p.returncode != 0:
+        return False
+
+    p = Popen(['grep', '-Eq', r'\b(function|var|let|const|class|async|await|return|if|for|while|try|catch|import|export)\b|=>|\.\s*then\(', path], stdout=PIPE, stderr=PIPE)
+    stdout, stderr = p.communicate()
     return p.returncode == 0
 
 def is_lnk_file(path):
