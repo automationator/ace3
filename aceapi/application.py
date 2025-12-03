@@ -1,5 +1,5 @@
 from aceapi.blueprints import register_blueprints
-from saq.configuration import get_config, get_config_value
+from saq.configuration import get_config, get_config_value_as_str
 from saq.constants import CONFIG_API, CONFIG_API_SECRET_KEY, CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_NAME
 from saq.database.pool import set_db
 
@@ -18,10 +18,10 @@ class CustomSQLAlchemy(SQLAlchemy):
 
 def create_app(testing=False):
     class _config(object):
-        SECRET_KEY = get_config_value(CONFIG_API, CONFIG_API_SECRET_KEY)
+        SECRET_KEY = get_config_value_as_str(CONFIG_API, CONFIG_API_SECRET_KEY)
         SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-        INSTANCE_NAME = get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_NAME)
+        INSTANCE_NAME = get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_NAME)
 
         # also see lib/saq/database.py:initialize_database
         if get_config()['database_ace'].get('unix_socket', fallback=None):

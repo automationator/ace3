@@ -10,7 +10,7 @@ import urllib
 from app.blueprints import register_blueprints
 
 from app.integration import register_integration_blueprints
-from saq.configuration.config import get_config_value
+from saq.configuration.config import get_config_value_as_str
 from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE, G_INSTANCE_TYPE
 from flask_config import get_flask_config
 from flask_login import LoginManager
@@ -76,7 +76,7 @@ def pprint_json_dict(d):
 class CustomSQLAlchemy(SQLAlchemy):
     def apply_driver_hacks(self, app, info, options):
         # add SSL (if configured)
-        options.update(get_flask_config(get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE)).SQLALCHEMY_DATABASE_OPTIONS)
+        options.update(get_flask_config(get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE)).SQLALCHEMY_DATABASE_OPTIONS)
         SQLAlchemy.apply_driver_hacks(self, app, info, options)
 
 def initialize_presenters():
@@ -95,12 +95,12 @@ def initialize_presenters():
 def create_app(testing: Optional[bool]=False):
 
     flask_app = Flask(__name__)
-    flask_app.config.from_object(get_flask_config(get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE)))
+    flask_app.config.from_object(get_flask_config(get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE)))
 
     # This ensures that any exceptions raised by background Flask-Executor tasks get raised
     flask_app.config['EXECUTOR_PROPAGATE_EXCEPTIONS'] = True
     
-    get_flask_config(get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE)).init_app(flask_app)
+    get_flask_config(get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE)).init_app(flask_app)
 
     login_manager.init_app(flask_app)
 

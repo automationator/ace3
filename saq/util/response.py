@@ -12,7 +12,7 @@ import smtplib
 
 from email.message import EmailMessage
 
-from saq.configuration import get_config_value, get_config_value_as_boolean
+from saq.configuration import get_config_value_as_str, get_config_value_as_boolean
 from saq.constants import CONFIG_SMTP, CONFIG_SMTP_ENABLED, CONFIG_SMTP_MAIL_FROM, CONFIG_SMTP_SERVER
 
 def send_email_notification(notification_config: configparser.SectionProxy,
@@ -70,7 +70,7 @@ def send_email_notification(notification_config: configparser.SectionProxy,
     message = EmailMessage()
     message['Subject'] = notification_config['email_subject']
 
-    message['From'] = get_config_value(CONFIG_SMTP, CONFIG_SMTP_MAIL_FROM)
+    message['From'] = get_config_value_as_str(CONFIG_SMTP, CONFIG_SMTP_MAIL_FROM)
     message['To'] = (recipient,)
     message['CC'] = notification_config['cc_list'].split(',')
     message['BCC'] = notification_config['bcc_list'].split(',')
@@ -79,7 +79,7 @@ def send_email_notification(notification_config: configparser.SectionProxy,
     if html_content:
         message.add_alternative(html_content, subtype='html')
 
-    with smtplib.SMTP(get_config_value(CONFIG_SMTP, CONFIG_SMTP_SERVER)) as smtp_server:
+    with smtplib.SMTP(get_config_value_as_str(CONFIG_SMTP, CONFIG_SMTP_SERVER)) as smtp_server:
         smtp_server.set_debuglevel(2)
         logging.info(f"sending email notification to {recipient} with subject {message['Subject']}")
         smtp_server.send_message(message)

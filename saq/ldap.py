@@ -2,7 +2,7 @@ import json
 import re
 from ldap3 import ALL, RESTARTABLE, SIMPLE, Server, Connection, SUBTREE, ALL_ATTRIBUTES
 from ldap3.utils.ciDict import CaseInsensitiveDict
-from saq.configuration import get_config_value, get_config_value_as_int
+from saq.configuration import get_config_value_as_str, get_config_value_as_int
 from saq.constants import CONFIG_LDAP, CONFIG_LDAP_BASE_DN, CONFIG_LDAP_BIND_PASSWORD, CONFIG_LDAP_BIND_USER, CONFIG_LDAP_PORT, CONFIG_LDAP_SERVER
 from saq.email import is_local_email_domain, normalize_email_address
 
@@ -11,14 +11,14 @@ def connect():
     global connection
     connection = Connection(
         Server(
-            get_config_value(CONFIG_LDAP, CONFIG_LDAP_SERVER),
+            get_config_value_as_str(CONFIG_LDAP, CONFIG_LDAP_SERVER),
             port = get_config_value_as_int(CONFIG_LDAP, CONFIG_LDAP_PORT, default=389),
             get_info = ALL,
         ),
         auto_bind = True,
         client_strategy = RESTARTABLE,
-        user = get_config_value(CONFIG_LDAP, CONFIG_LDAP_BIND_USER),
-        password = get_config_value(CONFIG_LDAP, CONFIG_LDAP_BIND_PASSWORD),
+        user = get_config_value_as_str(CONFIG_LDAP, CONFIG_LDAP_BIND_USER),
+        password = get_config_value_as_str(CONFIG_LDAP, CONFIG_LDAP_BIND_PASSWORD),
         authentication = SIMPLE,
         check_names = True,
     )
@@ -26,7 +26,7 @@ def connect():
 def search(query, attributes=ALL_ATTRIBUTES):
     # replace memberOf wildcard queries with fullmatch
     query = re.sub(r'\(memberOf=([^\)]*\*[^\)]*)\)', member_of_wildcard_substitute, query)
-    base_dn = get_config_value(CONFIG_LDAP, CONFIG_LDAP_BASE_DN)
+    base_dn = get_config_value_as_str(CONFIG_LDAP, CONFIG_LDAP_BASE_DN)
     if connection is None:
         connect()
     return [entry_to_dict(e) for e in list(connection.extend.standard.paged_search(base_dn, query, SUBTREE, attributes=attributes))]

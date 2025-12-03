@@ -4,7 +4,7 @@ import urllib
 
 import pytz
 import requests
-from saq.configuration.config import get_config_value, get_config_value_as_boolean, get_config_value_as_int
+from saq.configuration.config import get_config_value_as_str, get_config_value_as_boolean, get_config_value_as_int
 from saq.constants import CONFIG_ELK, CONFIG_ELK_CLUSTER, CONFIG_ELK_ENABLED, CONFIG_ELK_MAX_RESULT_COUNT, CONFIG_ELK_PASSWORD, CONFIG_ELK_RELATIVE_DURATION_AFTER, CONFIG_ELK_RELATIVE_DURATION_BEFORE, CONFIG_ELK_URI, CONFIG_ELK_USERNAME
 from saq.modules.base_module import AnalysisModule
 from saq.util.time import create_timedelta
@@ -16,22 +16,22 @@ class ELKAnalysisModule(AnalysisModule):
         super().__init__(*args, **kwargs)
         
         # for relative time searches, how far back and forward do we go?
-        self.earliest_timedelta = create_timedelta(get_config_value(CONFIG_ELK, CONFIG_ELK_RELATIVE_DURATION_BEFORE))
+        self.earliest_timedelta = create_timedelta(get_config_value_as_str(CONFIG_ELK, CONFIG_ELK_RELATIVE_DURATION_BEFORE))
         if "relative_duration_before" in self.config:
             self.earliest_timedelta = create_timedelta(self.config["relative_duration_before"])
 
-        self.latest_timedelta = create_timedelta(get_config_value(CONFIG_ELK, CONFIG_ELK_RELATIVE_DURATION_AFTER))
+        self.latest_timedelta = create_timedelta(get_config_value_as_str(CONFIG_ELK, CONFIG_ELK_RELATIVE_DURATION_AFTER))
         if "relative_duration_after" in self.config:
             self.latest_timedelta = create_timedelta(self.config["relative_duration_after"])
 
         # format the elk search uri with the username and password if it's specified
-        if get_config_value(CONFIG_ELK, CONFIG_ELK_USERNAME) and get_config_value(CONFIG_ELK, CONFIG_ELK_PASSWORD):
+        if get_config_value_as_str(CONFIG_ELK, CONFIG_ELK_USERNAME) and get_config_value_as_str(CONFIG_ELK, CONFIG_ELK_PASSWORD):
             # using urlencoding in case username or password has funky characters
-            self.elk_uri = "https://{}:{}@{}".format(urllib.parse.quote_plus(get_config_value(CONFIG_ELK, CONFIG_ELK_USERNAME)), 
-                                                     urllib.parse.quote_plus(get_config_value(CONFIG_ELK, CONFIG_ELK_PASSWORD)), 
-                                                     get_config_value(CONFIG_ELK, CONFIG_ELK_URI))
+            self.elk_uri = "https://{}:{}@{}".format(urllib.parse.quote_plus(get_config_value_as_str(CONFIG_ELK, CONFIG_ELK_USERNAME)), 
+                                                     urllib.parse.quote_plus(get_config_value_as_str(CONFIG_ELK, CONFIG_ELK_PASSWORD)), 
+                                                     get_config_value_as_str(CONFIG_ELK, CONFIG_ELK_URI))
         else:
-            self.elk_uri = "https://{}".format(get_config_value(CONFIG_ELK, CONFIG_ELK_URI))
+            self.elk_uri = "https://{}".format(get_config_value_as_str(CONFIG_ELK, CONFIG_ELK_URI))
 
         # make sure it ends with /
         if not self.elk_uri.endswith('/'):
@@ -44,8 +44,8 @@ class ELKAnalysisModule(AnalysisModule):
 
         # if we've specified a cluster in the global config then we prefix our index with that cluster
         self.cluster = "" # by default we don't specify the cluster at all
-        if get_config_value(CONFIG_ELK, CONFIG_ELK_CLUSTER):
-            self.cluster = get_config_value(CONFIG_ELK_CLUSTER)
+        if get_config_value_as_str(CONFIG_ELK, CONFIG_ELK_CLUSTER):
+            self.cluster = get_config_value_as_str(CONFIG_ELK_CLUSTER)
 
         # we can also specify the cluster for this specific module
         if "cluster" in self.config:

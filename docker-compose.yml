@@ -17,6 +17,7 @@
 # NGINX_DOCKER_IMAGE
 # RABBITMQ_DOCKER_IMAGE
 # MINIO_DOCKER_IMAGE
+# GARAGEHQ_DOCKER_IMAGE
 # MINIO_MC_DOCKER_IMAGE
 # QDRANT_DOCKER_IMAGE
 # DOCKER_IN_DOCKER_IMAGE
@@ -34,6 +35,9 @@
 # MINIO_PASSWORD
 # RABBITMQ_PASSWORD
 # QDRANT_API_KEY
+# GARAGEHQ_RPC_SECRET
+# GARAGEHQ_ADMIN_TOKEN
+# GARAGEHQ_METRICS_TOKEN
 # FLASK_SECRET_KEY (used by flask to encrypt and verify session data)
 #
 # host name overrides if services are running on different hosts
@@ -42,6 +46,7 @@
 # RABBITMQ_HOSTNAME
 # REDIS_HOSTNAME
 # MINIO_HOSTNAME
+# GARAGEHQ_HOSTNAME
 # QDRANT_HOSTNAME
 #
 # configuration options
@@ -63,6 +68,9 @@ x-common-env: &common-env
   MINIO_PASSWORD: ${MINIO_PASSWORD:-}
   RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-}
   QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+  GARAGEHQ_RPC_SECRET: ${GARAGEHQ_RPC_SECRET:-}
+  GARAGEHQ_ADMIN_TOKEN: ${GARAGEHQ_ADMIN_TOKEN:-}
+  GARAGEHQ_METRICS_TOKEN: ${GARAGEHQ_METRICS_TOKEN:-}
   ACE_API_KEY: ${ACE_API_KEY:-}
   FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:-}
   AWS_REGION:
@@ -579,6 +587,31 @@ services:
     networks:
       - ace
 
+  garagehq:
+    image: ${GARAGEHQ_DOCKER_IMAGE:-dxflrs/garage:v2.1.0}
+    depends_on:
+      ace-initialize:
+        condition: service_completed_successfully
+      fluent-bit:
+        condition: service_started
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: garagehq
+        fluentd-async: "true"
+    restart: always
+    hostname: ${GARAGEHQ_HOSTNAME:-garagehq}
+    ports:
+      - "3900:3900"
+      - "3901:3901"
+      - "3902:3902"
+      - "3903:3903"
+    entrypoint: "/garage -c /auth/etc/garagehq/garage.toml server"
+    volumes:
+      - ace-garage:/data
+      - ace-auth:/auth
+
   minio:
     environment:
       MINIO_ROOT_USER: "ace3"
@@ -694,6 +727,8 @@ volumes:
     name: ace-minio
   ace-minio-events:
     name: ace-minio-events
+  ace-garage:
+    name: ace-garage
   ace-phishkit:
     name: ace-phishkit
   ace-auth:

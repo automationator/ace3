@@ -12,7 +12,7 @@ from saq.analysis.search import recurse_tree
 
 from qdrant_client.models import FieldCondition, Filter, MatchValue, UpdateStatus, VectorParams, Distance
 
-from saq.configuration.config import get_config_value
+from saq.configuration.config import get_config_value_as_str
 from saq.constants import CONFIG_LLM, CONFIG_LLM_EMBEDDING_MODEL, CONFIG_QDRANT, CONFIG_QDRANT_COLLECTION_ALERTS
 from saq.database.model import Alert, Comment
 from saq.database.pool import get_db
@@ -26,11 +26,11 @@ def _generate_point_id(root: RootAnalysis, context_document: str) -> str:
 
 def get_embedding_model() -> str:
     """Returns the configured embedding model name."""
-    return get_config_value(CONFIG_LLM, CONFIG_LLM_EMBEDDING_MODEL)
+    return get_config_value_as_str(CONFIG_LLM, CONFIG_LLM_EMBEDDING_MODEL)
 
 def get_alert_collection_name() -> str:
     """Returns the configured collection name for ace3 alert data."""
-    return get_config_value(CONFIG_QDRANT, CONFIG_QDRANT_COLLECTION_ALERTS)
+    return get_config_value_as_str(CONFIG_QDRANT, CONFIG_QDRANT_COLLECTION_ALERTS)
 
 def clear_vectors():
     """Clears ALL vectors fro Qrant for the ace collection."""
@@ -150,7 +150,7 @@ def vectorize(target: Union[Alert, RootAnalysis]) -> list[str]:
         )
 
     client.upload_points(
-        collection_name=get_config_value(CONFIG_QDRANT, CONFIG_QDRANT_COLLECTION_ALERTS),
+        collection_name=get_config_value_as_str(CONFIG_QDRANT, CONFIG_QDRANT_COLLECTION_ALERTS),
         points=points
     )
 

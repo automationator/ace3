@@ -5,7 +5,7 @@ import os
 import iptools
 from saq.analysis import Analysis
 from saq.analysis.presenter.analysis_presenter import AnalysisPresenter, register_analysis_presenter
-from saq.configuration.config import get_config_value
+from saq.configuration.config import get_config_value_as_str
 from saq.constants import F_ASSET, F_IPV4, AnalysisExecutionResult
 from saq.environment import get_base_dir
 from saq.modules import AnalysisModule
@@ -65,7 +65,7 @@ class NetworkIdentifier(AnalysisModule):
         self._networks = [] # list of _NetworkDefinition
         
         # load the network definitions from the CSV file
-        with open(os.path.join(get_base_dir(), get_config_value(self.config_section_name, "csv_file")), 'r') as fp:
+        with open(os.path.join(get_base_dir(), get_config_value_as_str(self.config_section_name, "csv_file")), 'r') as fp:
             reader = csv.reader(fp)
             # these are pulled from splunk and these are the header names
             header = next(reader)

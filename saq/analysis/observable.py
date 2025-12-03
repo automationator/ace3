@@ -11,7 +11,7 @@ from saq.analysis.module_path import CLASS_STRING_REGEX, IS_MODULE_PATH, MODULE_
 from saq.analysis.relationship import Relationship
 from saq.analysis.search import search_down
 from saq.analysis.serialize.observable_serializer import ObservableSerializer
-from saq.configuration import get_config_value
+from saq.configuration import get_config_value_as_str
 from saq.constants import CONFIG_OBSERVABLE_EXPIRATION_MAPPINGS, EVENT_ANALYSIS_ADDED, EVENT_DIRECTIVE_ADDED, EVENT_RELATIONSHIP_ADDED, EVENT_TIME_FORMAT_TZ, F_TEST, VALID_RELATIONSHIP_TYPES
 from saq.environment import get_local_timezone
 from saq.util import create_timedelta, parse_event_time
@@ -749,7 +749,7 @@ class Observable(BaseNode):
 
 def get_observable_type_expiration_time(observable_type: str) -> Union[datetime, None]:
     """Calculates the observable expiration datetime based on now + the configured time delta for this observable type."""
-    delta = get_config_value(CONFIG_OBSERVABLE_EXPIRATION_MAPPINGS, observable_type)
+    delta = get_config_value_as_str(CONFIG_OBSERVABLE_EXPIRATION_MAPPINGS, observable_type)
 
     if delta:
         try:

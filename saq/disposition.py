@@ -1,4 +1,4 @@
-from saq.configuration import get_config, get_config_value, get_config_value_as_boolean, get_config_value_as_int
+from saq.configuration import get_config, get_config_value_as_str, get_config_value_as_boolean, get_config_value_as_int
 from saq.constants import CONFIG_DISPOSITION_BENIGN, CONFIG_DISPOSITION_CSS, CONFIG_DISPOSITION_MALICIOUS, CONFIG_DISPOSITION_RANK, CONFIG_DISPOSITION_SHOW_SAVE_TO_EVENT, CONFIG_VALID_DISPOSITIONS, DISPOSITION_OPEN, VALID_DISPOSITIONS
 
 # XXX refactor this
@@ -23,7 +23,7 @@ def initialize_dispositions():
         if get_config_value_as_boolean(CONFIG_VALID_DISPOSITIONS, disposition):
             DISPOSITIONS[disposition.upper()] = {
                 "rank": get_config_value_as_int(CONFIG_DISPOSITION_RANK, disposition, default=0),
-                "css": get_config_value(CONFIG_DISPOSITION_CSS, disposition, default="special"),
+                "css": get_config_value_as_str(CONFIG_DISPOSITION_CSS, disposition, default="special"),
                 "show_save_to_event": get_config_value_as_boolean(CONFIG_DISPOSITION_SHOW_SAVE_TO_EVENT, disposition, default=False),
             }
 

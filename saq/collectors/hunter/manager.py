@@ -5,7 +5,7 @@ from queue import Queue
 import threading
 
 
-from saq.configuration.config import get_config_value
+from saq.configuration.config import get_config_value_as_str
 from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE, ExecutionMode
 from saq.error import report_exception
 from saq.network_semaphore import NetworkSemaphoreClient
@@ -141,7 +141,7 @@ class HuntManager:
 
     def is_valid_instance_type(self, hunt: Hunt) -> bool:
         """Returns True if the given hunt is valid for the current instance type (ignoring case)."""
-        instance_type = get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE)
+        instance_type = get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE)
         return (
             any(instance_type.lower() == t.lower() for t in hunt.instance_types)
         )

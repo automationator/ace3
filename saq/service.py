@@ -4,7 +4,7 @@ import threading
 from typing import Protocol
 
 
-from saq.configuration.config import get_config, get_config_value, get_config_value_as_boolean, get_config_value_as_list
+from saq.configuration.config import get_config, get_config_value_as_str, get_config_value_as_boolean, get_config_value_as_list
 from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE, CONFIG_SERVICE_CLASS, CONFIG_SERVICE_ENABLED, CONFIG_SERVICE_INSTANCE_TYPES, CONFIG_SERVICE_MODULE
 
 class ACEServiceInterface(Protocol):
@@ -77,7 +77,7 @@ def service_valid_for_instance(name: str) -> bool:
     if service_section_name not in get_config():
         raise RuntimeError(f"configuration section {service_section_name} not found")
 
-    instance_type = get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE)
+    instance_type = get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE)
     if instance_type is None:
         raise RuntimeError("missing instance type is global config?")
 
@@ -113,4 +113,4 @@ def load_service_by_name(name: str) -> ACEServiceInterface:
         logging.info(f"service {name} is disabled by configuration")
         return DisabledService(name)
 
-    return load_service(get_config_value(service_section_name, CONFIG_SERVICE_MODULE), get_config_value(service_section_name, CONFIG_SERVICE_CLASS))
+    return load_service(get_config_value_as_str(service_section_name, CONFIG_SERVICE_MODULE), get_config_value_as_str(service_section_name, CONFIG_SERVICE_CLASS))

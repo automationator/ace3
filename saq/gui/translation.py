@@ -1,6 +1,6 @@
 import logging
 from urllib.parse import urlparse, urlunparse
-from saq.configuration.config import get_config_value
+from saq.configuration.config import get_config_value_as_str
 from saq.constants import CONFIG_NODE_TRANSLATION_GUI
 
 
@@ -8,7 +8,7 @@ def node_translate_gui(node:str) -> str:
     """Looks up the node in the node_translation_gui section and returns the value.
     If the node does not exist, then node is returned.
     This is used to translate a node location to a DNS name that can be used in a URL."""
-    return get_config_value(CONFIG_NODE_TRANSLATION_GUI, node, default=node)
+    return get_config_value_as_str(CONFIG_NODE_TRANSLATION_GUI, node, default=node)
 
 def translate_alert_redirect(url: str, source_node: str, target_node: str) -> str:
     parsed = urlparse(url)

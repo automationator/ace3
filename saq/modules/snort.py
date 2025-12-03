@@ -9,7 +9,7 @@ import uuid
 from typing import Optional
 
 from saq.analysis import Analysis
-from saq.configuration import get_config_value, get_config_value_as_int
+from saq.configuration import get_config_value_as_str, get_config_value_as_int
 from saq.constants import CONFIG_REDIS, CONFIG_REDIS_HOST, CONFIG_REDIS_PASSWORD, CONFIG_REDIS_PORT, CONFIG_REDIS_USERNAME, F_SNORT_SIGNATURE, REDIS_DB_SNORT, SUMMARY_DETAIL_FORMAT_TXT, AnalysisExecutionResult
 from saq.modules import AnalysisModule
 from saq.util import abs_path
@@ -102,10 +102,10 @@ def _create_signature_key(signature, rev):
 def _get_redis_connection():
     """Returns the Redis object to use to store/retrieve signature info."""
     return redis.Redis(
-        host=get_config_value(CONFIG_REDIS, CONFIG_REDIS_HOST), 
+        host=get_config_value_as_str(CONFIG_REDIS, CONFIG_REDIS_HOST), 
         port=get_config_value_as_int(CONFIG_REDIS, CONFIG_REDIS_PORT),
-        username=get_config_value(CONFIG_REDIS, CONFIG_REDIS_USERNAME),
-        password=get_config_value(CONFIG_REDIS, CONFIG_REDIS_PASSWORD),
+        username=get_config_value_as_str(CONFIG_REDIS, CONFIG_REDIS_USERNAME),
+        password=get_config_value_as_str(CONFIG_REDIS, CONFIG_REDIS_PASSWORD),
         db=REDIS_DB_SNORT, 
         decode_responses=True, 
         encoding='utf-8'

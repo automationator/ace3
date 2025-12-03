@@ -14,7 +14,9 @@ def get_config():
     """Returns the global configuration object (YAMLConfig)."""
     return CONFIG
 
-def get_config_value_as_is(section: str, name: str, default: Optional[Any] = None) -> Optional[Any]:
+def get_config_value(section: str, name: str, default: Optional[Any] = None) -> Optional[Any]:
+    """Returns the configuration value for the given section and name as the type it is stored as.
+    If the section or name does not exist, the default value is returned."""
     cfg = get_config()
     if section not in cfg:
         return default
@@ -26,7 +28,9 @@ def get_config_value_as_is(section: str, name: str, default: Optional[Any] = Non
 
     return value
 
-def get_config_value(section: str, name: str, default: Optional[Any] = None) -> Optional[str]:
+def get_config_value_as_str(section: str, name: str, default: Optional[Any] = None) -> Optional[str]:
+    """Returns the configuration value for the given section and name as a string.
+    If the section or name does not exist, the default value is returned."""
     cfg = get_config()
     if section not in cfg:
         return default
@@ -38,6 +42,8 @@ def get_config_value(section: str, name: str, default: Optional[Any] = None) -> 
     return value if isinstance(value, str) else str(value)
 
 def get_config_value_as_int(section: str, name: str, default: Optional[Any] = None) -> Optional[int]:
+    """Returns the configuration value for the given section and name as an integer.
+    If the section or name does not exist, the default value is returned."""
     cfg = get_config()
     if section not in cfg:
         return default
@@ -61,6 +67,8 @@ def get_config_value_as_int(section: str, name: str, default: Optional[Any] = No
         return default
 
 def get_config_value_as_boolean(section: str, name: str, default: Optional[Any] = None) -> Optional[bool]:
+    """Returns the configuration value for the given section and name as a boolean.
+    If the section or name does not exist, the default value is returned."""
     cfg = get_config()
     if section not in cfg:
         return default
@@ -89,6 +97,10 @@ def get_config_value_as_boolean(section: str, name: str, default: Optional[Any] 
     return default
 
 def get_config_value_as_list(section: str, name: str, default: Optional[list[str]] = None, sep: Optional[str] = ",", include_empty: Optional[bool] = True) -> Optional[list[str]]:
+    """Returns the configuration value for the given section and name as a list of strings separated by sep.
+    If the section or name does not exist, the default value is returned.
+    The optional include_empty parameter controls whether empty strings are included in the result."""
+
     cfg = get_config()
     if section not in cfg:
         return default

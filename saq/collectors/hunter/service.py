@@ -8,7 +8,7 @@ from saq.analysis.root import Submission
 from saq.collectors.base_collector import Collector, CollectorExecutionMode, CollectorService
 from saq.collectors.collector_configuration import CollectorServiceConfiguration
 from saq.collectors.hunter.manager import HuntManager
-from saq.configuration import get_config, get_config_value
+from saq.configuration import get_config, get_config_value_as_str
 from saq.constants import CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR, ExecutionMode
 from saq.service import ACEServiceInterface
 
@@ -121,7 +121,7 @@ class HunterService(ACEServiceInterface):
                             rule_dirs=[_.strip() for _ in section['rule_dirs'].split(',')],
                             hunt_cls=class_definition,
                             concurrency_limit=section.get('concurrency_limit', fallback=None),
-                            persistence_dir=get_config_value(CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR),
+                            persistence_dir=get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR),
                             update_frequency=section.getint('update_frequency', fallback=60),
                             config = section,
                             execution_mode=execution_mode))

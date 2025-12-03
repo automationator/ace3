@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytz
 
-from saq.configuration import get_config_value
+from saq.configuration import get_config_value_as_str
 from saq.constants import CONFIG_SPLUNK_TIMEZONE
 from saq.modules.api_analysis import BaseAPIAnalysis, BaseAPIAnalyzer, AnalysisDelay
 from saq.splunk import extract_event_timestamp, SplunkClient
@@ -97,7 +97,7 @@ class SplunkAPIAnalyzer(BaseAPIAnalyzer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.timezone = get_config_value(self.api, CONFIG_SPLUNK_TIMEZONE)
+        self.timezone = get_config_value_as_str(self.api, CONFIG_SPLUNK_TIMEZONE)
         self.use_index_time = self.config.getboolean('use_index_time')
 
         self.splunk = SplunkClient(

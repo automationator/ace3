@@ -9,7 +9,7 @@ import pytest
 from saq.collectors.base_collector import CollectorExecutionMode
 from saq.collectors.email import EmailCollector
 from saq.collectors.email.scanner import EmailCollectorService
-from saq.configuration.config import get_config, get_config_value
+from saq.configuration.config import get_config, get_config_value_as_str
 from saq.constants import ANALYSIS_MODE_EMAIL, CONFIG_EMAIL_COLLECTOR, CONFIG_EMAIL_COLLECTOR_ASSIGNMENT_YARA_RULE_PATH, CONFIG_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_PATH
 from saq.database.pool import get_db_connection
 from saq.engine.core import Engine
@@ -30,7 +30,7 @@ def test_startup():
     assert log_count('no work available') == 1
 
 def get_email_dir() -> str:
-    return os.path.join(get_data_dir(), get_config_value('email', 'email_dir'))
+    return os.path.join(get_data_dir(), get_config_value_as_str('email', 'email_dir'))
 
 def submit_email(email_path: str):
     amc_mda_path = os.path.join(get_base_dir(), 'bin', 'amc_mda')

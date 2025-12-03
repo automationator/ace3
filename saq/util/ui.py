@@ -1,4 +1,4 @@
-from saq.configuration.config import get_config_value
+from saq.configuration.config import get_config_value_as_str
 from saq.constants import CONFIG_TAG_CSS_CLASS, CONFIG_TAGS
 
 
@@ -48,6 +48,6 @@ def create_histogram_string(data):
 
 def get_tag_css_class(tag):
     try:
-        return get_config_value(CONFIG_TAG_CSS_CLASS, get_config_value(CONFIG_TAGS, tag))
+        return get_config_value_as_str(CONFIG_TAG_CSS_CLASS, get_config_value_as_str(CONFIG_TAGS, tag))
     except:
         return 'label-default'

@@ -11,7 +11,7 @@ from saq.constants import (
     G_SAQ_NODE,
     G_SAQ_NODE_ID,
 )
-from saq.configuration.config import get_config, get_config_value, get_config_value_as_int
+from saq.configuration.config import get_config, get_config_value_as_str, get_config_value_as_int
 from saq.database.pool import get_db_connection
 from saq.database.retry import execute_with_retry
 from saq.database.util.locking import clear_expired_locks
@@ -59,7 +59,7 @@ def update_node_status(
 def translate_node(node: str) -> str:
     """Return the correct node taking node translation into account."""
     for key in get_config()[CONFIG_NODE_TRANSLATION].keys():
-        src, target = get_config_value(CONFIG_NODE_TRANSLATION, key).split(",")
+        src, target = get_config_value_as_str(CONFIG_NODE_TRANSLATION, key).split(",")
         if node == src:
             logging.debug("translating node {} to {}".format(node, target))
             return target

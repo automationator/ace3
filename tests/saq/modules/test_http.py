@@ -4,7 +4,7 @@ import pytest
 import pytz
 
 from saq.analysis.root import load_root
-from saq.configuration.config import get_config, get_config_value
+from saq.configuration.config import get_config, get_config_value_as_str
 from saq.constants import ANALYSIS_MODE_HTTP, ANALYSIS_TYPE_BRO_HTTP, CONFIG_API, CONFIG_API_KEY, EVENT_TIME_FORMAT_JSON_TZ, F_FILE, F_FQDN, F_IPV4, F_IPV4_CONVERSATION, F_URL
 from saq.engine.core import Engine
 from saq.engine.engine_configuration import EngineConfiguration
@@ -104,7 +104,7 @@ def test_bro_http_submission(test_client, datadir):
                     (reply_fp, 'CZZiJd1zicZKNMMrV1.0.reply'),
                     (reply_entity_fp, 'CZZiJd1zicZKNMMrV1.0.reply.entity'),
                     (request_fp, 'CZZiJd1zicZKNMMrV1.0.request'), ],
-        }, content_type='multipart/form-data', headers = { 'x-ice-auth': get_config_value(CONFIG_API, CONFIG_API_KEY) })
+        }, content_type='multipart/form-data', headers = { 'x-ice-auth': get_config_value_as_str(CONFIG_API, CONFIG_API_KEY) })
 
     ready_fp.close()
     reply_fp.close()

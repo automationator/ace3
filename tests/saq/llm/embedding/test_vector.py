@@ -53,10 +53,10 @@ def mock_config(monkeypatch):
         ("qdrant", "url"): "http://localhost:6333"
     }
 
-    def mock_get_config_value(section, key):
+    def mock_get_config_value_as_str(section, key):
         return config_values.get((section, key), "default_value")
 
-    monkeypatch.setattr("saq.llm.embedding.vector.get_config_value", mock_get_config_value)
+    monkeypatch.setattr("saq.llm.embedding.vector.get_config_value_as_str", mock_get_config_value_as_str)
     return config_values
 
 

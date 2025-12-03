@@ -6,7 +6,7 @@ import pytz
 from typing import Optional
 from saq import RootAnalysis
 from saq.analysis.presenter import register_analysis_presenter, AnalysisPresenter
-from saq.configuration.config import get_config, get_config_value, get_config_value_as_list
+from saq.configuration.config import get_config, get_config_value_as_str, get_config_value_as_list
 from saq.constants import CONFIG_CUSTOM_ALERTS, CONFIG_CUSTOM_ALERTS_BACKWARDS_COMPAT, CONFIG_CUSTOM_ALERTS_DIR, CONFIG_CUSTOM_ALERTS_TEMPLATE_DIR, EVENT_TIME_FORMAT_TZ
 from saq.database.model import Alert
 from saq.environment import get_base_dir
@@ -42,12 +42,12 @@ class GUIAlert(Alert):
             logging.debug(f"checking for custom template for {self.alert_type}")
 
             # first check backward compatible config to see if there is already a template set for this alert_type value
-            backwards_compatible = get_config_value(CONFIG_CUSTOM_ALERTS_BACKWARDS_COMPAT, self.alert_type)
+            backwards_compatible = get_config_value_as_str(CONFIG_CUSTOM_ALERTS_BACKWARDS_COMPAT, self.alert_type)
             if backwards_compatible:
                 logging.debug(f"using backwards compatible template {backwards_compatible} for {self.alert_type}")
                 return backwards_compatible
 
-            base_template_dir = get_config_value(CONFIG_CUSTOM_ALERTS, CONFIG_CUSTOM_ALERTS_TEMPLATE_DIR)
+            base_template_dir = get_config_value_as_str(CONFIG_CUSTOM_ALERTS, CONFIG_CUSTOM_ALERTS_TEMPLATE_DIR)
             dirs = get_config_value_as_list(CONFIG_CUSTOM_ALERTS, CONFIG_CUSTOM_ALERTS_DIR, sep=";")
 
             # gather all available custom templates into dictionary with their parent directory
@@ -188,7 +188,7 @@ class GUIAlertPresenter(AnalysisPresenter):
 
         # Complex template selection logic from original GUIAlert
         try:
-            from saq.configuration import get_config_value
+            from saq.configuration import get_config_value_as_str
             from saq.constants import (
                 CONFIG_CUSTOM_ALERTS,
                 CONFIG_CUSTOM_ALERTS_BACKWARDS_COMPAT,
@@ -204,7 +204,7 @@ class GUIAlertPresenter(AnalysisPresenter):
             )
 
             # first check backward compatible config to see if there is already a template set for this alert_type value
-            backwards_compatible = get_config_value(
+            backwards_compatible = get_config_value_as_str(
                 CONFIG_CUSTOM_ALERTS_BACKWARDS_COMPAT, self._analysis.alert_type
             )
             if backwards_compatible:
@@ -215,10 +215,10 @@ class GUIAlertPresenter(AnalysisPresenter):
                 )
                 return backwards_compatible
 
-            base_template_dir = get_config_value(
+            base_template_dir = get_config_value_as_str(
                 CONFIG_CUSTOM_ALERTS, CONFIG_CUSTOM_ALERTS_TEMPLATE_DIR
             )
-            dirs = get_config_value(
+            dirs = get_config_value_as_str(
                 CONFIG_CUSTOM_ALERTS, CONFIG_CUSTOM_ALERTS_DIR
             ).split(";")
 

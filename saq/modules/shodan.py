@@ -9,7 +9,7 @@ import shodan
 from saq import x509
 from saq.analysis import Analysis
 from saq.analysis.observable import Observable
-from saq.configuration.config import get_config_value
+from saq.configuration.config import get_config_value_as_str
 from saq.constants import F_IPV4, F_SHA1, SUMMARY_DETAIL_FORMAT_PRE, AnalysisExecutionResult, register_directive
 from saq.modules import AnalysisModule
 
@@ -182,10 +182,10 @@ class ShodanAnalyzer(AnalysisModule):
                 file_observable.add_tag(TAG_X509)
 
     def _get_shodan_client(self):
-        if not get_config_value(CONFIG_SHODAN, CONFIG_SHODAN_API_KEY):
+        if not get_config_value_as_str(CONFIG_SHODAN, CONFIG_SHODAN_API_KEY):
             raise ValueError("missing api key for shodan")
 
-        return shodan.Shodan(get_config_value(CONFIG_SHODAN, CONFIG_SHODAN_API_KEY))
+        return shodan.Shodan(get_config_value_as_str(CONFIG_SHODAN, CONFIG_SHODAN_API_KEY))
 
     def search_cert(self, sha1):
         if self._test_data:

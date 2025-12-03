@@ -6,15 +6,15 @@ from celery.result import AsyncResult
 from celery.exceptions import TimeoutError
 
 from saq.cli.cli_main import get_cli_subparsers
-from saq.configuration.config import get_config_value
+from saq.configuration.config import get_config_value_as_str
 from saq.constants import BUCKET_ACE3, CONFIG_RABBITMQ, CONFIG_RABBITMQ_USER, CONFIG_RABBITMQ_PASSWORD, CONFIG_RABBITMQ_HOST
 from saq.storage.factory import get_storage_system
 
 def initialize_phishkit():
     from phishkit.phishkit import app
-    rabbitmq_user = get_config_value(CONFIG_RABBITMQ, CONFIG_RABBITMQ_USER)
-    rabbitmq_password = get_config_value(CONFIG_RABBITMQ, CONFIG_RABBITMQ_PASSWORD)
-    rabbitmq_host = get_config_value(CONFIG_RABBITMQ, CONFIG_RABBITMQ_HOST)
+    rabbitmq_user = get_config_value_as_str(CONFIG_RABBITMQ, CONFIG_RABBITMQ_USER)
+    rabbitmq_password = get_config_value_as_str(CONFIG_RABBITMQ, CONFIG_RABBITMQ_PASSWORD)
+    rabbitmq_host = get_config_value_as_str(CONFIG_RABBITMQ, CONFIG_RABBITMQ_HOST)
     app.conf.update({
         "broker_url": f"pyamqp://{rabbitmq_user}:{rabbitmq_password}@{rabbitmq_host}//"
     })

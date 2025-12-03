@@ -7,7 +7,7 @@ import shutil
 from typing import Optional
 
 from ace_api import upload
-from saq.configuration import get_config_value, get_config_value_as_int
+from saq.configuration import get_config_value_as_str, get_config_value_as_int
 from saq.constants import CONFIG_API, CONFIG_API_KEY, CONFIG_GLOBAL, CONFIG_GLOBAL_DISTRIBUTE_DAYS_OLD, CONFIG_GLOBAL_DISTRIBUTION_TARGET, CONFIG_GLOBAL_FP_DAYS, CONFIG_GLOBAL_IGNORE_DAYS, DISPOSITION_FALSE_POSITIVE, DISPOSITION_IGNORE, G_SAQ_NODE
 from saq.database import Alert, get_db, retry_sql_on_deadlock
 from saq.database.pool import get_db_connection
@@ -54,7 +54,7 @@ def cleanup_alerts(fp_days_old: Optional[int]=None, ignore_days_old: Optional[in
 
     try:
         if distribute_days_old > 0:
-            distribute_old_alerts(distribute_days_old, dry_run, get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_DISTRIBUTION_TARGET))
+            distribute_old_alerts(distribute_days_old, dry_run, get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_DISTRIBUTION_TARGET))
     except Exception as e:
         logging.error(f"error distributing old alerts: {e}")
         report_exception()
@@ -163,7 +163,7 @@ def distribute_old_alerts(days: int, dry_run: bool, distribution_target: str, ma
                                        sync=False,
                                        move=True,
                                        remote_host=distribution_target,
-                                       api_key=get_config_value(CONFIG_API, CONFIG_API_KEY))
+                                       api_key=get_config_value_as_str(CONFIG_API, CONFIG_API_KEY))
                 # {'result': True}
                 if isinstance(upload_result, dict) and upload_result.get("result", False):
                     logging.info(f"uploaded {uuid} to {distribution_target}")

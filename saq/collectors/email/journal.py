@@ -12,7 +12,7 @@ from uuid import uuid4
 from saq.analysis.root import RootAnalysis, Submission
 from saq.collectors.base_collector import Collector, CollectorService
 from saq.collectors.collector_configuration import CollectorServiceConfiguration
-from saq.configuration.config import get_config, get_config_value, get_config_value_as_boolean, get_config_value_as_int
+from saq.configuration.config import get_config, get_config_value_as_str, get_config_value_as_boolean, get_config_value_as_int
 from saq.constants import ANALYSIS_MODE_EMAIL, ANALYSIS_TYPE_MAILBOX, CONFIG_JOURNAL_EMAIL_COLLECTOR, CONFIG_JOURNAL_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_CHECK_FREQUENCY, CONFIG_JOURNAL_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_PATH, CONFIG_JOURNAL_EMAIL_COLLECTOR_DELETE_S3_OBJECTS, CONFIG_RABBITMQ, CONFIG_RABBITMQ_HOST, CONFIG_RABBITMQ_PASSWORD, CONFIG_RABBITMQ_PORT, CONFIG_RABBITMQ_USER, DIRECTIVE_ARCHIVE, DIRECTIVE_NO_SCAN, DIRECTIVE_ORIGINAL_EMAIL, G_TEMP_DIR
 from saq.environment import g
 from saq.error.reporting import report_exception
@@ -78,7 +78,7 @@ class JournalEmailCollector(Collector):
         self.client: Minio = get_minio_client()
 
         # inbound emails are scanned by this yara context to support node assignment
-        self.blacklist_yara_rule_path: str = get_config_value(CONFIG_JOURNAL_EMAIL_COLLECTOR, CONFIG_JOURNAL_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_PATH)
+        self.blacklist_yara_rule_path: str = get_config_value_as_str(CONFIG_JOURNAL_EMAIL_COLLECTOR, CONFIG_JOURNAL_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_PATH)
 
         # check every N seconds to see if the blacklist yara rule has changed
         self.blacklist_yara_rule_check_frequency: int = get_config_value_as_int(CONFIG_JOURNAL_EMAIL_COLLECTOR, CONFIG_JOURNAL_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_CHECK_FREQUENCY)
@@ -93,12 +93,12 @@ class JournalEmailCollector(Collector):
 
     def connect(self) -> bool:
         credentials = pika.PlainCredentials(
-            get_config_value(CONFIG_RABBITMQ, CONFIG_RABBITMQ_USER), 
-            get_config_value(CONFIG_RABBITMQ, CONFIG_RABBITMQ_PASSWORD))
+            get_config_value_as_str(CONFIG_RABBITMQ, CONFIG_RABBITMQ_USER), 
+            get_config_value_as_str(CONFIG_RABBITMQ, CONFIG_RABBITMQ_PASSWORD))
 
         parameters = pika.ConnectionParameters(
-            host=get_config_value(CONFIG_RABBITMQ, CONFIG_RABBITMQ_HOST),
-            port=get_config_value(CONFIG_RABBITMQ, CONFIG_RABBITMQ_PORT),
+            host=get_config_value_as_str(CONFIG_RABBITMQ, CONFIG_RABBITMQ_HOST),
+            port=get_config_value_as_str(CONFIG_RABBITMQ, CONFIG_RABBITMQ_PORT),
             credentials=credentials)
 
         self.connection = pika.BlockingConnection(parameters)

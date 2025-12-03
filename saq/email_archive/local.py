@@ -15,7 +15,7 @@ from typing import Optional
 
 from pymysql import IntegrityError
 
-from saq.configuration import get_config_value
+from saq.configuration import get_config_value_as_str
 from saq.constants import CONFIG_EMAIL_ARCHIVE_MODULE, CONFIG_EMAIL_ARCHIVE_MODULE_DIR, DB_EMAIL_ARCHIVE, EMAIL_ARCHIVE_FIELD_MESSAGE_ID, EMAIL_ARCHIVE_FIELD_URL, G_EMAIL_ARCHIVE_SERVER_ID
 from saq.crypto import decrypt, encrypt, is_encryption_initialized
 from saq.database import get_db_connection, execute_with_retry
@@ -33,7 +33,7 @@ class EmailArchiveLocal(EmailArchiveInterface):
 
     def get_archive_dir(self) -> str:
         """Returns the relative path of the email archive directory (relative to get_data_dir())"""
-        return get_config_value(CONFIG_EMAIL_ARCHIVE_MODULE, CONFIG_EMAIL_ARCHIVE_MODULE_DIR)
+        return get_config_value_as_str(CONFIG_EMAIL_ARCHIVE_MODULE, CONFIG_EMAIL_ARCHIVE_MODULE_DIR)
 
     def get_email_archive_dir(self) -> str:
         """Returns the full path to the email archive directory."""

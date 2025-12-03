@@ -12,7 +12,7 @@ import urllib3
 
 from ace_api import upload
 from saq.analysis.root import RootAnalysis, Submission
-from saq.configuration import get_config_value, get_config_value_as_boolean, get_config_value_as_int
+from saq.configuration import get_config_value_as_str, get_config_value_as_boolean, get_config_value_as_int
 from saq.constants import ANALYSIS_MODE_CORRELATION, CONFIG_COLLECTION, CONFIG_COLLECTION_FORCE_API, CONFIG_COLLECTION_INCOMING_DIR, CONFIG_ENGINE, CONFIG_ENGINE_NODE_STATUS_UPDATE_FREQUENCY, CONFIG_SSL, CONFIG_SSL_CA_CHAIN_PATH, DB_COLLECTION, G_SAQ_NODE, G_UNIT_TESTING, NO_NODES_AVAILABLE, NO_WORK_AVAILABLE, NO_WORK_SUBMITTED, WORK_SUBMITTED
 from saq.database import ALERT, execute_with_retry, get_db, get_db_connection
 from saq.database.pool import execute_with_db_cursor
@@ -53,7 +53,7 @@ class RemoteNode:
         self.company_id: Optional[int] = company_id
 
         # the directory that contains any files that to be transfered along with submissions
-        self.incoming_dir = os.path.join(get_data_dir(), get_config_value(CONFIG_COLLECTION, CONFIG_COLLECTION_INCOMING_DIR))
+        self.incoming_dir = os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_INCOMING_DIR))
 
     def __str__(self):
         return "RemoteNode(id={},name={},location={})".format(self.id, self.name, self.location)
@@ -106,7 +106,7 @@ class RemoteNode:
                 sync=True, # ends up calling root.schedule() on the other side
                 move=False, # not an Alert yet
                 remote_host=self.location, # should be sent to this node
-                ssl_verification=get_config_value(CONFIG_SSL, CONFIG_SSL_CA_CHAIN_PATH),
+                ssl_verification=get_config_value_as_str(CONFIG_SSL, CONFIG_SSL_CA_CHAIN_PATH),
             )
 
             result = result['result']
@@ -206,7 +206,7 @@ class RemoteNodeGroup:
         self.node_status_update_frequency = get_config_value_as_int(CONFIG_ENGINE, CONFIG_ENGINE_NODE_STATUS_UPDATE_FREQUENCY)
 
         # the directory that contains any files that to be transfered along with submissions
-        self.incoming_dir = os.path.join(get_data_dir(), get_config_value(CONFIG_COLLECTION, CONFIG_COLLECTION_INCOMING_DIR))
+        self.incoming_dir = os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_INCOMING_DIR))
         
         # sync lock for assigning work to the threads
         self.work_sync_lock = threading.RLock()

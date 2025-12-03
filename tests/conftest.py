@@ -11,7 +11,7 @@ import uuid
 from requests import HTTPError
 
 from saq.analysis.root import RootAnalysis
-from saq.configuration.config import get_config, get_config_value, set_config
+from saq.configuration.config import get_config, get_config_value_as_str, set_config
 from saq.constants import ANALYSIS_MODE_ANALYSIS, CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR, CONFIG_GLOBAL, CONFIG_GLOBAL_NODE, G_INSTANCE_TYPE, G_SAQ_NODE, G_SAQ_NODE_ID, G_TEMP_DIR, G_UNIT_TESTING, INSTANCE_TYPE_UNITTEST
 from saq.crypto import set_encryption_password
 from saq.database import get_db
@@ -95,7 +95,7 @@ def execute_global_setup():
     set_g(G_SAQ_NODE_ID, None)
 
     # what node is this?
-    node = get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_NODE)
+    node = get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_NODE)
     if node == "AUTO":
         node = socket.getfqdn()
 
@@ -132,7 +132,7 @@ def execute_global_setup():
 def global_function_setup(request):
 
     # clear work directory
-    work_dir = get_config_value(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR)
+    work_dir = get_config_value_as_str(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR)
     assert os.path.exists(work_dir)
     shutil.rmtree(work_dir)
     os.mkdir(work_dir)

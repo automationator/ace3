@@ -7,7 +7,7 @@ import json
 
 from saq.analysis import Analysis
 from saq.analysis.presenter import AnalysisPresenter, register_analysis_presenter
-from saq.configuration import get_config_value
+from saq.configuration import get_config_value_as_str
 from saq.constants import CONFIG_LDAP, CONFIG_LDAP_TOP_USER, F_EMAIL_ADDRESS, F_USER, AnalysisExecutionResult
 from saq.environment import get_base_dir
 from saq.ldap import lookup_email_address, lookup_user
@@ -125,7 +125,7 @@ class UserAnalyzer(AnalysisModule):
                 new_observable.add_directive(directive)
 
         # get manager info and determine if user is executive
-        top_user = get_config_value(CONFIG_LDAP, CONFIG_LDAP_TOP_USER)
+        top_user = get_config_value_as_str(CONFIG_LDAP, CONFIG_LDAP_TOP_USER)
         if 'manager_cn' in analysis.details['ldap'] and analysis.details['ldap']['manager_cn'] is not None:
             analysis.details['manager_ldap'] = lookup_user(analysis.details['ldap']['manager_cn'])
             if analysis.details['manager_ldap'] is None:

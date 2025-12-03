@@ -254,8 +254,8 @@ class INIConfigBackend(ConfigBackend):
         return section_name in self._config_parser
     
     def get_value(self, section: str, key: str, fallback: Optional[str] = None) -> Optional[str]:
-        from saq.configuration.config import get_config_value
-        return get_config_value(section, key, fallback)
+        from saq.configuration.config import get_config_value_as_str
+        return get_config_value_as_str(section, key, fallback)
     
     def get_value_as_int(self, section: str, key: str, fallback: Optional[int] = None) -> Optional[int]:
         from saq.configuration.config import get_config_value_as_int
@@ -373,8 +373,8 @@ class YAMLConfigBackend(ConfigBackend):
         return section_name in self._yaml_config
 
     def get_value(self, section: str, key: str, fallback: Optional[str] = None) -> Optional[str]:
-        from saq.configuration.config import get_config_value
-        return get_config_value(section, key, fallback)
+        from saq.configuration.config import get_config_value_as_str
+        return get_config_value_as_str(section, key, fallback)
 
     def get_value_as_int(self, section: str, key: str, fallback: Optional[int] = None) -> Optional[int]:
         from saq.configuration.config import get_config_value_as_int

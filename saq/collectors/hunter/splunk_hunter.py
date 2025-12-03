@@ -15,14 +15,14 @@ from pydantic import Field
 import pytz
 
 from saq.collectors.hunter.loader import load_from_yaml
-from saq.configuration import get_config_value
+from saq.configuration import get_config_value_as_str
 from saq.constants import CONFIG_SPLUNK, CONFIG_SPLUNK_APP_CONTEXT, CONFIG_SPLUNK_TIMEZONE, CONFIG_SPLUNK_URI, CONFIG_SPLUNK_USER_CONTEXT
 from saq.splunk import extract_event_timestamp, SplunkClient
 from saq.collectors.hunter.query_hunter import QueryHunt, QueryHuntConfig
 
 class SplunkHuntConfig(QueryHuntConfig):
-    namespace_user: Optional[str] = Field(alias="splunk_user_context", default_factory=lambda: get_config_value(CONFIG_SPLUNK, CONFIG_SPLUNK_USER_CONTEXT), description="The namespace user to use for the hunt")
-    namespace_app: Optional[str] = Field(alias="splunk_app_context", default_factory=lambda: get_config_value(CONFIG_SPLUNK, CONFIG_SPLUNK_APP_CONTEXT), description="The namespace app to use for the hunt")
+    namespace_user: Optional[str] = Field(alias="splunk_user_context", default_factory=lambda: get_config_value_as_str(CONFIG_SPLUNK, CONFIG_SPLUNK_USER_CONTEXT), description="The namespace user to use for the hunt")
+    namespace_app: Optional[str] = Field(alias="splunk_app_context", default_factory=lambda: get_config_value_as_str(CONFIG_SPLUNK, CONFIG_SPLUNK_APP_CONTEXT), description="The namespace app to use for the hunt")
 
 
 class SplunkHunt(QueryHunt):
@@ -38,8 +38,8 @@ class SplunkHunt(QueryHunt):
         # since we have multiple splunk instances, allow config to point to a different one
         self.splunk_config = self.manager.config.get('splunk_config', 'splunk')
         
-        self.tool_instance = get_config_value(self.splunk_config, CONFIG_SPLUNK_URI)
-        self.timezone = get_config_value(self.splunk_config, CONFIG_SPLUNK_TIMEZONE)
+        self.tool_instance = get_config_value_as_str(self.splunk_config, CONFIG_SPLUNK_URI)
+        self.timezone = get_config_value_as_str(self.splunk_config, CONFIG_SPLUNK_TIMEZONE)
 
         self.job = None
 

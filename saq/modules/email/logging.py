@@ -7,7 +7,7 @@ import os
 from saq.analysis.analysis import Analysis
 from saq.analysis.observable import Observable
 from saq.analysis.search import recurse_tree
-from saq.configuration.config import get_config_value
+from saq.configuration.config import get_config_value_as_str
 from saq.constants import CONFIG_SPLUNK_LOGGING, CONFIG_SPLUNK_LOGGING_DIR, DIRECTIVE_ORIGINAL_EMAIL, F_FILE, F_URL, AnalysisExecutionResult
 from saq.database.pool import get_db_connection
 from saq.database.retry import execute_with_retry
@@ -55,7 +55,7 @@ class EmailLoggingAnalyzer(AnalysisModule):
 
         # splunk log settings
         self.splunk_log_enabled = self.config.getboolean(CONFIG_SPLUNK_LOGGING_ENABLED)
-        self.splunk_log_dir = os.path.join(get_data_dir(), get_config_value(CONFIG_SPLUNK_LOGGING, CONFIG_SPLUNK_LOGGING_DIR), 
+        self.splunk_log_dir = os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_SPLUNK_LOGGING, CONFIG_SPLUNK_LOGGING_DIR), 
                                            self.config.get(CONFIG_SPLUNK_LOG_SUBDIR))
 
         # JSON log settings (for elasticsearch)
@@ -204,7 +204,7 @@ class EmailLoggingAnalyzer(AnalysisModule):
         # convert the date into a timestamp for splunk
         entry["timestamp"] = str(datetime.strptime(entry["date"], '%Y-%m-%d %H:%M:%S.%f %z').timestamp())
 
-        json_log_path_format = get_config_value(self.config_section_name, CONFIG_JSON_LOG_PATH_FORMAT)
+        json_log_path_format = get_config_value_as_str(self.config_section_name, CONFIG_JSON_LOG_PATH_FORMAT)
         target_path = datetime.now().strftime(os.path.join(get_data_dir(), json_log_path_format)).format(pid=os.getpid())
 
         dir_path = os.path.dirname(target_path)

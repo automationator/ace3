@@ -9,7 +9,7 @@ from typing import Optional, Type
 from saq.analysis.analysis import Analysis
 from saq.analysis.interfaces import RootAnalysisInterface
 from saq.analysis.observable import Observable
-from saq.configuration.config import get_config, get_config_value
+from saq.configuration.config import get_config, get_config_value_as_str
 from saq.constants import CONFIG_ANALYSIS_MODULE_CLASS, CONFIG_ANALYSIS_MODULE_ID, CONFIG_ANALYSIS_MODULE_INSTANCE, CONFIG_ANALYSIS_MODULE_MODULE, AnalysisExecutionResult
 from saq.engine.interface import EngineInterface
 from saq.error.reporting import report_exception
@@ -203,12 +203,12 @@ def load_module_from_config(config_section_name):
         )
         return None
 
-    module_id = get_config_value(config_section_name, CONFIG_ANALYSIS_MODULE_ID)
+    module_id = get_config_value_as_str(config_section_name, CONFIG_ANALYSIS_MODULE_ID)
     if not module_id:
         logging.error("module id is required for analysis module {}".format(config_section_name))
         return None
 
-    module_name = get_config_value(config_section_name, CONFIG_ANALYSIS_MODULE_MODULE)
+    module_name = get_config_value_as_str(config_section_name, CONFIG_ANALYSIS_MODULE_MODULE)
     try:
         _module = importlib.import_module(module_name)
     except Exception as e:
@@ -216,7 +216,7 @@ def load_module_from_config(config_section_name):
         report_exception()
         return None
 
-    class_name = get_config_value(config_section_name, CONFIG_ANALYSIS_MODULE_CLASS)
+    class_name = get_config_value_as_str(config_section_name, CONFIG_ANALYSIS_MODULE_CLASS)
     try:
         module_class = getattr(_module, class_name)
     except AttributeError as e:
@@ -228,7 +228,7 @@ def load_module_from_config(config_section_name):
         report_exception()
         return None
 
-    instance = get_config_value(config_section_name, CONFIG_ANALYSIS_MODULE_INSTANCE)
+    instance = get_config_value_as_str(config_section_name, CONFIG_ANALYSIS_MODULE_INSTANCE)
 
     try:
         logging.debug(

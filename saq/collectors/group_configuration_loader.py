@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 from saq.collectors.remote_node import RemoteNodeGroup
-from saq.configuration import get_config, get_config_value, get_config_value_as_boolean, get_config_value_as_int, get_config_value_as_list
+from saq.configuration import get_config, get_config_value_as_str, get_config_value_as_boolean, get_config_value_as_int, get_config_value_as_list
 from saq.constants import CONFIG_COLLECTION_GROUP_ENABLED, CONFIG_COLLECTION_GROUP_COVERAGE, CONFIG_COLLECTION_GROUP_FULL_DELIVERY, CONFIG_COLLECTION_GROUP_COMPANY_ID, CONFIG_COLLECTION_GROUP_DATABASE, CONFIG_COLLECTION_GROUP_BATCH_SIZE, CONFIG_COLLECTION_GROUP_THREAD_COUNT, CONFIG_COLLECTION_GROUP_TARGET_NODE_AS_COMPANY_ID, CONFIG_COLLECTION_GROUP_TARGET_NODES, G_SAQ_NODE
 from saq.environment import g
 
@@ -44,17 +44,17 @@ class GroupConfigurationLoader:
             coverage = get_config_value_as_int(section, CONFIG_COLLECTION_GROUP_COVERAGE)
             full_delivery = get_config_value_as_boolean(section, CONFIG_COLLECTION_GROUP_FULL_DELIVERY)
             company_id = get_config_value_as_int(section, CONFIG_COLLECTION_GROUP_COMPANY_ID)
-            database = get_config_value(section, CONFIG_COLLECTION_GROUP_DATABASE)
+            database = get_config_value_as_str(section, CONFIG_COLLECTION_GROUP_DATABASE)
             batch_size = get_config_value_as_int(section, CONFIG_COLLECTION_GROUP_BATCH_SIZE, default=32)
             thread_count = get_config_value_as_int(section, CONFIG_COLLECTION_GROUP_THREAD_COUNT, default=1)
             
             # XXX get rid of this
             target_node_as_company_id = None
-            if get_config_value(section, CONFIG_COLLECTION_GROUP_TARGET_NODE_AS_COMPANY_ID):
+            if get_config_value_as_str(section, CONFIG_COLLECTION_GROUP_TARGET_NODE_AS_COMPANY_ID):
                 target_node_as_company_id = get_config_value_as_int(section, CONFIG_COLLECTION_GROUP_TARGET_NODE_AS_COMPANY_ID)
 
             target_nodes = []
-            if get_config_value(section, CONFIG_COLLECTION_GROUP_TARGET_NODES):
+            if get_config_value_as_str(section, CONFIG_COLLECTION_GROUP_TARGET_NODES):
                 for node in get_config_value_as_list(section, CONFIG_COLLECTION_GROUP_TARGET_NODES):
                     if not node:  # pragma: no cover
                         continue

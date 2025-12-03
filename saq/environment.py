@@ -367,7 +367,7 @@ def initialize_data_dir():
     g(G_DATA_DIR) must be set prior to this call and the directory must already
     exist or an exception is raised."""
 
-    from saq.configuration import get_config_value
+    from saq.configuration import get_config_value_as_str
     from saq.local_locking import get_lock_directory
     from saq.email_archive import get_email_archive_dir
     from saq.collectors.base_collector import get_collection_error_dir
@@ -389,24 +389,24 @@ def initialize_data_dir():
         os.path.join(data_dir, "review", "misc"),
         os.path.join(
             data_dir,
-            get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_ERROR_REPORTING_DIR, default="error_reports"),
+            get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_ERROR_REPORTING_DIR, default="error_reports"),
         ),
         g(G_STATS_DIR),
         g(G_MODULE_STATS_DIR),
         os.path.join(g(G_STATS_DIR), "brocess"),  # get rid of this
         os.path.join(g(G_STATS_DIR), "metrics"),
         # XXX this should be done by the splunk module?
-        os.path.join(get_data_dir(), get_config_value("splunk_logging", "splunk_log_dir")),
-        os.path.join(get_data_dir(), get_config_value("splunk_logging", "splunk_log_dir"), "smtp"),
+        os.path.join(get_data_dir(), get_config_value_as_str("splunk_logging", "splunk_log_dir")),
+        os.path.join(get_data_dir(), get_config_value_as_str("splunk_logging", "splunk_log_dir"), "smtp"),
         g(G_TEMP_DIR),
         g(G_SERVICES_DIR),
         os.path.join(
             data_dir,
-            get_config_value(CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR, default="var/collection/persistence"),
+            get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR, default="var/collection/persistence"),
         ),
         os.path.join(
             data_dir,
-            get_config_value(CONFIG_COLLECTION, CONFIG_COLLECTION_INCOMING_DIR, default="var/collection/incoming"),
+            get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_INCOMING_DIR, default="var/collection/incoming"),
         ),
         get_collection_error_dir(),
         g(G_DAEMON_DIR),
@@ -457,7 +457,7 @@ def initialize_environment(
     from saq.database import initialize_database, initialize_automation_user
     from saq.configuration import (
         get_config,
-        get_config_value,
+        get_config_value_as_str,
         get_config_value_as_boolean,
         get_config_value_as_int,
         get_config_value_as_list,
@@ -473,7 +473,7 @@ def initialize_environment(
     set_g(
         G_DATA_DIR,
         data_dir if data_dir else os.path.join(
-            get_base_dir(), get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_DATA_DIR)
+            get_base_dir(), get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_DATA_DIR)
         ),
     )
 
@@ -481,20 +481,20 @@ def initialize_environment(
         G_ANALYST_DATA_DIR,
         os.path.join(
             get_base_dir(),
-            get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_ANALYST_DATA_DIR),
+            get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_ANALYST_DATA_DIR),
         ),
     )
 
     # figure out where the tmp dir should be
     if not temp_dir:
-        temp_dir = get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_TEMP_DIR, default=os.path.join(tempfile.gettempdir(), "ace"))
+        temp_dir = get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_TEMP_DIR, default=os.path.join(tempfile.gettempdir(), "ace"))
         if os.path.isabs(temp_dir):
             temp_dir = os.path.join(get_base_dir(), temp_dir)
 
     set_g(G_TEMP_DIR, temp_dir)
     set_g(G_DAEMON_DIR, os.path.join(get_data_dir(), "var", "daemon"))
     set_g(G_SERVICES_DIR, os.path.join(get_data_dir(), "var", "services"))
-    set_g(G_COMPANY_NAME, get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_COMPANY_NAME))
+    set_g(G_COMPANY_NAME, get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_COMPANY_NAME))
     set_g(
         G_COMPANY_ID, get_config_value_as_int(CONFIG_GLOBAL, CONFIG_GLOBAL_COMPANY_ID)
     )
@@ -514,7 +514,7 @@ def initialize_environment(
     )
 
     minutes, seconds = map(
-        int, get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_LOCK_TIMEOUT).split(":")
+        int, get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_LOCK_TIMEOUT).split(":")
     )
     set_g(G_LOCK_TIMEOUT_SECONDS, (minutes * 60) + seconds)
     set_g(
@@ -576,12 +576,12 @@ def initialize_environment(
     )
 
     # what node is this?
-    node = get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_NODE)
+    node = get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_NODE)
     if node == "AUTO":
         node = socket.getfqdn()
 
     # configure prefix
-    set_g(G_API_PREFIX, get_config_value(CONFIG_API, CONFIG_API_PREFIX))
+    set_g(G_API_PREFIX, get_config_value_as_str(CONFIG_API, CONFIG_API_PREFIX))
     if g(G_API_PREFIX) == "AUTO":
         set_g(G_API_PREFIX, socket.getfqdn())
 
@@ -590,7 +590,7 @@ def initialize_environment(
     logging.debug("node {} has api prefix {}".format(g(G_SAQ_NODE), g(G_API_PREFIX)))
 
     # what type of instance is this?
-    set_g(G_INSTANCE_TYPE, get_config_value(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE))
+    set_g(G_INSTANCE_TYPE, get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE))
     if g(G_INSTANCE_TYPE) not in [
         INSTANCE_TYPE_PRODUCTION,
         INSTANCE_TYPE_QA,
@@ -636,17 +636,17 @@ def initialize_environment(
     set_g(
         G_CA_CHAIN_PATH,
         os.path.join(
-            get_base_dir(), get_config_value(CONFIG_SSL, CONFIG_SSL_CA_CHAIN_PATH)
+            get_base_dir(), get_config_value_as_str(CONFIG_SSL, CONFIG_SSL_CA_CHAIN_PATH)
         ),
     )
     ace_api.set_default_ssl_ca_path(g(G_CA_CHAIN_PATH))
 
     # set the api key if it's available
-    if get_config_value(CONFIG_API, CONFIG_API_KEY):
-        ace_api.set_default_api_key(get_config_value(CONFIG_API, CONFIG_API_KEY))
+    if get_config_value_as_str(CONFIG_API, CONFIG_API_KEY):
+        ace_api.set_default_api_key(get_config_value_as_str(CONFIG_API, CONFIG_API_KEY))
 
-    if get_config_value(CONFIG_API, CONFIG_API_PREFIX):
-        ace_api.set_default_remote_host(get_config_value(CONFIG_API, CONFIG_API_PREFIX))
+    if get_config_value_as_str(CONFIG_API, CONFIG_API_PREFIX):
+        ace_api.set_default_remote_host(get_config_value_as_str(CONFIG_API, CONFIG_API_PREFIX))
 
     # initialize the database connection
     initialize_database()
@@ -684,32 +684,32 @@ def initialize_environment(
             g_dict(G_OTHER_PROXIES)[proxy_name] = {}
             for proxy_key in ["http", "https"]:
                 if (
-                    get_config_value(section, "host")
-                    and get_config_value(section, "port")
-                    and get_config_value(section, "transport")
+                    get_config_value_as_str(section, "host")
+                    and get_config_value_as_str(section, "port")
+                    and get_config_value_as_str(section, "transport")
                 ):
-                    if get_config_value(section, "user") and get_config_value(
+                    if get_config_value_as_str(section, "user") and get_config_value_as_str(
                         section, "password"
                     ):
                         g_dict(G_OTHER_PROXIES)[proxy_name][proxy_key] = (
                             "{}://{}:{}@{}:{}".format(
-                                get_config_value(section, "transport"),
+                                get_config_value_as_str(section, "transport"),
                                 urllib.parse.quote_plus(
-                                    get_config_value(section, "user")
+                                    get_config_value_as_str(section, "user")
                                 ),
                                 urllib.parse.quote_plus(
-                                    get_config_value(section, "password")
+                                    get_config_value_as_str(section, "password")
                                 ),
-                                get_config_value(section, "host"),
-                                get_config_value(section, "port"),
+                                get_config_value_as_str(section, "host"),
+                                get_config_value_as_str(section, "port"),
                             )
                         )
                     else:
                         g_dict(G_OTHER_PROXIES)[proxy_name][proxy_key] = (
                             "{}://{}:{}".format(
-                                get_config_value(section, "transport"),
-                                get_config_value(section, "host"),
-                                get_config_value(section, "port"),
+                                get_config_value_as_str(section, "transport"),
+                                get_config_value_as_str(section, "host"),
+                                get_config_value_as_str(section, "port"),
                             )
                         )
 

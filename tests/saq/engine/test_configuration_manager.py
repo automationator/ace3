@@ -214,7 +214,7 @@ def test_engine_configuration_loads_from_config():
         CONFIG_GLOBAL_MEMORY_LIMIT_WARNING,
     )
     from saq.configuration.config import (
-        get_config_value,
+        get_config_value_as_str,
         get_config_value_as_boolean,
         get_config_value_as_int,
         get_config_value_as_list,
@@ -225,7 +225,7 @@ def test_engine_configuration_loads_from_config():
     config = EngineConfiguration()
 
     # Test default_analysis_mode
-    expected_default_mode = get_config_value(
+    expected_default_mode = get_config_value_as_str(
         CONFIG_ENGINE,
         CONFIG_ENGINE_DEFAULT_ANALYSIS_MODE,
         default=ANALYSIS_MODE_ANALYSIS,
@@ -283,7 +283,7 @@ def test_engine_configuration_loads_from_config():
     assert config.alerting_enabled == expected_alerting_enabled
 
     # Test work_dir
-    expected_work_dir = get_config_value(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR)
+    expected_work_dir = get_config_value_as_str(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR)
     assert config.work_dir == expected_work_dir
 
     # Test alert_disposition_check_frequency
@@ -347,7 +347,7 @@ def test_engine_configuration_loads_from_config():
 @pytest.mark.unit
 def test_engine_configuration_analysis_pools_loaded_from_config():
     """Test that analysis_pools are loaded automatically from configuration."""
-    from saq.configuration.config import get_config_value_as_is
+    from saq.configuration.config import get_config_value
     from saq.constants import CONFIG_ENGINE, CONFIG_ENGINE_ANALYSIS_POOLS
     from saq.engine.engine_configuration import compute_pool_size
 
@@ -356,7 +356,7 @@ def test_engine_configuration_analysis_pools_loaded_from_config():
     config = EngineConfiguration(local_analysis_modes=[])
 
     # Get the analysis_pools from configuration
-    config_analysis_pools = get_config_value_as_is(CONFIG_ENGINE, CONFIG_ENGINE_ANALYSIS_POOLS, {})
+    config_analysis_pools = get_config_value(CONFIG_ENGINE, CONFIG_ENGINE_ANALYSIS_POOLS, {})
 
     # Compute expected pools using the compute_pool_size function
     expected_pools = {}

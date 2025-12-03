@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 
-from saq.configuration.config import get_config, get_config_value
+from saq.configuration.config import get_config, get_config_value_as_str
 from saq.constants import G_INTEGRATION_CONFIG_PATHS
 from saq.environment import g_list
 from saq.error import report_exception
@@ -143,7 +143,7 @@ def initialize_integrations():
         #
 
         try:
-            importlib.import_module(get_config_value(section, "module"))
+            importlib.import_module(get_config_value_as_str(section, "module"))
         except Exception as e:
             logging.error(f"failed to import integration module {section}: {e}")
             report_exception()

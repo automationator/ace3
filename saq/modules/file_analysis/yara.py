@@ -12,7 +12,7 @@ from typing import override
 import distorm3
 from saq.analysis.analysis import Analysis
 from saq.analysis.presenter.analysis_presenter import AnalysisPresenter, register_analysis_presenter
-from saq.configuration.config import get_config_value
+from saq.configuration.config import get_config_value_as_str
 from saq.constants import AnalysisExecutionResult, CONFIG_YARA_SCANNER, CONFIG_YARA_SCANNER_SCAN_FAILURE_DIR, CONFIG_YARA_SCANNER_SIGNATURE_DIR, CONFIG_YARA_SCANNER_SOCKET_DIR, DIRECTIVE_NO_SCAN, DIRECTIVE_SANDBOX, F_FILE, F_INDICATOR, F_YARA_RULE, F_YARA_STRING, create_yara_string
 from saq.database import Observable as db_Observable
 from saq.database.pool import get_db
@@ -90,12 +90,12 @@ class YaraScanner_v3_4(AnalysisModule):
     @property
     def socket_dir(self):
         """Relative directory of the socket directory of the yara scanner server."""
-        return os.path.join(get_data_dir(), get_config_value(CONFIG_YARA_SCANNER, CONFIG_YARA_SCANNER_SOCKET_DIR))
+        return os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_YARA_SCANNER, CONFIG_YARA_SCANNER_SOCKET_DIR))
 
     @property
     def signature_dir(self):
         """Relative or absolute path to directory containing sub directories of yara rules."""
-        return abs_path(get_config_value(CONFIG_YARA_SCANNER, CONFIG_YARA_SCANNER_SIGNATURE_DIR))
+        return abs_path(get_config_value_as_str(CONFIG_YARA_SCANNER, CONFIG_YARA_SCANNER_SIGNATURE_DIR))
 
     @property
     def save_scan_failures(self):
@@ -127,7 +127,7 @@ class YaraScanner_v3_4(AnalysisModule):
         #self.blacklisted_rules = []
 
         # this is where we place files that fail scanning
-        self.scan_failure_dir = os.path.join(get_data_dir(), get_config_value(CONFIG_YARA_SCANNER, CONFIG_YARA_SCANNER_SCAN_FAILURE_DIR))
+        self.scan_failure_dir = os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_YARA_SCANNER, CONFIG_YARA_SCANNER_SCAN_FAILURE_DIR))
         if not os.path.exists(self.scan_failure_dir):
             try:
                 os.makedirs(self.scan_failure_dir)

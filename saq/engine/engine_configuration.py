@@ -13,11 +13,11 @@ from typing import Optional
 
 from saq.configuration.config import (
     get_config,
-    get_config_value,
+    get_config_value_as_str,
     get_config_value_as_boolean,
     get_config_value_as_int,
     get_config_value_as_list,
-    get_config_value_as_is,
+    get_config_value,
 )
 from saq.constants import (
     ANALYSIS_MODE_ANALYSIS,
@@ -143,7 +143,7 @@ class EngineConfiguration:
         )
         
         # Directory configuration
-        self.work_dir = get_config_value(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR)
+        self.work_dir = get_config_value_as_str(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR)
         self.stats_dir = os.path.join(g(G_MODULE_STATS_DIR), "ace")
         self.runtime_dir = os.path.join(get_data_dir(), "var", "engine", "ace")
         
@@ -216,7 +216,7 @@ class EngineConfiguration:
         if default_analysis_mode:
             result = default_analysis_mode
         else:
-            result = get_config_value(
+            result = get_config_value_as_str(
                 CONFIG_ENGINE,
                 CONFIG_ENGINE_DEFAULT_ANALYSIS_MODE,
                 default=ANALYSIS_MODE_ANALYSIS,
@@ -309,7 +309,7 @@ class EngineConfiguration:
     def _get_analysis_pools(self, analysis_pools: Optional[dict[str, str|int]]) -> dict[str, int]:
         """Get the analysis pools configuration."""
         if analysis_pools is None:
-            analysis_pools = get_config_value_as_is(CONFIG_ENGINE, CONFIG_ENGINE_ANALYSIS_POOLS, {})
+            analysis_pools = get_config_value(CONFIG_ENGINE, CONFIG_ENGINE_ANALYSIS_POOLS, {})
 
         result = {}
         for analysis_mode, value in analysis_pools.items():

@@ -10,7 +10,7 @@ from typing import Generator
 
 from saq.collectors.base_collector import Collector, CollectorService
 from saq.analysis.root import Submission
-from saq.configuration import get_config, get_config_value
+from saq.configuration import get_config, get_config_value_as_str
 from saq.constants import ANALYSIS_MODE_HTTP, ANALYSIS_TYPE_BRO_HTTP
 from saq.environment import get_data_dir
 
@@ -26,7 +26,7 @@ class BroHTTPStreamCollector(Collector):
         super().__init__()
         
         # the location of the incoming http streams
-        self.bro_http_dir = os.path.join(get_data_dir(), get_config_value('bro', 'http_dir'))
+        self.bro_http_dir = os.path.join(get_data_dir(), get_config_value_as_str('bro', 'http_dir'))
         
         # for tool_instance
         self.hostname = socket.getfqdn()

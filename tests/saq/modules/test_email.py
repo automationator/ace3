@@ -8,7 +8,7 @@ import pytest
 import pytz
 
 from saq.analysis.root import RootAnalysis, load_root
-from saq.configuration.config import get_config, get_config_value
+from saq.configuration.config import get_config, get_config_value_as_str
 from saq.constants import ANALYSIS_TYPE_BRO_SMTP, ANALYSIS_TYPE_MAILBOX, CONFIG_API, CONFIG_API_KEY, CONFIG_SPLUNK_LOGGING, CONFIG_SPLUNK_LOGGING_DIR, DB_BROCESS, DB_EMAIL_ARCHIVE, DIRECTIVE_ARCHIVE, DIRECTIVE_EXTRACT_URLS, DIRECTIVE_ORIGINAL_EMAIL, DIRECTIVE_PREVIEW, DIRECTIVE_REMEDIATE, DIRECTIVE_RENAME_ANALYSIS, EVENT_TIME_FORMAT_JSON_TZ, F_EMAIL_ADDRESS, F_EMAIL_CONVERSATION, F_EMAIL_DELIVERY, F_FILE, F_MESSAGE_ID, F_URL, G_ENCRYPTION_KEY, G_TEMP_DIR, create_email_conversation, create_email_delivery
 from saq.crypto import decrypt
 from saq.database.model import load_alert
@@ -129,7 +129,7 @@ def test_mailbox_submission(test_client, root_analysis, datadir):
                 'tags': [ ],
             }, cls=_JSONEncoder),
             'file': (fp, 'rfc822.email'),
-            }, content_type='multipart/form-data', headers = { 'x-ice-auth': get_config_value(CONFIG_API, CONFIG_API_KEY) })
+            }, content_type='multipart/form-data', headers = { 'x-ice-auth': get_config_value_as_str(CONFIG_API, CONFIG_API_KEY) })
 
     result = result.get_json()
     assert result

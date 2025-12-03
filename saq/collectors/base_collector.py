@@ -13,7 +13,7 @@ from saq.collectors.submission_scheduler import SubmissionScheduler
 from saq.collectors.submission_file_manager import SubmissionFileManager
 from saq.collectors.workload_repository import WorkloadRepository
 from saq.collectors.duplicate_filter import DuplicateSubmissionFilter
-from saq.configuration import get_config_value
+from saq.configuration import get_config_value_as_str
 from saq.constants import CONFIG_COLLECTION, CONFIG_COLLECTION_ERROR_DIR
 from saq.database import get_db
 from saq.environment import get_data_dir
@@ -23,7 +23,7 @@ from saq.service import ACEServiceInterface
 from saq.submission_filter import SubmissionFilter
 
 def get_collection_error_dir() -> str:
-    return os.path.join(get_data_dir(), get_config_value(CONFIG_COLLECTION, CONFIG_COLLECTION_ERROR_DIR))
+    return os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_ERROR_DIR))
 
 class CollectorExecutionMode(Enum):
     """Enum representing the possible execution modes for a collector."""

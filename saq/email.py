@@ -8,7 +8,7 @@ import socket
 
 from email.utils import parseaddr
 from email.header import decode_header
-from saq.configuration import get_config, get_config_value, get_config_value_as_list
+from saq.configuration import get_config, get_config_value_as_str, get_config_value_as_list
 from saq.constants import CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_PRIMARY, CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_EMAIL_DOMAINS
 from saq.database import get_db_connection
 from saq.util import is_subdomain
@@ -178,8 +178,8 @@ def get_email_archive_sections():
        Includes the primary and any secondary."""
 
     result = []
-    if get_config_value(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_PRIMARY):
-        result.append(get_config_value(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_PRIMARY))
+    if get_config_value_as_str(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_PRIMARY):
+        result.append(get_config_value_as_str(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_PRIMARY))
     
     for section in get_config().keys():
         if section.startswith('database_email_archive_'):

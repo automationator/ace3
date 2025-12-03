@@ -18,11 +18,11 @@ class TestJournalEmailCollector:
     @pytest.fixture
     def mock_config(self):
         """Mock configuration values."""
-        with patch("saq.collectors.email.journal.get_config_value") as mock_get_config_value, \
+        with patch("saq.collectors.email.journal.get_config_value_as_str") as mock_get_config_value_as_str, \
              patch("saq.collectors.email.journal.get_config_value_as_int") as mock_get_config_value_as_int, \
              patch("saq.collectors.email.journal.get_config_value_as_boolean") as mock_get_config_value_as_boolean:
 
-            mock_get_config_value.side_effect = lambda section, key: {
+            mock_get_config_value_as_str.side_effect = lambda section, key: {
                 ("rabbitmq", "user"): "test_user",
                 ("rabbitmq", "password"): "test_password",
                 ("rabbitmq", "host"): "test_host",
@@ -34,7 +34,7 @@ class TestJournalEmailCollector:
             mock_get_config_value_as_boolean.return_value = False
 
             yield {
-                "get_config_value": mock_get_config_value,
+                "get_config_value": mock_get_config_value_as_str,
                 "get_config_value_as_int": mock_get_config_value_as_int,
                 "get_config_value_as_boolean": mock_get_config_value_as_boolean,
             }

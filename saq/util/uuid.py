@@ -1,7 +1,7 @@
 import os
 import re
 
-from saq.configuration.config import get_config_value
+from saq.configuration.config import get_config_value_as_str
 from saq.constants import CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR, G_SAQ_NODE
 from saq.environment import g, get_base_dir, get_data_dir
 
@@ -34,7 +34,7 @@ def storage_dir_from_uuid(uuid):
 def workload_storage_dir(uuid):
     """Returns the path (relative to SAQ_HOME) to the storage directory for the current engien for the given uuid."""
     validate_uuid(uuid)
-    if get_config_value(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR):
-        return os.path.join(get_config_value(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR), uuid)
+    if get_config_value_as_str(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR):
+        return os.path.join(get_config_value_as_str(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR), uuid)
     else:
         return storage_dir_from_uuid(uuid)

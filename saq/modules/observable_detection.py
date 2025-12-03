@@ -3,7 +3,7 @@ from typing import override
 import redis
 
 from saq.analysis import Analysis
-from saq.configuration import get_config_value, get_config_value_as_int
+from saq.configuration import get_config_value_as_str, get_config_value_as_int
 from saq.constants import CONFIG_REDIS_HOST, CONFIG_REDIS_LOCAL, CONFIG_REDIS_PASSWORD, CONFIG_REDIS_PORT, CONFIG_REDIS_USERNAME, REDIS_DB_FOR_DETECTION_A, AnalysisExecutionResult
 from saq.modules import AnalysisModule
 
@@ -57,10 +57,10 @@ class ObservableDetectionAnalyzer(AnalysisModule):
             redis_connection = kwargs["redis_connection"]
         else:
             redis_connection = redis.Redis(
-                host=get_config_value(CONFIG_REDIS_LOCAL, CONFIG_REDIS_HOST),
+                host=get_config_value_as_str(CONFIG_REDIS_LOCAL, CONFIG_REDIS_HOST),
                 port=get_config_value_as_int(CONFIG_REDIS_LOCAL, CONFIG_REDIS_PORT),
-                username=get_config_value(CONFIG_REDIS_LOCAL, CONFIG_REDIS_USERNAME),
-                password=get_config_value(CONFIG_REDIS_LOCAL, CONFIG_REDIS_PASSWORD),
+                username=get_config_value_as_str(CONFIG_REDIS_LOCAL, CONFIG_REDIS_USERNAME),
+                password=get_config_value_as_str(CONFIG_REDIS_LOCAL, CONFIG_REDIS_PASSWORD),
                 db=REDIS_DB_FOR_DETECTION_A,
                 decode_responses=True,
                 encoding="utf-8"
