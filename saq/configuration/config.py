@@ -2,9 +2,12 @@ import sys
 from typing import Any, Optional
 
 from saq.configuration.loader import load_configuration
+from saq.configuration.schema import ACEConfig
 
 # global configuration singleton (YAML-backed)
 CONFIG = None
+
+CONFIG_V2: Optional[ACEConfig] = None
 
 def config_section_exists(section_name: str) -> bool:
     """Returns True if the given configuration section exists."""
@@ -124,6 +127,7 @@ def set_config(config):
 
 def initialize_configuration(config_paths: Optional[list[str]]=None):
     global CONFIG
+    global CONFIG_V2
 
     # load configuration files
     if config_paths is None:
@@ -131,6 +135,14 @@ def initialize_configuration(config_paths: Optional[list[str]]=None):
     
     try:
         CONFIG = load_configuration(config_paths=config_paths)
+        CONFIG_V2 = ACEConfig.model_validate(CONFIG._data)
     except Exception as e:
         sys.stderr.write(f"ERROR: unable to load configuration: {e}")
         raise
+
+def get_config_v2() -> ACEConfig:
+    """Returns the global configuration object (ACEConfig)."""
+    if CONFIG_V2 is None:
+        raise RuntimeError("Configuration not loaded")
+
+    return CONFIG_V2

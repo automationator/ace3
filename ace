@@ -3141,8 +3141,9 @@ close_event_parser.add_argument("--dry-run", action="store_true", default=False,
 close_event_parser.set_defaults(func=close_event)
 
 def debug(args):
+    from saq.configuration.config import get_config_v2
     # use this when you need it
-    logging.info("HELLO WORLD")
+    logging.info("%s", get_config_v2().global_settings.memory_limit_warning)
     return 0
 
 debug_parser = get_cli_subparsers().add_parser('debug')
