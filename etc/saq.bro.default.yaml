@@ -11,31 +11,34 @@ config:
 
 # [service_bro_http_collector]
 service_bro_http_collector:
-  module: saq.collectors.http
-  class: BroHTTPStreamCollector
+  name: bro_http_collector
+  python_module: saq.collectors.http
+  python_class: BroHTTPStreamCollectorService
   description: Bro HTTP Stream Collector - collects HTTP stream data from bro (zeek) running ACE modules
   enabled: true
   workload_type: http
 
 # [service_bro_smtp_collector]
 service_bro_smtp_collector:
-  module: saq.collectors.smtp
-  class: BroSMTPStreamCollector
+  name: bro_smtp_collector
+  python_module: saq.collectors.smtp
+  python_class: BroSMTPStreamCollectorService
   description: Bro SMTP Stream Collector - collects SMTP stream data from bro (zeek) running ACE modules
   enabled: true
+  workload_type: smtp
 
 # [analysis_module_bro_smtp_analyzer]
 analysis_module_bro_smtp_analyzer:
-  id: bro_smtp_analyzer
-  module: saq.modules.email.zeek
-  class: BroSMTPStreamAnalyzer
+  name: bro_smtp_analyzer
+  python_module: saq.modules.email.zeek
+  python_class: BroSMTPStreamAnalyzer
   enabled: true
 
 # [analysis_module_bro_http_analyzer]
 analysis_module_bro_http_analyzer:
-  id: bro_http_analyzer
-  module: saq.modules.http
-  class: BroHTTPStreamAnalyzer
+  name: bro_http_analyzer
+  python_module: saq.modules.http
+  python_class: BroHTTPStreamAnalyzer
   enabled: true
   # path to the brotex custom whitelist file
   whitelist_path: etc/brotex.whitelist

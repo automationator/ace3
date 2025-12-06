@@ -1,11 +1,13 @@
 import logging
 import os
 from subprocess import Popen
-from typing import override
+from typing import Type, override
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import DIRECTIVE_SANDBOX, F_FILE, AnalysisExecutionResult
 from saq.environment import get_base_dir
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.observables.file import FileObservable
 
 KEY_ANALYSIS_OUTPUT = "analysis_output"
@@ -36,15 +38,20 @@ class MicrosoftScriptEncodingAnalysis(Analysis):
 
         return None
 
+class MicrosoftScriptEncodingAnalyzerConfig(AnalysisModuleConfig):
+    decryption_program: str = Field(..., description="The full path to the program used to decrypt these files.")
+
 class MicrosoftScriptEncodingAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return MicrosoftScriptEncodingAnalyzerConfig
 
     def verify_environment(self):
-        self.verify_config_exists('decryption_program')
-        self.verify_path_exists(self.config['decryption_program'])
+        self.verify_path_exists(self.config.decryption_program)
 
     @property
     def decryption_program(self):
-        path = self.config['decryption_program']
+        path = self.config.decryption_program
         if os.path.isabs(path):
             return path
         return os.path.join(get_base_dir(), path)

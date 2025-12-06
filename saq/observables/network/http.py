@@ -2,8 +2,8 @@ import logging
 import re
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 from saq.analysis.observable import Observable
-from saq.configuration.config import get_config_value_as_list
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_DOMAINS, CONFIG_GLOBAL_LOCAL_EMAIL_DOMAINS, F_URI_PATH, F_URL, F_USER_AGENT
+from saq.configuration.config import get_config
+from saq.constants import F_URI_PATH, F_URL, F_USER_AGENT
 from saq.gui import ObservableActionSeparator, ObservableActionUrlCrawl, ObservableActionUrlscan
 from saq.observables.generator import register_observable_type
 from urlfinderlib.url import URL
@@ -77,11 +77,11 @@ class URLObservable(Observable):
         """Returns True if this URL has a managed domain."""
 
         url = URL(self.value)
-        for fqdn in get_config_value_as_list(CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_DOMAINS):
+        for fqdn in get_config().global_settings.local_domains:
             if is_subdomain(url.netloc_idna, fqdn):
                 return True
 
-        for fqdn in get_config_value_as_list(CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_EMAIL_DOMAINS):
+        for fqdn in get_config().global_settings.local_email_domains:
             if is_subdomain(url.netloc_idna, fqdn):
                 return True
 

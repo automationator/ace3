@@ -5,8 +5,9 @@ from queue import Queue
 import threading
 
 
-from saq.configuration.config import get_config_value_as_str
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE, ExecutionMode
+from saq.configuration.config import get_config
+from saq.configuration.schema import HuntTypeConfig
+from saq.constants import ExecutionMode
 from saq.error import report_exception
 from saq.network_semaphore import NetworkSemaphoreClient
 from saq.util import local_time, abs_path
@@ -26,7 +27,7 @@ class HuntManager:
                  concurrency_limit,
                  persistence_dir,
                  update_frequency,
-                 config,
+                 config: HuntTypeConfig,
                  execution_mode: ExecutionMode = ExecutionMode.CONTINUOUS):
 
         assert isinstance(submission_queue, Queue)
@@ -141,7 +142,7 @@ class HuntManager:
 
     def is_valid_instance_type(self, hunt: Hunt) -> bool:
         """Returns True if the given hunt is valid for the current instance type (ignoring case)."""
-        instance_type = get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE)
+        instance_type = get_config().global_settings.instance_type
         return (
             any(instance_type.lower() == t.lower() for t in hunt.instance_types)
         )

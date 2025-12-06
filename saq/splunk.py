@@ -15,11 +15,10 @@ from splunklib.client import Job
 import splunklib.client as client
 from splunklib.results import JSONResultsReader
 
-from saq.configuration import get_config
+from saq.configuration.config import get_proxy_config, get_splunk_config
 from saq.environment import get_data_dir
 from saq.util import local_time, create_timedelta
 from saq.error import report_exception
-from saq.proxy import proxy_config
 
 #
 # NOTE: proxy support is missing
@@ -538,7 +537,7 @@ class SplunkQueryObject:
             logging.error(f"unable to record splunk query performance: {e}")
             report_exception()
 
-def SplunkClient(config: str = "splunk", **kwargs) -> SplunkQueryObject:
+def SplunkClient(name: str = "default", **kwargs) -> SplunkQueryObject:
     """Convenience function for creating a SplunkClient from a config section
 
     Attributes:
@@ -548,22 +547,26 @@ def SplunkClient(config: str = "splunk", **kwargs) -> SplunkQueryObject:
         SplunkQueryObject: a splunk client configured with the options set in the specified config section
     """
 
+    splunk_config = get_splunk_config(name)
+
     kwargs.update({
-        "host": get_config()[config]["host"],
-        "port": get_config()[config]["port"],
-        "proxies": proxy_config(get_config()[config].get("proxy", fallback=None)),
+        "host": splunk_config.host,
+        "port": splunk_config.port,
     })
+        
+    if splunk_config.proxy is not None:
+        kwargs["proxies"] = get_proxy_config(splunk_config.proxy)
 
-    if get_config()[config].get("username"):
-        kwargs["username"] = get_config()[config]["username"]
-        kwargs["password"] = get_config()[config]["password"]
+    if splunk_config.username is not None:
+        kwargs["username"] = splunk_config.username
+        kwargs["password"] = splunk_config.password
     else:
-        kwargs["token"] = get_config()[config]["token"]
+        kwargs["token"] = splunk_config.token
 
-    if get_config()[config].get("user_context"):
-        kwargs["user_context"] = get_config()[config]["user_context"]
+    if splunk_config.user_context is not None:
+        kwargs["user_context"] = splunk_config.user_context
 
-    if get_config()[config].get("app_context"):
-        kwargs["app"] = get_config()[config]["app_context"]
+    if splunk_config.app_context is not None:
+        kwargs["app"] = splunk_config.app_context
 
     return SplunkQueryObject(**kwargs)

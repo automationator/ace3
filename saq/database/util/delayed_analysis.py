@@ -32,7 +32,7 @@ def add_delayed_analysis_request(root, observable, analysis_module, hours, minut
                               ( 
                                   root.uuid, 
                                   observable.uuid, 
-                                  analysis_module.config_section_name, 
+                                  analysis_module.name, 
                                   hours, 
                                   minutes, 
                                   seconds, 
@@ -42,16 +42,16 @@ def add_delayed_analysis_request(root, observable, analysis_module, hours, minut
             db.commit()
 
             logging.info("added delayed analysis uuid {} observable_uuid {} analysis_module {} delayed for {}:{}:{} node {} storage_dir {}".format(
-                         root.uuid, observable.uuid, analysis_module.config_section_name, hours, minutes, seconds, g_int(G_SAQ_NODE_ID), root.storage_dir))
+                         root.uuid, observable.uuid, analysis_module.name, hours, minutes, seconds, g_int(G_SAQ_NODE_ID), root.storage_dir))
 
     except pymysql.err.IntegrityError as ie:
         logging.warning(str(ie))
         logging.warning("already waiting for delayed analysis on {} by {} for {}".format(
-                         root, analysis_module.config_section_name, observable))
+                         root, analysis_module.name, observable))
         return True
     except Exception as e:
         logging.error("unable to insert delayed analysis on {} by {} for {}: {}".format(
-                         root, analysis_module.config_section_name, observable, e))
+                         root, analysis_module.name, observable, e))
         report_exception()
         return False
 

@@ -1,18 +1,28 @@
 import logging
 import os
 from subprocess import Popen
+from typing import Type
+
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.configuration.config import get_config
 from saq.constants import AnalysisExecutionResult, F_FILE
 from saq.environment import get_base_dir
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.observables.file import FileObservable
 
+class BroAnalyzerConfig(AnalysisModuleConfig):
+    bro_bin_path: str = Field(..., description="The path to the bro binary.")
 
 class BroAnalysis(Analysis):
     pass
 
 class BroAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return BroAnalyzerConfig
+
     @property
     def generated_analysis_type(self):
         return BroAnalysis
@@ -63,7 +73,7 @@ class BroAnalyzer(AnalysisModule):
             with open(bro_stderr_path, 'wb') as stderr_fp:
                 logging.debug("executing bro against {0}".format(pcap.value))
                 p = Popen([
-                    get_config().get(self.config_section_name, 'bro_bin_path'),
+                    self.config.bro_bin_path,
                     '-r', os.path.join(get_base_dir(), pcap.value),
                     '-e', 'redef FileExtract::prefix = "{0}/";'.format(extraction_dir),
                     os.path.join(get_base_dir(), 'etc', 'bro', 'ace.bro')],

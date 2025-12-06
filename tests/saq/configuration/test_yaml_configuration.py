@@ -32,11 +32,11 @@ global:
     config.load_file(yaml_path_2)
 
     # test that changes made in override are in config
-    assert config['global']['test_1'] == 4
+    assert config._data['global']['test_1'] == 4
     # test that settings in config that were not changed are the same
-    assert config['global']['test_2'] == 2
+    assert config._data['global']['test_2'] == 2
     # test that new settings in override are added
-    assert config['global']['test_3'] == 3
+    assert config._data['global']['test_3'] == 3
 
 @pytest.mark.unit
 def test_load_configuration_file(tmp_path):
@@ -50,7 +50,7 @@ global:
 
     config = YAMLConfig()
     config.load_file(yaml_path)
-    assert config['global']['test'] is True
+    assert config._data['global']['test'] is True
 
 @pytest.mark.unit
 def test_load_configuration_file_override(tmp_path):
@@ -73,8 +73,8 @@ global:
     config = YAMLConfig()
     config.load_file(yaml_path)
     config.load_file(yaml_path_override)
-    assert config['global']['test'] is False
-    assert config['global']['new_option'] == 'value'
+    assert config._data['global']['test'] is False
+    assert config._data['global']['new_option'] == 'value'
 
 @pytest.mark.unit
 def test_load_configuration_reference(tmp_path):
@@ -105,7 +105,7 @@ global:
 
     config = YAMLConfig()
     config.load_file(yaml_path_1)
-    assert config['global']['loaded_3'] is True
+    assert config._data['global']['loaded_3'] is True
 
 @pytest.mark.unit
 def test_load_configuration_missing_reference(tmp_path, caplog):
@@ -124,7 +124,7 @@ config:
     config = YAMLConfig()
 
     config.load_file(yaml_path_1)
-    assert "Skipping non-existent YAML include path in YAML config" in caplog.text
+    assert "skipping non-existent YAML include path in YAML config" in caplog.text
 
 @pytest.mark.unit
 def test_load_configuration_no_references(tmp_path):
@@ -137,33 +137,6 @@ global:
 
     config = YAMLConfig()
     config.load_file(yaml_path_1)
-
-@pytest.mark.unit
-def test_verify_valid_config(tmp_path):
-    yaml_path_1 = str(tmp_path / '1.yaml')
-    with open(yaml_path_1, 'w') as fp:
-        fp.write("""
-global:
-  option: test
-""")
-
-    config = YAMLConfig()
-    config.load_file(yaml_path_1)
-    assert config.verify()
-
-@pytest.mark.unit
-def test_verify_invalid_config(tmp_path):
-    yaml_path_1 = str(tmp_path / '1.yaml')
-    with open(yaml_path_1, 'w') as fp:
-        fp.write("""
-global:
-  option: OVERRIDE
-""")
-
-    config = YAMLConfig()
-    config.load_file(yaml_path_1)
-    with pytest.raises(ConfigurationException):
-        config.verify()
 
 @pytest.mark.unit
 def test_load_path_references(tmp_path):

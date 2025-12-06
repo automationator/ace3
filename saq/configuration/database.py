@@ -1,6 +1,6 @@
 import base64
 
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_ENCRYPTED_PASSWORDS_DB
+from saq.configuration.config import get_config
 
 # the following functions use the database table `config` to store arbitrary key/value pairs
 # TODO move this to a better service at some point
@@ -8,7 +8,6 @@ from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_ENCRYPTED_PASSWORDS_DB
 
 def set_database_config_value(key, value):
     from saq.database import get_db_connection
-    from saq.configuration.config import get_config_value_as_str
     if isinstance(value, int):
         value = str(value)
     elif isinstance(value, str):
@@ -18,7 +17,7 @@ def set_database_config_value(key, value):
     else:
         raise TypeError(f"invalid type {type(value)} specified for set_database_config_value")
 
-    with get_db_connection(name=get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_ENCRYPTED_PASSWORDS_DB)) as db:
+    with get_db_connection(name=get_config().global_settings.encrypted_passwords_db) as db:
         c = db.cursor()
         c.execute("""
 INSERT INTO `config` ( `key`, `value` ) VALUES ( %s, %s )
@@ -27,8 +26,8 @@ ON DUPLICATE KEY UPDATE `value` = %s""", (key, value, value))
 
 def get_database_config_value(key, type=str):
     from saq.database import get_db_connection
-    from saq.configuration.config import get_config_value_as_str
-    with get_db_connection(name=get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_ENCRYPTED_PASSWORDS_DB)) as db:
+    from saq.configuration.config import get_config
+    with get_db_connection(name=get_config().global_settings.encrypted_passwords_db) as db:
         c = db.cursor()
         c.execute("""SELECT `value` FROM `config` WHERE `key` = %s""", (key,))
         result = c.fetchone()
@@ -47,8 +46,7 @@ def get_database_config_value(key, type=str):
 
 def delete_database_config_value(key):
     from saq.database import get_db_connection
-    from saq.configuration.config import get_config_value_as_str
-    with get_db_connection(name=get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_ENCRYPTED_PASSWORDS_DB)) as db:
+    with get_db_connection(name=get_config().global_settings.encrypted_passwords_db) as db:
         c = db.cursor()
         c.execute("""DELETE FROM `config` WHERE `key` = %s""", (key,))
         db.commit()

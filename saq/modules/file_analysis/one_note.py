@@ -3,9 +3,12 @@ import hashlib
 import logging
 import os
 import re
+from typing import Type
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import F_FILE, R_EXTRACTED_FROM, AnalysisExecutionResult
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.is_file_type import is_onenote_file
 from saq.observables.file import FileObservable
 from saq.util.strings import format_item_list_for_summary
@@ -37,7 +40,13 @@ class OneNoteFileAnalysis(Analysis):
 
         return "OneNote File Analysis: extracted files " + format_item_list_for_summary(self.extracted_files)
 
+class OneNoteFileAnalyzerConfig(AnalysisModuleConfig):
+    max_bytes: int = Field(..., description="The maximum number of bytes to read from the file.")
+
 class OneNoteFileAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return OneNoteFileAnalyzerConfig
 
     @property
     def generated_analysis_type(self):
@@ -49,7 +58,7 @@ class OneNoteFileAnalyzer(AnalysisModule):
 
     @property
     def max_bytes(self):
-        return int(self.config.get("max_bytes", 104857600))
+        return self.config.max_bytes
 
     def execute_analysis(self, _file: FileObservable) -> AnalysisExecutionResult:
 

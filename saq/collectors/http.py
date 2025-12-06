@@ -2,17 +2,21 @@
 
 import collections
 import datetime
-import os, os.path
+import os
+import os.path
 import re
 import socket
 import logging
-from typing import Generator
+from tkinter import BROWSE
+from typing import Generator, Type, override
 
-from saq.collectors.base_collector import Collector, CollectorService
+from saq.collectors.base_collector import Collector, CollectorExecutionMode, CollectorService
 from saq.analysis.root import Submission
-from saq.configuration import get_config, get_config_value_as_str
-from saq.constants import ANALYSIS_MODE_HTTP, ANALYSIS_TYPE_BRO_HTTP
+from saq.configuration.config import get_service_config
+from saq.configuration.schema import ServiceConfig
+from saq.constants import ANALYSIS_MODE_HTTP, ANALYSIS_TYPE_BRO_HTTP, SERVICE_BRO_HTTP_COLLECTOR
 from saq.environment import get_data_dir
+from saq.service import ACEServiceInterface
 
 REGEX_CONNECTION_ID = re.compile(r'^(C[^\.]+\.\d+)\.ready$')
 HTTP_DETAILS_REQUEST = 'request'
@@ -26,7 +30,7 @@ class BroHTTPStreamCollector(Collector):
         super().__init__()
         
         # the location of the incoming http streams
-        self.bro_http_dir = os.path.join(get_data_dir(), get_config_value_as_str('bro', 'http_dir'))
+        self.bro_http_dir = os.path.join(get_data_dir(), get_service_config(SERVICE_BRO_HTTP_COLLECTOR).http_dir)
         
         # for tool_instance
         self.hostname = socket.getfqdn()
@@ -74,3 +78,35 @@ class BroHTTPStreamCollector(Collector):
                 
                 submission = Submission(root)
                 yield submission
+
+class BroHTTPStreamCollectorService(ACEServiceInterface):
+    @classmethod
+    def get_config_class(cls) -> Type[ServiceConfig]:
+        return ServiceConfig
+
+    def __init__(self):
+        self.collector = BroHTTPStreamCollector()
+        self.collector_service = CollectorService(self.collector, config=get_service_config(SERVICE_BRO_HTTP_COLLECTOR))
+
+    @override
+    def start(self):
+        self.collector_service.start()
+
+    @override
+    def wait_for_start(self, timeout: float = 5) -> bool:
+        if not self.collector_service.wait_for_start(timeout):
+            return False
+
+        return True
+
+    @override
+    def start_single_threaded(self):
+        self.collector_service.start_single_threaded(execution_mode=CollectorExecutionMode.SINGLE_SHOT)
+
+    @override
+    def stop(self):
+        self.collector_service.stop()
+
+    @override
+    def wait(self):
+        self.collector_service.wait()

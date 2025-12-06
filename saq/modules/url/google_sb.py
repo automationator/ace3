@@ -1,8 +1,10 @@
 import logging
-from typing import Any, override
+from typing import Any, Type, override
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import F_URL, AnalysisExecutionResult
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 
 from gglsbl_rest_client import GGLSBL_Rest_Service_Client as GRS_Client
 
@@ -44,7 +46,16 @@ class GoogleSafeBrowsingAnalysis(Analysis):
     def generate_summary(self):
         return "Google SafeBrowsing Results: {}".format(' '.join(self.details['match_tags']))
 
+class GoogleSafeBrowsingAnalyzerConfig(AnalysisModuleConfig):
+    server: str = Field(..., description="The server address for the gglsbl-rest service.")
+    port: int = Field(..., description="The port number for the gglsbl-rest service.")
+    verify_ssl: bool = Field(default=False, description="If we're verifying ssl and the cert is signed by an authority the OS trusts, then True. Else, it should be the path to the CA chain.")
+
 class GoogleSafeBrowsingAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return GoogleSafeBrowsingAnalyzerConfig
+
     """Lookup a URL against a gglsbl-rest service.
     """
 
@@ -58,15 +69,11 @@ class GoogleSafeBrowsingAnalyzer(AnalysisModule):
 
     @property
     def remote_server(self) -> str:
-        return self.config['server']
+        return self.config.server
 
     @property
     def remote_port(self) -> int:
-        return int(self.config['port'])
-
-    def verify_environment(self):
-        self.verify_config_exists('server')
-        self.verify_config_exists('port')
+        return self.config.port
 
     def execute_analysis(self, observable) -> AnalysisExecutionResult:
         logging.info("looking up '{}' in gglsbl-rest service at '{}'".format(observable.value, self.remote_server))       

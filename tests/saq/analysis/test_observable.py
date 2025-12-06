@@ -4,7 +4,7 @@ import pytest
 import time
 
 from saq.configuration import get_config
-from saq.constants import DISPOSITION_DELIVERY, F_ASSET, F_EMAIL_ADDRESS, F_EMAIL_DELIVERY, F_FILE, F_FILE_LOCATION, F_FILE_NAME, F_FILE_PATH, F_FQDN, F_HOSTNAME, F_INDICATOR, F_IPV4, F_MAC_ADDRESS, F_MD5, F_MESSAGE_ID, F_SHA256, F_SNORT_SIGNATURE, F_TEST, F_URL, F_USER, F_YARA_RULE, create_email_delivery
+from saq.constants import DISPOSITION_DELIVERY, F_ASSET, F_EMAIL_ADDRESS, F_EMAIL_DELIVERY, F_FILE_LOCATION, F_FILE_NAME, F_FILE_PATH, F_FQDN, F_HOSTNAME, F_INDICATOR, F_IPV4, F_MAC_ADDRESS, F_MD5, F_MESSAGE_ID, F_SHA256, F_SNORT_SIGNATURE, F_TEST, F_URL, F_USER, F_YARA_RULE, create_email_delivery
 from saq.database import get_db
 from saq.observables import create_observable
 from tests.saq.helpers import create_root_analysis
@@ -41,7 +41,7 @@ def test_snort_signature_observable():
 def test_observable_expires_on(db_event):
     from saq.database import Alert, ALERT, Campaign, EventMapping, Observable, ObservableMapping, User, set_dispositions
 
-    get_config()['observable_expiration_mappings'][F_TEST] = '01:00:00:00'
+    get_config().observable_expiration_mappings[F_TEST] = '01:00:00:00'
 
     # Create an analysis that turns into an alert
     root = create_root_analysis(analysis_mode='test_single')
@@ -202,7 +202,7 @@ def test_file_type_observables():
     observable_2 = root.add_observable_by_spec(F_FILE_NAME, observable_1.file_name)
 
     # the second should NOT return the same object
-    assert not ( observable_1 is observable_2 )
+    assert observable_1 is not observable_2
 
 @pytest.mark.unit
 def test_ipv6_observable():

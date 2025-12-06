@@ -1,10 +1,8 @@
 import collections
 from contextlib import contextmanager
 from datetime import datetime
-import functools
 import logging
 import os
-import sys
 import threading
 from typing import Any, Callable
 import warnings
@@ -13,7 +11,6 @@ import pymysql
 from sqlalchemy import create_engine, event
 
 from saq.configuration.config import get_config
-from saq.error import report_exception
 from saq.monitor import emit_monitor
 from saq.monitor_definitions import MONITOR_DB_POOL_AVAILABLE_COUNT, MONITOR_DB_POOL_IN_USE_COUNT, MONITOR_SQLALCHEMY_DB_POOL_STATUS
 from saq.util import abs_path, create_timedelta
@@ -45,50 +42,49 @@ class _database_pool:
         # lock used to make changes to the queues
         self.lock = threading.RLock()
 
-        config_section = f'database_{name}'
-        section = get_config()[config_section]
+        self.database_config = get_config().get_database_config(name)
         kwargs: dict[str, Any] = {
-            'db': section['database'],
-            'user': section['username'],
-            'passwd': section['password'],
+            'db': self.database_config.database,
+            'user': self.database_config.username,
+            'passwd': self.database_config.password,
             'charset': 'utf8mb4',
         }
 
-        if 'max_allowed_packet' in section:
-            kwargs['max_allowed_packet'] = section.getint('max_allowed_packet')
+        if self.database_config.max_allowed_packet:
+            kwargs['max_allowed_packet'] = self.database_config.max_allowed_packet
 
-        if 'hostname' in section:
-            kwargs['host'] = section['hostname']
+        if self.database_config.hostname:
+            kwargs['host'] = self.database_config.hostname
 
-        if 'port' in section:
-            kwargs['port'] = section.getint('port')
-        
-        if 'unix_socket' in section:
-            kwargs['unix_socket'] = section['unix_socket']
+        if self.database_config.port:
+            kwargs['port'] = self.database_config.port
+
+        if self.database_config.unix_socket:
+            kwargs['unix_socket'] = self.database_config.unix_socket
 
         kwargs['init_command'] = 'SET NAMES utf8mb4'
 
-        if 'ssl_ca' in section or 'ssl_key' in section or 'ssl_cert' in section:
+        if self.database_config.ssl_ca or self.database_config.ssl_key or self.database_config.ssl_cert:
             kwargs['ssl'] = {}
 
-            if 'ssl_ca' in section and section['ssl_ca']:
-                path = abs_path(section['ssl_ca'])
+            if self.database_config.ssl_ca:
+                path = abs_path(self.database_config.ssl_ca)
                 if not os.path.exists(path):
-                    logging.error("ssl_ca file {} does not exist (specified in {})".format(path, config_section))
+                    logging.error("ssl_ca file {} does not exist (specified in {})".format(path, self.database_config.name))
                 else:
                     kwargs['ssl']['ca'] = path
 
-            if 'ssl_key' in section and section['ssl_key']:
-                path = abs_path(section['ssl_key'])
+            if self.database_config.ssl_key:
+                path = abs_path(self.database_config.ssl_key)
                 if not os.path.exists(path):
-                    logging.error("ssl_key file {} does not exist (specified in {})".format(path, config_section))
+                    logging.error("ssl_key file {} does not exist (specified in {})".format(path, self.database_config.name))
                 else:
                     kwargs['ssl']['key'] = path
 
-            if 'ssl_cert' in section and section['ssl_cert']:
-                path = section['ssl_cert']
+            if self.database_config.ssl_cert:
+                path = abs_path(self.database_config.ssl_cert)
                 if not os.path.exists(path):
-                    logging.error("ssl_cert file {} does not exist (specified in {})".format(path, config_section))
+                    logging.error("ssl_cert file {} does not exist (specified in {})".format(path, self.database_config.name))
                 else:
                     kwargs['ssl']['cert'] = path
 
@@ -188,7 +184,7 @@ class _database_pool:
         # keep track of when this connection should be invalidated
         setattr(connection,
                 'termination_date',
-                datetime.now() + create_timedelta(get_config()['database']['max_connection_lifetime']))
+                datetime.now() + create_timedelta(self.database_config.max_connection_lifetime))
 
         logging.debug(f"got new database connection to {self.name} ({len(self.in_use)} existing connections)")
         return connection
@@ -293,9 +289,9 @@ def initialize_database():
 
     if get_db() is None:
         engine = create_engine(
-            get_flask_config(get_config()['global']['instance_type']).SQLALCHEMY_DATABASE_URI, 
+            get_flask_config(get_config().global_settings.instance_type).SQLALCHEMY_DATABASE_URI, 
             isolation_level='READ COMMITTED',
-            **get_flask_config(get_config()['global']['instance_type']).SQLALCHEMY_DATABASE_OPTIONS)
+            **get_flask_config(get_config().global_settings.instance_type).SQLALCHEMY_DATABASE_OPTIONS)
 
         @event.listens_for(engine, 'connect')
         def connect(dbapi_connection, connection_record):

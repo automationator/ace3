@@ -1,18 +1,19 @@
 import pytest
 
-from saq.configuration.config import get_config
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_CRAWLPHISH
 from saq.crawlphish_filter import REASON_BLACKLISTED, REASON_COMMON_NETWORK, REASON_DIRECT_IPV4, REASON_OK, REASON_WHITELISTED, CrawlphishURLFilter
 
 @pytest.fixture(autouse=True, scope="function")
 def reset_crawlphish(tmpdir):
     whitelist_path = str(tmpdir / "test.whitelist")
-    get_config()['analysis_module_crawlphish']['whitelist_path'] = whitelist_path
+    get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH).whitelist_path = whitelist_path
 
     regex_path = str(tmpdir / "test.regex")
-    get_config()['analysis_module_crawlphish']['regex_path'] = regex_path
+    get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH).regex_path = regex_path
 
     blacklist_path = str(tmpdir / "test.blacklist")
-    get_config()['analysis_module_crawlphish']['blacklist_path'] = blacklist_path
+    get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH).blacklist_path = blacklist_path
 
     with open(blacklist_path, 'w') as fp:
         fp.write('10.0.0.0/8\n')

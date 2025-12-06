@@ -1,11 +1,14 @@
 import logging
 import re
 from subprocess import DEVNULL, PIPE, Popen
+from typing import Type
+from pydantic import Field
 from saq.analysis.analysis import Analysis
-from saq.configuration.config import get_config_value_as_list
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_DOMAINS, F_ASSET, F_FQDN, F_HOSTNAME, F_IPV4, G_DEFAULT_ENCODING, G_LOCAL_DOMAINS, AnalysisExecutionResult
+from saq.configuration.config import get_config
+from saq.constants import F_ASSET, F_FQDN, F_HOSTNAME, F_IPV4, G_DEFAULT_ENCODING, G_LOCAL_DOMAINS, AnalysisExecutionResult
 from saq.environment import g, g_list
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.util.strings import format_item_list_for_summary
 
 #(env)jdavison@NAKYLEXSEC101:~/saq$ dig -x 162.128.155.20
@@ -86,7 +89,13 @@ class DNSAnalysis(Analysis):
             self.dns_fqdn,
             format_item_list_for_summary(self.dns_ipv4))
 
+class DNSAnalyzerConfig(AnalysisModuleConfig):
+    ssh_host: str = Field(default="", description="If this is set then the command is prefixed with ssh ssh_host so that it executes from another system. Use this if you are in AWS and your target is inside target network.")
+
 class DNSAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return DNSAnalyzerConfig
 
     def verify_environment(self):
         self.verify_program_exists('dig')
@@ -134,7 +143,7 @@ class DNSAnalyzer(AnalysisModule):
         # if we have a hostname then we try all the local domains we know about as well
         if observable.type == F_HOSTNAME:
             for local_domain in g_list(G_LOCAL_DOMAINS):
-                for local_domain in get_config_value_as_list(CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_DOMAINS):
+                for local_domain in get_config().global_settings.local_domains:
                     target_queries.append(f'{observable.value}.{local_domain}')
 
         for target_query in target_queries:
@@ -142,8 +151,8 @@ class DNSAnalyzer(AnalysisModule):
             dig_process.append(target_query)
 
             # are we executing this from a host in a target network?
-            if self.config['ssh_host']:
-                dig_process.insert(0, self.config['ssh_host'])
+            if self.config.ssh_host:
+                dig_process.insert(0, self.config.ssh_host)
                 dig_process.insert(0, 'ssh')
 
             p = Popen(dig_process, stdout=PIPE, stderr=DEVNULL)

@@ -59,6 +59,6 @@ def index():
         url_histogram=create_histogram_string(event.all_url_domain_counts),
         urls='\n'.join(sorted(list(event.all_urls))),
         observables=event.all_observables_sorted,
-        closed_status=get_config()['events'].get('closed_status', fallback='CLOSED'),
+        closed_status=get_config().events.closed_status,
         comments=comments
     )

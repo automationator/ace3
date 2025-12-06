@@ -2,11 +2,13 @@ from datetime import datetime
 import logging
 import os
 from subprocess import PIPE, Popen
-from typing import Optional, override
+from typing import Optional, Type, override
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.analysis.observable import Observable
 from saq.constants import F_FILE, AnalysisExecutionResult
 from saq.modules.base_module import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.is_file_type import is_java_class_file
 from saq.observables.file import FileObservable
 
@@ -116,11 +118,18 @@ class JavaClassDecompilerAnalysis(Analysis):
         self.details[KEY_DECOMPILED_FILES] = value
 
 
+class JavaClassDecompilerConfig(AnalysisModuleConfig):
+    timeout: int = Field(default=30, description="The maximum amount of time (in seconds) to wait for the decompiler to complete.")
+
 class JavaClassDecompilerAnalysisModule(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return JavaClassDecompilerConfig
+
     @property
     def timeout(self):
         """The maximum amount of time (in seconds) to wait for the decompiler to complete."""
-        return self.config.getint("timeout", fallback=30)
+        return self.config.timeout
 
     @override
     @property

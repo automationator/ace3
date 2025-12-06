@@ -15,8 +15,8 @@ from typing import Optional
 
 from pymysql import IntegrityError
 
-from saq.configuration import get_config_value_as_str
-from saq.constants import CONFIG_EMAIL_ARCHIVE_MODULE, CONFIG_EMAIL_ARCHIVE_MODULE_DIR, DB_EMAIL_ARCHIVE, EMAIL_ARCHIVE_FIELD_MESSAGE_ID, EMAIL_ARCHIVE_FIELD_URL, G_EMAIL_ARCHIVE_SERVER_ID
+from saq.configuration.config import get_config
+from saq.constants import DB_EMAIL_ARCHIVE, EMAIL_ARCHIVE_FIELD_MESSAGE_ID, EMAIL_ARCHIVE_FIELD_URL, G_EMAIL_ARCHIVE_SERVER_ID
 from saq.crypto import decrypt, encrypt, is_encryption_initialized
 from saq.database import get_db_connection, execute_with_retry
 from saq.email import normalize_email_address, normalize_message_id
@@ -33,7 +33,7 @@ class EmailArchiveLocal(EmailArchiveInterface):
 
     def get_archive_dir(self) -> str:
         """Returns the relative path of the email archive directory (relative to get_data_dir())"""
-        return get_config_value_as_str(CONFIG_EMAIL_ARCHIVE_MODULE, CONFIG_EMAIL_ARCHIVE_MODULE_DIR)
+        return get_config().get_analysis_module_config('email_archiver').archive_dir
 
     def get_email_archive_dir(self) -> str:
         """Returns the full path to the email archive directory."""
@@ -226,7 +226,7 @@ class EmailArchiveLocal(EmailArchiveInterface):
         if not result:
             return None
 
-        return fully_qualified(result[0])
+        return result[0]
 
     def get_archived_email_path(self, message_id: str) -> Optional[str]:
         """Returns the local file path to the archive  email specified by message id.

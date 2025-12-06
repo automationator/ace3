@@ -2,11 +2,15 @@ import logging
 import os
 import re
 from subprocess import PIPE, Popen
+from typing import Type
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import DIRECTIVE_SANDBOX, F_FILE, AnalysisExecutionResult
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.observables.file import FileObservable
 from saq.util.filesystem import get_local_file_path
+from saq.environment import get_base_dir
 
 
 class SsdeepAnalysis(Analysis):
@@ -24,26 +28,37 @@ class SsdeepAnalysis(Analysis):
                 len(self.details['matches']), max([x['score'] for x in self.details['matches']]))
         return None
 
+class SsdeepAnalyzerConfig(AnalysisModuleConfig):
+    ssdeep_hashes: str = Field(..., description="The location of the ssdeep hashes to match against.")
+    maximum_size: int = Field(..., description="Maximum file size (in bytes).")
+    ssdeep_match_threshold: int = Field(..., description="Minimum matching threshold (in percent) before the file is tagged as ssdeep.")
+
 class SsdeepAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return SsdeepAnalyzerConfig
 
     def verify_environment(self):
-        self.verify_config_exists('ssdeep_hashes')
-        self.verify_path_exists(self.config['ssdeep_hashes'])
-        self.verify_config_exists('maximum_size')
-        self.verify_config_exists('ssdeep_match_threshold')
+        ssdeep_path = self.ssdeep_hashes
+        if not os.path.isabs(ssdeep_path):
+            ssdeep_path = os.path.join(get_base_dir(), ssdeep_path)
+        self.verify_path_exists(ssdeep_path)
         self.verify_program_exists('ssdeep')
 
     @property
     def ssdeep_hashes(self):
-        return self.config['ssdeep_hashes']
+        path = self.config.ssdeep_hashes
+        if os.path.isabs(path):
+            return path
+        return os.path.join(get_base_dir(), path)
 
     @property
     def maximum_size(self):
-        return self.config.getint('maximum_size')
+        return self.config.maximum_size
 
     @property
     def ssdeep_match_threshold(self):
-        return self.config.getint('ssdeep_match_threshold')
+        return self.config.ssdeep_match_threshold
 
     @property
     def generated_analysis_type(self):

@@ -5,12 +5,15 @@ import re
 import shutil
 import socket
 from subprocess import PIPE, Popen
+from typing import Type
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import DIRECTIVE_ARCHIVE, F_FILE, AnalysisExecutionResult
 from saq.crypto import encrypt
 from saq.environment import get_data_dir
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.email.constants import KEY_ENVELOPES, KEY_ENVELOPES_MAIL_FROM, KEY_ENVELOPES_RCPT_TO, KEY_SMTP_FILES
 from saq.observables.file import FileObservable
 
@@ -22,6 +25,13 @@ pattern_brotex_stream = re.compile(
 r'^_[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]{1,5}'
 '-'
 r'[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]{1,5}_\.stream$')
+
+
+class BrotexSMTPStreamArchiveConfig(AnalysisModuleConfig):
+    archive_dir: str = Field(..., description="The directory to contain the archived streams (relative to DATA_DIR).")
+
+class SMTPStreamAnalyzerConfig(AnalysisModuleConfig):
+    protocol_scan_line_count: int = Field(..., description="The number of lines to scan at the beginning of the file to detect SMTP protocol data.")
 
 
 class BrotexSMTPStreamArchiveResults(Analysis):
@@ -46,13 +56,16 @@ class BrotexSMTPStreamArchiveResults(Analysis):
         return "Archive Path - {}".format(self.archive_path)
 
 class BrotexSMTPStreamArchiveAction(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return BrotexSMTPStreamArchiveConfig
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.hostname = socket.gethostname().lower()
 
     def verify_environment(self):
-        self.verify_config_exists('archive_dir')
-        self.verify_path_exists(self.config['archive_dir'])
+        self.verify_path_exists(self.config.archive_dir)
 
     @property
     def generated_analysis_type(self):
@@ -78,7 +91,7 @@ class BrotexSMTPStreamArchiveAction(AnalysisModule):
         logging.debug("archiving bro smtp connection {} from {}".format(connection_id, _file))
 
         # where do we put the file?
-        archive_dir = os.path.join(get_data_dir(), self.config['archive_dir'], self.hostname, connection_id[0:3])
+        archive_dir = os.path.join(get_data_dir(), self.config.archive_dir, self.hostname, connection_id[0:3])
         if not os.path.isdir(archive_dir):
             logging.debug("creating archive directory {}".format(archive_dir))
 
@@ -389,8 +402,9 @@ class SMTPStreamAnalysis(Analysis):
 
 class SMTPStreamAnalyzer(AnalysisModule):
     """Parses SMTP protocol traffic for RFC 822 messages."""
-    def verify_environment(self):
-        self.verify_config_exists('protocol_scan_line_count')
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return SMTPStreamAnalyzerConfig
 
     @property
     def generated_analysis_type(self):
@@ -420,7 +434,7 @@ class SMTPStreamAnalyzer(AnalysisModule):
 
         # read the first N lines looking for required SMTP protocol data
         with open(_path, 'rb') as fp:
-            while line_number < self.config.getint('protocol_scan_line_count'):
+            while line_number < self.config.protocol_scan_line_count:
                 line = fp.readline()
                 has_mail_from |= line.startswith(b'MAIL FROM:')
                 has_rcpt_to |= line.startswith(b'RCPT TO:')

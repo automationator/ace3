@@ -1,5 +1,4 @@
-from saq.configuration.config import get_config_value_as_str
-from saq.constants import CONFIG_TAG_CSS_CLASS, CONFIG_TAGS
+from saq.configuration.config import get_config
 
 
 def human_readable_size(size):
@@ -48,6 +47,6 @@ def create_histogram_string(data):
 
 def get_tag_css_class(tag):
     try:
-        return get_config_value_as_str(CONFIG_TAG_CSS_CLASS, get_config_value_as_str(CONFIG_TAGS, tag))
-    except:
+        return get_config().tag_css_class.get(tag, 'label-default')
+    except Exception:
         return 'label-default'

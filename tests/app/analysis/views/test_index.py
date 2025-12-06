@@ -4,7 +4,8 @@ from flask import url_for
 import pytest
 
 from saq.analysis.module_path import MODULE_PATH
-from saq.constants import F_TEST
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_BASIC_TEST, F_TEST
 from saq.database.model import Alert
 from saq.database.util.alert import ALERT
 from saq.observables.testing import TestObservable
@@ -24,7 +25,9 @@ def test_index(web_client, root_analysis, api_server, test_context):
 
     from saq.modules.test import BasicTestAnalyzer, BasicTestAnalysis
     from saq.modules.context import AnalysisModuleContext
-    analyzer = AnalysisModuleAdapter(BasicTestAnalyzer(context=test_context))
+    analyzer = AnalysisModuleAdapter(BasicTestAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_BASIC_TEST)))
     context = AnalysisModuleContext(root=root_analysis)
     analyzer.set_context(context)
     analyzer.execute_analysis(test_observable)
@@ -217,7 +220,9 @@ class TestIndexHelperFunctions:
         
         # Add test observable and analysis
         test_observable = root_analysis.add_observable_by_spec(F_TEST, "recurse_test")
-        analyzer = AnalysisModuleAdapter(BasicTestAnalyzer(context=test_context))
+        analyzer = AnalysisModuleAdapter(BasicTestAnalyzer(
+            context=test_context,
+            config=get_analysis_module_config(ANALYSIS_MODULE_BASIC_TEST)))
         context = AnalysisModuleContext(root=root_analysis)
         analyzer.set_context(context)
         analyzer.execute_analysis(test_observable)
@@ -276,7 +281,9 @@ class TestIndexHelperFunctions:
         
         # Create a tree with analysis
         test_observable = root_analysis.add_observable_by_spec(F_TEST, "prune_test")
-        analyzer = AnalysisModuleAdapter(BasicTestAnalyzer(context=test_context))
+        analyzer = AnalysisModuleAdapter(BasicTestAnalyzer(
+            context=test_context,
+            config=get_analysis_module_config(ANALYSIS_MODULE_BASIC_TEST)))
         context = AnalysisModuleContext(root=root_analysis)
         analyzer.set_context(context)
         analyzer.execute_analysis(test_observable)
@@ -357,7 +364,9 @@ def test_index_with_observable_and_module_path(web_client, root_analysis, test_c
     
     # Add test observable and analysis
     test_observable = root_analysis.add_observable_by_spec(F_TEST, "test_1")
-    analyzer = AnalysisModuleAdapter(BasicTestAnalyzer(context=test_context))
+    analyzer = AnalysisModuleAdapter(BasicTestAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_BASIC_TEST)))
     context = AnalysisModuleContext(root=root_analysis)
     analyzer.set_context(context)
     analyzer.execute_analysis(test_observable)
@@ -434,7 +443,9 @@ def test_index_tree_display_logic(web_client, root_analysis, test_context):
     
     # Add some observables to create a tree
     test_observable = root_analysis.add_observable_by_spec(F_TEST, "tree_test")
-    analyzer = AnalysisModuleAdapter(BasicTestAnalyzer(context=test_context))
+    analyzer = AnalysisModuleAdapter(BasicTestAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_BASIC_TEST)))
     context = AnalysisModuleContext(root=root_analysis)
     analyzer.set_context(context)
     analyzer.execute_analysis(test_observable)

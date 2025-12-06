@@ -5,8 +5,7 @@ Configuration management for the analysis engine.
 import logging
 from typing import Optional, Set, Union
 
-from saq.configuration.config import get_config, get_config_value_as_boolean
-from saq.constants import CONFIG_DISABLED_MODULES
+from saq.configuration.config import get_analysis_module_config, get_config
 from saq.engine.engine_configuration import EngineConfiguration
 from saq.engine.module_loader import ModuleLoader
 from saq.modules.interfaces import AnalysisModuleInterface
@@ -64,18 +63,18 @@ class ConfigurationManager:
         """Get an analysis module by its name (config section name)."""
         return self.analysis_module_name_mapping.get(name)
     
-    def enable_module(self, config_section_name: str, analysis_mode: Union[str, list[str], None] = None):
+    def enable_module(self, analysis_module_name: str, analysis_mode: Union[str, list[str], None] = None):
         """Enable a specific module for local testing.
         
         Args:
-            config_section_name: Configuration section name of the module
+            analysis_module_name: Analysis module name
             analysis_mode: Analysis mode(s) to map the module to
         """
-        if get_config_value_as_boolean(CONFIG_DISABLED_MODULES, config_section_name, default=False):
-            logging.info(f"skipping disabled module {config_section_name}")
+        if analysis_module_name in get_config().disabled_modules:
+            logging.info(f"skipping disabled module {analysis_module_name}")
             return
         
-        self.locally_enabled_modules.append(config_section_name)
+        self.locally_enabled_modules.append(analysis_module_name)
         
         if analysis_mode is not None:
             if isinstance(analysis_mode, str):
@@ -86,7 +85,7 @@ class ConfigurationManager:
             for mode in analysis_modes:
                 if mode not in self.locally_mapped_analysis_modes:
                     self.locally_mapped_analysis_modes[mode] = set()
-                self.locally_mapped_analysis_modes[mode].add(config_section_name)
+                self.locally_mapped_analysis_modes[mode].add(analysis_module_name)
         
         # Update module loader with new local settings
         self.module_loader = ModuleLoader(
@@ -120,15 +119,18 @@ class ConfigurationManager:
             raise e
         
         # Get module configuration
-        module_config = self._get_analysis_module_config(analysis_module)
+        module_config = analysis_module.config
+
+        #module_config = self._get_analysis_module_config(analysis_module)
         if module_config is None:
             logging.error(f"unable to find configuration for analysis module {analysis_module}")
             return
-        section = module_config.name
+
+        analysis_module_name = module_config.name
         
         # Store the module
         self.analysis_modules.append(analysis_module)
-        self.analysis_module_name_mapping[section] = analysis_module
+        self.analysis_module_name_mapping[analysis_module_name] = analysis_module
         
         # Map to analysis modes
         for mode in analysis_modes:
@@ -138,11 +140,11 @@ class ConfigurationManager:
             if analysis_module not in self.analysis_mode_mapping[mode]:
                 self.analysis_mode_mapping[mode].append(analysis_module)
         
-        logging.info(f"loaded analysis module {analysis_module} section {section}")
+        logging.info(f"loaded analysis module {analysis_module} name {analysis_module_name}")
     
     def _get_analysis_module_config(self, module: AnalysisModuleInterface):
         """Get the configuration section for an analysis module."""
-        return get_analysis_module_config(module)
+        return get_analysis_module_config(module.name)
     
     def load_modules(self) -> None:
         """Load all configured analysis modules and build the analysis mode mapping."""
@@ -154,6 +156,13 @@ class ConfigurationManager:
         # Add each loaded module to our configuration
         for section_name, (module, analysis_modes) in loaded_modules.items():
             self.add_analysis_module(module, analysis_modes)
+        
+        # Ensure all supported analysis modes have entries in the mapping, even if they have no modules
+        for analysis_mode_config in get_config().analysis_modes:
+            analysis_mode = analysis_mode_config.name
+            if self.is_analysis_mode_supported(analysis_mode):
+                if analysis_mode not in self.analysis_mode_mapping:
+                    self.analysis_mode_mapping[analysis_mode] = []
     
     def get_analysis_modules_by_mode(self, analysis_mode: Optional[str]=None) -> list[AnalysisModuleInterface]:
         """Get analysis modules for a specific analysis mode, sorted by config section name."""
@@ -166,32 +175,8 @@ class ConfigurationManager:
                 logging.warning(f"invalid analysis mode {analysis_mode} - defaulting to {self.config.default_analysis_mode}")
                 result = self.analysis_mode_mapping[self.config.default_analysis_mode]
         
-        return sorted(result, key=lambda x: x.config_section_name)
+        return sorted(result, key=lambda x: x.config.name)
     
-    def get_analysis_module_by_id(self, module_id: str) -> Optional[AnalysisModuleInterface]:
-        """Get an analysis module by its ID."""
-        for analysis_module in self.analysis_modules:
-            if analysis_module.module_id == module_id:
-                return analysis_module
-        return None
-    
-    def is_module_enabled(self, module_id: str) -> bool:
+    def is_module_enabled(self, module_name: str) -> bool:
         """Check if a module is enabled by its ID."""
-        return self.get_analysis_module_by_id(module_id) is not None 
-
-
-# This function has been moved to ConfigurationManager._get_analysis_module_config
-# Keeping this for backwards compatibility during transition
-def get_analysis_module_config(module: AnalysisModuleInterface):
-    assert isinstance(module, AnalysisModuleInterface)
-
-    for section_name in get_config().sections():
-        if section_name.startswith("analysis_module_"):
-            module_name = get_config()[section_name].get("module")
-            class_name = get_config()[section_name].get("class")
-            instance_name = get_config()[section_name].get("instance")
-            if module.matches_module_spec(module_name or "", class_name or "", instance_name):
-                return get_config()[section_name]
-
-    logging.error(f"analysis module {module} not found in config")
-    return None
+        return self.get_analysis_module_by_name(module_name) is not None 

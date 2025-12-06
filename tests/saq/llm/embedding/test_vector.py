@@ -5,7 +5,9 @@ from unittest.mock import Mock, patch
 
 from qdrant_client.models import UpdateStatus, VectorParams, Distance, PointStruct
 
-from saq.constants import ANALYSIS_MODE_ANALYSIS
+from saq.configuration import get_config
+from saq.configuration.config import get_service_config
+from saq.constants import ANALYSIS_MODE_ANALYSIS, SERVICE_LLM_EMBEDDING
 from saq.database.util.alert import ALERT
 from tests.saq.helpers import create_root_analysis
 import saq.llm.embedding.vector as vector_module
@@ -47,17 +49,9 @@ def mock_load_model(monkeypatch):
 @pytest.fixture
 def mock_config(monkeypatch):
     """Mock configuration values."""
-    config_values = {
-        ("llm", "embedding_model"): "test-model",
-        ("qdrant", "collection_alerts"): "test-collection",
-        ("qdrant", "url"): "http://localhost:6333"
-    }
-
-    def mock_get_config_value_as_str(section, key):
-        return config_values.get((section, key), "default_value")
-
-    monkeypatch.setattr("saq.llm.embedding.vector.get_config_value_as_str", mock_get_config_value_as_str)
-    return config_values
+    monkeypatch.setattr(get_config().llm, "embedding_model", "test-model")
+    monkeypatch.setattr(get_config().qdrant, "collection_alerts", "test-collection")
+    monkeypatch.setattr(get_config().qdrant, "url", "http://localhost:6333")
 
 
 @pytest.fixture

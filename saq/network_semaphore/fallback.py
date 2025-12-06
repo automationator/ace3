@@ -3,8 +3,8 @@
 import logging
 from threading import RLock
 from typing import Optional
-from saq.configuration.config import get_config, get_config_value_as_int
-from saq.constants import CONFIG_NETWORK_SEMAPHORE
+from saq.configuration.config import get_config, get_service_config
+from saq.constants import SERVICE_NETWORK_SEMAPHORE
 from saq.network_semaphore.logging import LoggingSemaphore
 
 
@@ -67,16 +67,5 @@ def initialize_fallback_semaphores(force: Optional[bool]=False):
 
     # we need some fallback functionality for when the network semaphore server is down
     # these semaphores serve that purpose
-    for key in get_config()[CONFIG_NETWORK_SEMAPHORE].keys():
-        if key.startswith('semaphore_'):
-            semaphore_name = key[len('semaphore_'):]
-            # the configuration settings for the network semaphore specify how many connections
-            # are allowed to a specific resource at once, globally
-            # so if we unable to coordinate globally, the fall back is to divide the available
-            # number of resources between all the engines evenly
-            # that's what this next equation is for
-            fallback_limit = get_config_value_as_int(CONFIG_NETWORK_SEMAPHORE, key)
-            if fallback_limit < 1:
-                fallback_limit = 1
-
-            defined_fallback_semaphores[semaphore_name] = LoggingSemaphore(fallback_limit)
+    for name, limit in get_service_config(SERVICE_NETWORK_SEMAPHORE).semaphore_capacity_limits.items():
+        defined_fallback_semaphores[name] = LoggingSemaphore(limit)

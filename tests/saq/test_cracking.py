@@ -1,7 +1,6 @@
 import os
 import pytest
 import tempfile
-from pathlib import Path
 
 from saq.cracking import generate_wordlist, crack_password
 

@@ -6,14 +6,17 @@ import os
 from queue import Empty, Queue
 import threading
 import time
-from typing import Generator, Optional
+from typing import Generator, Optional, Type
 from uuid import uuid4
+
+from pydantic import Field
 
 from saq.analysis.root import RootAnalysis, Submission
 from saq.collectors.base_collector import Collector, CollectorService
 from saq.collectors.collector_configuration import CollectorServiceConfiguration
-from saq.configuration.config import get_config, get_config_value_as_str, get_config_value_as_boolean, get_config_value_as_int
-from saq.constants import ANALYSIS_MODE_EMAIL, ANALYSIS_TYPE_MAILBOX, CONFIG_JOURNAL_EMAIL_COLLECTOR, CONFIG_JOURNAL_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_CHECK_FREQUENCY, CONFIG_JOURNAL_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_PATH, CONFIG_JOURNAL_EMAIL_COLLECTOR_DELETE_S3_OBJECTS, CONFIG_RABBITMQ, CONFIG_RABBITMQ_HOST, CONFIG_RABBITMQ_PASSWORD, CONFIG_RABBITMQ_PORT, CONFIG_RABBITMQ_USER, DIRECTIVE_ARCHIVE, DIRECTIVE_NO_SCAN, DIRECTIVE_ORIGINAL_EMAIL, G_TEMP_DIR
+from saq.configuration.config import get_config, get_service_config
+from saq.configuration.schema import ServiceConfig
+from saq.constants import ANALYSIS_MODE_EMAIL, ANALYSIS_TYPE_MAILBOX, DIRECTIVE_ARCHIVE, DIRECTIVE_NO_SCAN, DIRECTIVE_ORIGINAL_EMAIL, G_TEMP_DIR, SERVICE_JOURNAL_EMAIL_COLLECTOR
 from saq.environment import g
 from saq.error.reporting import report_exception
 from saq.storage.minio import get_minio_client
@@ -32,11 +35,16 @@ class JournalEmailMessageLocation:
     object_size: int
     event_time: str
 
+class JournalEmailCollectorConfig(CollectorServiceConfiguration):
+    blacklist_yara_rule_path: str = Field(..., description="The path to the yara rule for blacklisting emails.")
+    blacklist_yara_rule_check_frequency: int = Field(..., description="The frequency of checking the blacklist yara rule in seconds.")
+    delete_s3_objects: bool = Field(..., description="Whether to delete s3 objects after collection.")
+
 class JournalEmailCollectorService(CollectorService):
     """Service for collecting journal emails from an S3 bucket."""
 
     def __init__(self, *args, **kwargs):
-        super().__init__(collector=JournalEmailCollector(), config=CollectorServiceConfiguration.from_config(get_config()[CONFIG_JOURNAL_EMAIL_COLLECTOR]), *args, **kwargs)
+        super().__init__(collector=JournalEmailCollector(), config=get_service_config(SERVICE_JOURNAL_EMAIL_COLLECTOR), *args, **kwargs)
 
         # extra thread dedicated to consuming messages from the journal queue
         self.consumer_thread: threading.Thread
@@ -61,6 +69,10 @@ class JournalEmailCollectorService(CollectorService):
         self.consumer_thread.join()
         super().wait()
 
+    @classmethod
+    def get_config_class(cls) -> Type[ServiceConfig]:
+        return JournalEmailCollectorConfig
+
 
 class JournalEmailCollector(Collector):
     def __init__(self, *args, **kwargs):
@@ -78,10 +90,10 @@ class JournalEmailCollector(Collector):
         self.client: Minio = get_minio_client()
 
         # inbound emails are scanned by this yara context to support node assignment
-        self.blacklist_yara_rule_path: str = get_config_value_as_str(CONFIG_JOURNAL_EMAIL_COLLECTOR, CONFIG_JOURNAL_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_PATH)
+        self.blacklist_yara_rule_path: str = get_service_config(SERVICE_JOURNAL_EMAIL_COLLECTOR).blacklist_yara_rule_path
 
         # check every N seconds to see if the blacklist yara rule has changed
-        self.blacklist_yara_rule_check_frequency: int = get_config_value_as_int(CONFIG_JOURNAL_EMAIL_COLLECTOR, CONFIG_JOURNAL_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_CHECK_FREQUENCY)
+        self.blacklist_yara_rule_check_frequency: int = get_service_config(SERVICE_JOURNAL_EMAIL_COLLECTOR).blacklist_yara_rule_check_frequency
         self.blacklist_yara_rule_last_check: datetime = local_time()
         self.blacklist_yara_rule_last_mtime: int = 0
 
@@ -93,12 +105,12 @@ class JournalEmailCollector(Collector):
 
     def connect(self) -> bool:
         credentials = pika.PlainCredentials(
-            get_config_value_as_str(CONFIG_RABBITMQ, CONFIG_RABBITMQ_USER), 
-            get_config_value_as_str(CONFIG_RABBITMQ, CONFIG_RABBITMQ_PASSWORD))
+            get_config().rabbitmq.username,
+            get_config().rabbitmq.password)
 
         parameters = pika.ConnectionParameters(
-            host=get_config_value_as_str(CONFIG_RABBITMQ, CONFIG_RABBITMQ_HOST),
-            port=get_config_value_as_str(CONFIG_RABBITMQ, CONFIG_RABBITMQ_PORT),
+            host=get_config().rabbitmq.host,
+            port=get_config().rabbitmq.port,
             credentials=credentials)
 
         self.connection = pika.BlockingConnection(parameters)
@@ -272,7 +284,7 @@ class JournalEmailCollector(Collector):
             yield Submission(root, key=journal_email_message_location.object_key)
 
             logging.info(f"collected {journal_email_message_location.object_key}")
-            if get_config_value_as_boolean(CONFIG_JOURNAL_EMAIL_COLLECTOR, CONFIG_JOURNAL_EMAIL_COLLECTOR_DELETE_S3_OBJECTS):
+            if get_service_config(SERVICE_JOURNAL_EMAIL_COLLECTOR).delete_s3_objects:
                 try:
                     self.client.remove_object(journal_email_message_location.bucket_name, journal_email_message_location.object_key)
                     logging.info(f"deleted {journal_email_message_location.object_key}")

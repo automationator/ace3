@@ -1,15 +1,22 @@
 import asyncio
 import signal
-from saq.configuration.config import get_config_value_as_str
-from saq.constants import CONFIG_SERVICE_CRON, CONFIG_SERVICE_CRON_CONFIG
+from typing import Type
+
+from pydantic import Field
+from saq.configuration.config import get_service_config
+from saq.configuration.schema import ServiceConfig
+from saq.constants import SERVICE_CRON
 from saq.service import ACEServiceInterface
 
 from yacron.cron import Cron
 
+class ACECronConfig(ServiceConfig):
+    cron_config_path: str = Field(..., description="the path to the cron configuration file")
+
 
 class ACECronService(ACEServiceInterface):
     def start(self):
-        cron = Cron(get_config_value_as_str(CONFIG_SERVICE_CRON, CONFIG_SERVICE_CRON_CONFIG))
+        cron = Cron(get_service_config(SERVICE_CRON).cron_config_path)
         loop = asyncio.get_event_loop()
         loop.add_signal_handler(signal.SIGINT, cron.signal_shutdown)
         loop.add_signal_handler(signal.SIGTERM, cron.signal_shutdown)
@@ -30,3 +37,7 @@ class ACECronService(ACEServiceInterface):
 
     def wait(self):
         pass
+
+    @classmethod
+    def get_config_class(cls) -> Type[ServiceConfig]:
+        return ACECronConfig

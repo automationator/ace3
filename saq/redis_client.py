@@ -1,45 +1,40 @@
+from typing import Optional
 from saq.configuration.config import (
-    config_section_exists,
-    get_config_value_as_str,
-    get_config_value_as_boolean,
-    get_config_value_as_int,
+    get_config,
 )
 
-from saq.constants import (
-    CONFIG_REDIS,
-    CONFIG_REDIS_HOST,
-    CONFIG_REDIS_PASSWORD,
-    CONFIG_REDIS_PORT,
-    CONFIG_REDIS_SSL_CA_PATH,
-    CONFIG_REDIS_USE_SSL,
-    CONFIG_REDIS_USERNAME,
-)
 
 import redis
 
 
-def get_redis_connection(database: int, config_section: str = CONFIG_REDIS) -> redis.Redis:
+def get_redis_connection(database: int, config_name: Optional[str] = None) -> redis.Redis:
 
-    if not config_section_exists(config_section):
-        raise RuntimeError(f"unknown redis configuration section {config_section}")
+    # right now there are only two redis configurations
+    if config_name is None:
+        config_name = "default"
+
+    assert config_name in ["default", "local"]
+
+    if config_name == "default":
+        redis_config = get_config().redis
+    else:
+        redis_config = get_config().redis_local
 
     kwargs = {
-        "host": get_config_value_as_str(config_section, CONFIG_REDIS_HOST),
-        "port": get_config_value_as_int(config_section, CONFIG_REDIS_PORT),
-        "username": get_config_value_as_str(config_section, CONFIG_REDIS_USERNAME),
-        "password": get_config_value_as_str(config_section, CONFIG_REDIS_PASSWORD),
+        "host": redis_config.host,
+        "port": redis_config.port,
+        "username": redis_config.username,
+        "password": redis_config.password,
         "db": database,
         "decode_responses": True,
         "encoding": "utf-8",
         "health_check_interval": 30,
     }
 
-    if get_config_value_as_boolean(config_section, CONFIG_REDIS_USE_SSL, False):
+    if redis_config.use_ssl:
         kwargs["ssl"] = True
 
-    if get_config_value_as_str(config_section, CONFIG_REDIS_SSL_CA_PATH):
-        kwargs["ssl_ca_path"] = get_config_value_as_str(
-            config_section, CONFIG_REDIS_SSL_CA_PATH
-        )
+    if redis_config.ssl_ca_path:
+        kwargs["ssl_ca_path"] = redis_config.ssl_ca_path
 
     return redis.Redis(**kwargs)

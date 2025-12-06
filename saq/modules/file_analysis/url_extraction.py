@@ -1,11 +1,13 @@
 import logging
 import os
-from typing import override
+from typing import Type, override
 from urllib.parse import urlparse
+from pydantic import Field
 from tld import get_tld
 from saq.analysis.analysis import Analysis
 from saq.constants import DIRECTIVE_CRAWL, DIRECTIVE_CRAWL_EXTRACTED_URLS, DIRECTIVE_EXTRACT_URLS, DIRECTIVE_EXTRACT_URLS_DOMAIN_AS_URL, F_FILE, F_URL, R_DOWNLOADED_FROM, AnalysisExecutionResult
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.observables.file import FileObservable
 from saq.util.networking import is_subdomain
 
@@ -15,6 +17,11 @@ from saq.util.strings import format_item_list_for_summary
 
 
 KEY_URLS = "urls"
+
+class URLExtractionConfig(AnalysisModuleConfig):
+    max_file_size: int = Field(..., description="The maximum file size in bytes.")
+    max_extracted_urls: int = Field(..., description="The maximum number of urls to extract from a single file.")
+    excluded_domains: list[str] = Field(..., description="The list of FQDNs of urls to NOT extract (e.g., XML schema domains).")
 
 class URLExtractionAnalysis(Analysis):
     def __init__(self, *args, **kwargs):
@@ -53,6 +60,10 @@ class URLExtractionAnalysis(Analysis):
         return f"{self.display_name} ({format_item_list_for_summary(sorted(list(domains)))})"
 
 class URLExtractionAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return URLExtractionConfig
+
     @property
     def generated_analysis_type(self):
         return URLExtractionAnalysis
@@ -68,12 +79,12 @@ class URLExtractionAnalyzer(AnalysisModule):
     @property
     def max_file_size(self):
         """The max file size to extract URLs from (in bytes.)"""
-        return self.config.getint("max_file_size") * 1024 * 1024
+        return self.config.max_file_size * 1024 * 1024
 
     @property
     def max_extracted_urls(self):
         """The maximum number of urls to extract from a single file."""
-        return self.config.getint("max_extracted_urls")
+        return self.config.max_extracted_urls
 
     @staticmethod
     def order_urls_by_interest(extracted_urls):
@@ -124,7 +135,7 @@ class URLExtractionAnalyzer(AnalysisModule):
     def filter_excluded_domains(self, url):
 
         # filter out the stuff that is excluded via configuration
-        fqdns = [_.strip() for _ in self.config['excluded_domains']]
+        fqdns = [_.strip() for _ in self.config.excluded_domains]
 
         if not fqdns:
             return True

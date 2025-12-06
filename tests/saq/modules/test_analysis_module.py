@@ -4,11 +4,8 @@ import pytest
 from saq.analysis import Analysis, RootAnalysis
 from saq.configuration import get_config
 from saq.constants import F_TEST
-from saq.engine.core import Engine
 from saq.modules import AnalysisModule
-from saq.engine.adapter import EngineAdapter
-from saq.filesystem.adapter import FileSystemAdapter
-from saq.modules.context import AnalysisModuleContext
+from saq.modules.config import AnalysisModuleConfig
 from tests.saq.test_util import create_test_context
 
 def get_mock_config(config_data: dict):
@@ -17,11 +14,15 @@ def get_mock_config(config_data: dict):
 
 @pytest.mark.unit
 def test_accepts(monkeypatch, test_context):
-    get_config()["analysis_module_test"] = {
-        "module": "saq.modules.base_module",
-        "class": "AnalysisModule"
-    }
-    module = AnalysisModule(context=test_context)
+    module = AnalysisModule(
+        context=test_context,
+        config=AnalysisModuleConfig(
+            name="test",
+            python_module="saq.modules.base_module",
+            python_class="AnalysisModule",
+            enabled=True
+        )
+    )
     root = RootAnalysis()
     obs = root.add_observable_by_spec(F_TEST, "test")
 
@@ -41,25 +42,30 @@ def test_accepts(monkeypatch, test_context):
         def valid_observable_types(self):
             return F_TEST
 
-    get_config()["analysis_module_mock"] = {
-        "module": str(MockAnalysisModule.__module__),
-        "class": str(MockAnalysisModule.__name__)
-    }
-
     # requires detection path
-    get_config()["analysis_module_mock"]["requires_detection_path"] = True
-    module = MockAnalysisModule(context=test_context)
+    module_config = AnalysisModuleConfig(
+        name="test",
+        python_module="saq.modules.base_module",
+        python_class="AnalysisModule",
+        enabled=True,
+        requires_detection_path=True
+    )
+    module = MockAnalysisModule(context=test_context, config=module_config)
     assert not module.accepts(obs)
     obs.add_detection_point("test")
     assert module.accepts(obs)
 
 @pytest.mark.unit
 def test_invalid_alert_type(monkeypatch, test_context):
-    get_config()["analysis_module_test"] = {
-        "module": "saq.modules.base_module",
-        "class": "AnalysisModule"
-    }
-    module = AnalysisModule(context=test_context)
+    module = AnalysisModule(
+        context=test_context,
+        config=AnalysisModuleConfig(
+            name="test",
+            python_module="saq.modules.base_module",
+            python_class="AnalysisModule",
+            enabled=True
+        )
+    )
     root = RootAnalysis(alert_type="test")
     obs = root.add_observable_by_spec(F_TEST, "test")
 
@@ -79,20 +85,31 @@ def test_invalid_alert_type(monkeypatch, test_context):
         def valid_observable_types(self):
             return F_TEST
 
-    get_config()["analysis_module_mock"] = {
-        "module": str(MockAnalysisModule.__module__),
-        "class": str(MockAnalysisModule.__name__)
-    }
+    module_config = AnalysisModuleConfig(
+        name="test",
+        python_module="saq.modules.base_module",
+        python_class="AnalysisModule",
+        enabled=True
+    )
 
-    module = MockAnalysisModule(context=create_test_context(root=root))
+    module = MockAnalysisModule(
+        context=create_test_context(root=root),
+        config=module_config
+    )
     assert module.accepts(obs)
 
     # single invalid alert type
-    get_config()["analysis_module_mock"]["invalid_alert_types"] = "test"
-    module = MockAnalysisModule(context=create_test_context(root=root))
+    module_config.invalid_alert_types = ["test"]
+    module = MockAnalysisModule(
+        context=create_test_context(root=root),
+        config=module_config
+    )
     assert not module.accepts(obs)
 
     # multiple invalid alert types
-    get_config()["analysis_module_mock"]["invalid_alert_types"] = "blah,test"
-    module = MockAnalysisModule(context=create_test_context(root=root))
+    module_config.invalid_alert_types = ["blah", "test"]
+    module = MockAnalysisModule(
+        context=create_test_context(root=root),
+        config=module_config
+    )
     assert not module.accepts(obs)

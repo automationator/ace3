@@ -35,7 +35,7 @@
                 <div id="collapse_{{yara_result['rule']}}" class="panel-collapse collapse" role="tabpanel" aria-labelledby="heading_{{yara_result['rule']}}">
                     <div class="panel-body">
                         <ul class="list-group">
-                        {% if ace_config['gui'].getboolean('hide_intel') %}
+                        {% if ace_config.gui.hide_intel %}
                             <li class="list-group-item">Hidden from public view.</li>
                         {% else %}
                             {% if 'context' in yara_result %}

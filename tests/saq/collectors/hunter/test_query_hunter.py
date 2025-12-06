@@ -10,6 +10,7 @@ import yaml
 from saq.analysis.tag import Tag
 import saq.collectors.hunter.base_hunter as hunter_base
 import saq.collectors.hunter.query_hunter as query_hunter_module
+from saq.configuration.schema import HuntTypeConfig
 import saq.util.time as saq_time
 from saq.collectors.hunter import HuntManager, HunterService, read_persistence_data
 from saq.collectors.hunter.query_hunter import ObservableMapping, QueryHunt, QueryHuntConfig
@@ -85,7 +86,7 @@ def manager_kwargs(rules_dir):
              'rule_dirs': [ rules_dir ],
              'hunt_cls': TestQueryHunt,
              'concurrency_limit': 1,
-             'persistence_dir': os.path.join(get_data_dir(), get_config()['collection']['persistence_dir']),
+             'persistence_dir': os.path.join(get_data_dir(), get_config().collection.persistence_dir),
              'update_frequency': 60 ,
              'config': {}}
 
@@ -97,14 +98,15 @@ def rules_dir(tmpdir, datadir) -> str:
 
 @pytest.fixture(autouse=True, scope="function")
 def setup(rules_dir):
-    get_config().add_section('hunt_type_test_query')
-    s = get_config()['hunt_type_test_query']
-    s['module'] = 'tests.saq.collectors.hunter.test_query_hunter'
-    s['class'] = 'TestQueryHunt'
-    s['rule_dirs'] = rules_dir
-    s['hunt_type'] = 'test_query'
-    s['concurrency_limit'] = "1"
-    s['update_frequency'] = "60"
+    get_config().add_hunt_type_config("test_query",
+        HuntTypeConfig(
+            name='test_query',
+            python_module='tests.saq.collectors.hunter.test_query_hunter',
+            python_class='TestQueryHunt',
+            rule_dirs=[rules_dir],
+            update_frequency=60
+        )
+    )
 
     test_yaml_path = os.path.join(rules_dir, 'test_1.yaml')
     with open(test_yaml_path, 'w') as fp:

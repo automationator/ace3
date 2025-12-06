@@ -4,8 +4,7 @@ import threading
 import uuid
 from typing import Optional
 
-from saq.configuration.config import get_config_value_as_int
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_LOCK_KEEPALIVE_FREQUENCY
+from saq.configuration.config import get_config
 from saq.engine.lock_manager.interface import LockManagerInterface
 from saq.error import report_exception
 
@@ -165,10 +164,7 @@ class LocalLockManager(LockManagerInterface):
         try:
             try:
                 keepalive_frequency = float(
-                    get_config_value_as_int(
-                        CONFIG_GLOBAL, 
-                        CONFIG_GLOBAL_LOCK_KEEPALIVE_FREQUENCY
-                    )
+                    get_config().global_settings.lock_keepalive_frequency
                 )
             except Exception:
                 # Default keepalive frequency of 10 seconds if config is not available

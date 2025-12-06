@@ -4,8 +4,8 @@ import uuid
 import pytest
 
 from saq.analysis.root import load_root
-from saq.configuration.config import get_config
-from saq.constants import DIRECTIVE_CRAWL, DIRECTIVE_CRAWL_EXTRACTED_URLS, DIRECTIVE_EXTRACT_URLS, DIRECTIVE_SANDBOX, F_FILE, F_URI_PATH, F_URL, F_YARA_RULE, R_EXTRACTED_FROM
+from saq.configuration.config import get_analysis_module_config, get_service_config
+from saq.constants import ANALYSIS_MODULE_OFFICEPARSER3, ANALYSIS_MODULE_OLEVBA_V1_2, ANALYSIS_MODULE_XML_PLAIN_TEXT_ANALYZER, ANALYSIS_MODULE_YARA_SCANNER_V3_4, DIRECTIVE_CRAWL, DIRECTIVE_CRAWL_EXTRACTED_URLS, DIRECTIVE_EXTRACT_URLS, DIRECTIVE_SANDBOX, F_FILE, F_URI_PATH, F_URL, F_YARA_RULE, R_EXTRACTED_FROM, SERVICE_YARA_SCANNER
 from saq.crypto import decrypt
 from saq.database.model import load_alert
 from saq.database.pool import get_db
@@ -32,10 +32,9 @@ from tests.saq.helpers import create_root_analysis, log_count
 UNITTEST_SOCKET_DIR = 'socket_unittest'
 
 @pytest.fixture(autouse=True, scope="function")
-def setup(datadir):
-    service_config = get_config()['service_yara']
-    service_config['socket_dir'] = UNITTEST_SOCKET_DIR
-    service_config['signature_dir'] = str(datadir / 'yara_rules')
+def setup(datadir, monkeypatch):
+    monkeypatch.setattr(get_service_config(SERVICE_YARA_SCANNER), "socket_dir", UNITTEST_SOCKET_DIR)  # noqa: F821
+    monkeypatch.setattr(get_service_config(SERVICE_YARA_SCANNER), "signature_dir", str(datadir / 'yara_rules'))
 
 @pytest.fixture
 def yss_server():
@@ -56,10 +55,10 @@ def test_file_analysis_000_url_extraction_001_pdfparser(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_pdf_analyzer', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_url_extraction', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_parse_url', 'test_groups')
+    engine.configuration_manager.enable_module('pdf_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('url_extraction', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
+    engine.configuration_manager.enable_module('parse_url', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -88,10 +87,10 @@ def test_file_analysis_000_url_extraction_002_gs(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_pdf_analyzer', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_url_extraction', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_parse_url', 'test_groups')
+    engine.configuration_manager.enable_module('pdf_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('url_extraction', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
+    engine.configuration_manager.enable_module('parse_url', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -163,8 +162,8 @@ def test_file_analysis_001_oletools_000(root_analysis, result_map, datadir):
         root_analysis.schedule()
 
         engine = Engine()
-        engine.configuration_manager.enable_module('analysis_module_olevba_v1_2', 'test_groups')
-        engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+        engine.configuration_manager.enable_module('olevba_v1_2', 'test_groups')
+        engine.configuration_manager.enable_module('file_type', 'test_groups')
         engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
         root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -187,8 +186,8 @@ def test_file_analysis_002_archive_000_zip(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     alert = load_alert(root_analysis.uuid)
@@ -212,8 +211,8 @@ def test_file_analysis_002_archive_001_rar(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     alert = load_alert(root_analysis.uuid)
@@ -241,8 +240,8 @@ def test_file_analysis_archive_skip_ole(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -261,8 +260,8 @@ def test_file_analysis_archive_malicious_msi(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -297,8 +296,8 @@ def test_file_analysis_archive_7z_under(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -320,8 +319,8 @@ def test_file_analysis_002_archive_002_ace(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     alert = load_alert(root_analysis.uuid)
@@ -343,8 +342,8 @@ def test_file_analysis_002_archive_003_jar(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -364,8 +363,8 @@ def test_file_analysis_002_archive_malicious_jar(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -384,8 +383,8 @@ def test_file_analysis_002_archive_004_jar(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -408,7 +407,7 @@ def test_file_analysis_004_yara_001_local_scan(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_yara_scanner_v3_4', 'test_groups')
+    engine.configuration_manager.enable_module('yara_scanner_v3_4', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     #assert log_count('with yss (matches found: True)') == 0
@@ -443,7 +442,7 @@ def test_file_analysis_004_yara_002_no_alert(yss_server, datadir):
     root.schedule()
 
     engine = Engine(config=EngineConfiguration(pool_size_limit=1))
-    engine.configuration_manager.enable_module('analysis_module_yara_scanner_v3_4', 'test_groups')
+    engine.configuration_manager.enable_module('yara_scanner_v3_4', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     #assert log_count('with yss (matches found: True)') == 1
@@ -474,7 +473,7 @@ def test_file_analysis_004_yara_003_directives(yss_server, datadir):
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_yara_scanner_v3_4', 'test_groups')
+    engine.configuration_manager.enable_module('yara_scanner_v3_4', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     #assert log_count('with yss (matches found: True)') == 1
@@ -510,7 +509,7 @@ def test_file_analysis_004_yara_004_directives_redirection(yss_server, root_anal
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_yara_scanner_v3_4', 'test_groups')
+    engine.configuration_manager.enable_module('yara_scanner_v3_4', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     #assert log_count('with yss (matches found: True)') == 1
@@ -540,7 +539,7 @@ def test_file_analysis_004_yara_006_whitelist(yss_server, root_analysis, datadir
     root_analysis.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_yara_scanner_v3_4', 'test_groups')
+    engine.configuration_manager.enable_module('yara_scanner_v3_4', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # scanned file /opt/saq/var/test/91b55d6f-fe82-4508-ac68-bbc519693d12/scan.target with yss (matches found: True)
@@ -568,7 +567,7 @@ def test_file_analysis_004_yara_007_qa_modifier(yss_server, root_analysis, datad
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_yara_scanner_v3_4', 'test_groups')
+    engine.configuration_manager.enable_module('yara_scanner_v3_4', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # scanned file /opt/saq/var/test/91b55d6f-fe82-4508-ac68-bbc519693d12/scan.target with yss (matches found: True)
@@ -586,7 +585,7 @@ def test_file_analysis_004_yara_007_qa_modifier(yss_server, root_analysis, datad
     # the yara rule should NOT have detections
     assert len(root_analysis.all_detection_points) == 0
     # there should be a file named after the md5 of the file
-    target_dir = os.path.join(get_data_dir(), get_config()['analysis_module_yara_scanner_v3_4']['qa_dir'])
+    target_dir = os.path.join(get_data_dir(), get_analysis_module_config(ANALYSIS_MODULE_YARA_SCANNER_V3_4).qa_dir)
     target_path = os.path.join(target_dir, 'test_qa_modifier', f"{_file.file_path}-{_file.sha256_hash}")
     assert os.path.exists(target_path)
     assert os.path.exists(f'{target_path}.json')
@@ -605,7 +604,7 @@ def test_file_analysis_004_yara_008_for_detection(yss_server, root_analysis, dat
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_yara_scanner_v3_4', 'test_groups')
+    engine.configuration_manager.enable_module('yara_scanner_v3_4', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     #assert log_count('with yss (matches found: True)') == 1
@@ -638,8 +637,8 @@ def test_file_analysis_005_pcode_000_extract_pcode(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_pcodedmp', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('pcodedmp', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -667,8 +666,8 @@ def test_file_analysis_005_office_file_archiver_000_archive(root_analysis, tmpdi
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_office_file_archiver', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('office_file_archiver', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -698,8 +697,8 @@ def test_file_analysis_005_office_file_archiver_000_archive(root_analysis, tmpdi
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_office_file_archiver', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('office_file_archiver', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -724,10 +723,10 @@ def test_file_analysis_006_extracted_ole_000_js(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_extracted_ole_analyzer', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_officeparser3', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('extracted_ole_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('officeparser3', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     alert = load_alert(root_analysis.uuid)
@@ -745,8 +744,8 @@ def test_open_office_extraction(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -768,9 +767,9 @@ def test_crawl_extracted_urls(yss_server, root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_yara_scanner_v3_4', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_url_extraction', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
+    engine.configuration_manager.enable_module('yara_scanner_v3_4', 'test_groups')
+    engine.configuration_manager.enable_module('url_extraction', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -800,10 +799,10 @@ def test_correlated_tag(yss_server, root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_correlated_tag_analyzer', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_yara_scanner_v3_4', 'test_groups')
+    engine.configuration_manager.enable_module('correlated_tag_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
+    engine.configuration_manager.enable_module('yara_scanner_v3_4', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should have an alert
@@ -823,7 +822,7 @@ def test_mhtml_analysis(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_mhtml', 'test_groups')
+    engine.configuration_manager.enable_module('mhtml', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -839,7 +838,7 @@ def test_mhtml_analysis(root_analysis):
 @pytest.mark.system
 def test_officeparser_macro_extraction(root_analysis, datadir):
 
-    get_config()['analysis_module_officeparser3']['merge_macros'] = False
+    get_analysis_module_config(ANALYSIS_MODULE_OFFICEPARSER3).merge_macros = False
 
     root_analysis.analysis_mode = "test_groups"
     _file = root_analysis.add_file_observable(str(datadir / "doc/DOC_PO_10142020EX.doc"))
@@ -847,9 +846,9 @@ def test_officeparser_macro_extraction(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_officeparser3', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('officeparser3', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -863,7 +862,7 @@ def test_officeparser_macro_extraction(root_analysis, datadir):
 @pytest.mark.integration
 def test_officeparser_macro_extraction_merged(root_analysis, datadir):
 
-    get_config()['analysis_module_officeparser3']['merge_macros'] = True
+    get_analysis_module_config(ANALYSIS_MODULE_OFFICEPARSER3).merge_macros = True
 
     root_analysis.analysis_mode = "test_groups"
     _file = root_analysis.add_file_observable(str(datadir / "doc/DOC_PO_10142020EX.doc"))
@@ -871,9 +870,9 @@ def test_officeparser_macro_extraction_merged(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_officeparser3', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('officeparser3', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -889,7 +888,7 @@ def test_officeparser_macro_extraction_merged(root_analysis, datadir):
 @pytest.mark.integration
 def test_olevba_macro_extraction(root_analysis, datadir):
 
-    get_config()['analysis_module_olevba_v1_2']['merge_macros'] = False
+    get_analysis_module_config(ANALYSIS_MODULE_OLEVBA_V1_2).merge_macros = False
 
     root_analysis.analysis_mode = "test_groups"
     _file = root_analysis.add_file_observable(str(datadir / "doc/DOC_PO_10142020EX.doc"))
@@ -897,10 +896,10 @@ def test_olevba_macro_extraction(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_olevba_v1_2', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_configuration_defined_tagging', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('olevba_v1_2', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
+    engine.configuration_manager.enable_module('configuration_defined_tagging', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     alert = load_alert(root_analysis.uuid)
@@ -914,7 +913,7 @@ def test_olevba_macro_extraction(root_analysis, datadir):
 @pytest.mark.integration
 def test_olevba_macro_extraction_merged(root_analysis, datadir):
 
-    get_config()['analysis_module_olevba_v1_2']['merge_macros'] = True
+    get_analysis_module_config(ANALYSIS_MODULE_OLEVBA_V1_2).merge_macros = True
 
     root_analysis.analysis_mode = "test_groups"
     _file = root_analysis.add_file_observable(str(datadir / "doc/DOC_PO_10142020EX.doc"))
@@ -922,10 +921,10 @@ def test_olevba_macro_extraction_merged(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_archive', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_olevba_v1_2', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_file_type', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_configuration_defined_tagging', 'test_groups')
+    engine.configuration_manager.enable_module('archive', 'test_groups')
+    engine.configuration_manager.enable_module('olevba_v1_2', 'test_groups')
+    engine.configuration_manager.enable_module('file_type', 'test_groups')
+    engine.configuration_manager.enable_module('configuration_defined_tagging', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     alert = load_alert(root_analysis.uuid)
@@ -947,7 +946,7 @@ def test_upx(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_upx', 'test_groups')
+    engine.configuration_manager.enable_module('upx', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -991,7 +990,7 @@ def test_xml_plain_text_analysis(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_xml_plain_text_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('xml_plain_text_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -1012,7 +1011,7 @@ def test_xml_plain_text_analysis(root_analysis):
 @pytest.mark.integration
 def test_xml_plain_text_analysis_file_too_large(root_analysis):
 
-    get_config()['analysis_module_xml_plain_text_analyzer']['maximum_size'] = 0
+    get_analysis_module_config(ANALYSIS_MODULE_XML_PLAIN_TEXT_ANALYZER).maximum_size = 0
 
     root_analysis.analysis_mode = "test_groups"
     target_path = root_analysis.create_file_path('test.xml')
@@ -1039,7 +1038,7 @@ def test_xml_plain_text_analysis_file_too_large(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_xml_plain_text_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('xml_plain_text_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))

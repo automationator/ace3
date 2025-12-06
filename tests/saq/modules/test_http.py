@@ -4,8 +4,8 @@ import pytest
 import pytz
 
 from saq.analysis.root import load_root
-from saq.configuration.config import get_config, get_config_value_as_str
-from saq.constants import ANALYSIS_MODE_HTTP, ANALYSIS_TYPE_BRO_HTTP, CONFIG_API, CONFIG_API_KEY, EVENT_TIME_FORMAT_JSON_TZ, F_FILE, F_FQDN, F_IPV4, F_IPV4_CONVERSATION, F_URL
+from saq.configuration.config import get_config
+from saq.constants import ANALYSIS_MODE_HTTP, ANALYSIS_TYPE_BRO_HTTP, EVENT_TIME_FORMAT_JSON_TZ, F_FILE, F_FQDN, F_IPV4, F_IPV4_CONVERSATION, F_URL
 from saq.engine.core import Engine
 from saq.engine.engine_configuration import EngineConfiguration
 from saq.engine.enums import EngineExecutionMode
@@ -39,7 +39,7 @@ def verify(root):
 
 @pytest.mark.integration
 def test_bro_http_analyzer(root_analysis, datadir):
-    get_config()['analysis_mode_http']['cleanup'] = False
+    get_config().get_analysis_mode_config(ANALYSIS_MODE_HTTP).cleanup = False
 
     root_analysis.alert_type = ANALYSIS_TYPE_BRO_HTTP
     root_analysis.analysis_mode = ANALYSIS_MODE_HTTP
@@ -54,7 +54,7 @@ def test_bro_http_analyzer(root_analysis, datadir):
     root_analysis.schedule()
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=[ANALYSIS_MODE_HTTP]))
-    engine.configuration_manager.enable_module('analysis_module_bro_http_analyzer', ANALYSIS_MODE_HTTP)
+    engine.configuration_manager.enable_module('bro_http_analyzer', ANALYSIS_MODE_HTTP)
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -63,7 +63,7 @@ def test_bro_http_analyzer(root_analysis, datadir):
 
 @pytest.mark.integration
 def test_bro_http_submission(test_client, datadir):
-    get_config()['analysis_mode_http']['cleanup'] = False
+    get_config().get_analysis_mode_config(ANALYSIS_MODE_HTTP).cleanup = False
 
     event_time = get_local_timezone().localize(datetime.now()).astimezone(pytz.UTC).strftime(EVENT_TIME_FORMAT_JSON_TZ)
 
@@ -104,7 +104,7 @@ def test_bro_http_submission(test_client, datadir):
                     (reply_fp, 'CZZiJd1zicZKNMMrV1.0.reply'),
                     (reply_entity_fp, 'CZZiJd1zicZKNMMrV1.0.reply.entity'),
                     (request_fp, 'CZZiJd1zicZKNMMrV1.0.request'), ],
-        }, content_type='multipart/form-data', headers = { 'x-ice-auth': get_config_value_as_str(CONFIG_API, CONFIG_API_KEY) })
+        }, content_type='multipart/form-data', headers = { 'x-ice-auth': get_config().api.api_key })
 
     ready_fp.close()
     reply_fp.close()
@@ -122,7 +122,7 @@ def test_bro_http_submission(test_client, datadir):
     # make sure we have a job ready
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=[ANALYSIS_MODE_HTTP]))
-    engine.configuration_manager.enable_module('analysis_module_bro_http_analyzer', ANALYSIS_MODE_HTTP)
+    engine.configuration_manager.enable_module('bro_http_analyzer', ANALYSIS_MODE_HTTP)
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(uuid))

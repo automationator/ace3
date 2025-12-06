@@ -7,10 +7,10 @@ from subprocess import PIPE, Popen
 import pytest
 
 from saq.collectors.base_collector import CollectorExecutionMode
-from saq.collectors.email import EmailCollector
 from saq.collectors.email.scanner import EmailCollectorService
-from saq.configuration.config import get_config, get_config_value_as_str
-from saq.constants import ANALYSIS_MODE_EMAIL, CONFIG_EMAIL_COLLECTOR, CONFIG_EMAIL_COLLECTOR_ASSIGNMENT_YARA_RULE_PATH, CONFIG_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_PATH
+from saq.configuration.config import get_config, get_service_config
+from saq.configuration.schema import CollectionGroupConfig
+from saq.constants import ANALYSIS_MODE_EMAIL, SERVICE_EMAIL_COLLECTOR
 from saq.database.pool import get_db_connection
 from saq.engine.core import Engine
 from saq.engine.engine_configuration import EngineConfiguration
@@ -30,7 +30,7 @@ def test_startup():
     assert log_count('no work available') == 1
 
 def get_email_dir() -> str:
-    return os.path.join(get_data_dir(), get_config_value_as_str('email', 'email_dir'))
+    return os.path.join(get_data_dir(), get_config().email.email_dir)
 
 def submit_email(email_path: str):
     amc_mda_path = os.path.join(get_base_dir(), 'bin', 'amc_mda')
@@ -91,7 +91,7 @@ rule blacklist : blacklist {
 
     submit_email(str(datadir / 'pdf_attachment.email.rfc822'))
 
-    get_config()[CONFIG_EMAIL_COLLECTOR][CONFIG_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_PATH] = blacklist_yara_rule_path
+    get_service_config(SERVICE_EMAIL_COLLECTOR).blacklist_yara_rule_path = blacklist_yara_rule_path
     collector = EmailCollectorService()
     collector.load_groups()
     collector.start_single_threaded(execution_mode=CollectorExecutionMode.SINGLE_SHOT)
@@ -122,13 +122,8 @@ rule assignment: unittest {
     submit_email(str(datadir / 'pdf_attachment.email.rfc822'))
 
     # we add another node group for testing purposes
-    get_config()['collection_group_qa'] = {}
-    get_config()['collection_group_qa']['coverage'] = '100'
-    get_config()['collection_group_qa']['full_delivery'] = 'no'
-    get_config()['collection_group_qa']['database'] = 'ace_qa'
-    get_config()['collection_group_qa']['company_id'] = '1'
-
-    get_config()[CONFIG_EMAIL_COLLECTOR][CONFIG_EMAIL_COLLECTOR_ASSIGNMENT_YARA_RULE_PATH] = assignment_yara_rule_path
+    get_config().add_collection_group_config('qa', CollectionGroupConfig(name='qa', enabled=True, coverage=100, full_delivery=False, database='ace', company_id=1))
+    get_service_config(SERVICE_EMAIL_COLLECTOR).assignment_yara_rule_path = assignment_yara_rule_path
     collector = EmailCollectorService()
     collector.load_groups()
     collector.start_single_threaded(execution_mode=CollectorExecutionMode.SINGLE_SHOT)
@@ -156,8 +151,8 @@ def test_complete_processing(datadir):
     submit_email(str(datadir / 'pdf_attachment.email.rfc822'))
 
     engine = Engine(config=EngineConfiguration(pool_size_limit=1, local_analysis_modes=[ANALYSIS_MODE_EMAIL]))
-    engine.configuration_manager.enable_module('analysis_module_file_type')
-    engine.configuration_manager.enable_module('analysis_module_email_analyzer')
+    engine.configuration_manager.enable_module('file_type')
+    engine.configuration_manager.enable_module('email_analyzer')
     engine_process = engine.start_nonblocking()
     engine.wait_for_start()
 
@@ -190,8 +185,8 @@ def test_multiple_emails_complete_processing(datadir):
         submit_email(os.path.join(test_email_dir, email_file))
 
     engine = Engine(config=EngineConfiguration(pool_size_limit=1, local_analysis_modes=[ANALYSIS_MODE_EMAIL]))
-    engine.configuration_manager.enable_module('analysis_module_file_type')
-    engine.configuration_manager.enable_module('analysis_module_email_analyzer')
+    engine.configuration_manager.enable_module('file_type')
+    engine.configuration_manager.enable_module('email_analyzer')
     engine_process = engine.start_nonblocking()
     engine.wait_for_start()
 

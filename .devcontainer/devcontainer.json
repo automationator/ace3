@@ -26,13 +26,13 @@
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
 		"charliermarsh.ruff"
-	]
+	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
 	// Uncomment the next line if you want start specific services in your Docker Compose config.
-	// "runServices": [],
+	"runServices": ["dev", "ace-db", "minio"]
 
 	// Uncomment the next line if you want to keep your containers running after VS Code shuts down.
 	// "shutdownAction": "none",

@@ -1,9 +1,11 @@
 import logging
 import os
-from typing import Optional, override
+from typing import Optional, Type, override
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import DIRECTIVE_EXTRACT_URLS, DIRECTIVE_EXTRACT_URLS_DOMAIN_AS_URL, F_FILE, R_EXTRACTED_FROM, AnalysisExecutionResult
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.is_file_type import is_image
 from saq.observables.file import FileObservable
 from saq.ocr import get_binary_image, get_image_text, invert_image_color, is_dark, is_small, read_image, remove_line_wrapping, scale_image
@@ -51,7 +53,15 @@ class OCRAnalysis(Analysis):
 
         return self.display_name
 
+class OCRAnalyzerConfig(AnalysisModuleConfig):
+    omp_thread_limit: Optional[int] = Field(default=None, description="Control the number of threads tesseract uses.")
+    valid_analysis_modes: list[str] = Field(default=[], description="The list of valid analysis modes for the OCR analyzer.")
+    valid_alert_types: list[str] = Field(default=[], description="The list of valid alert types for the OCR analyzer.")
+
 class OCRAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return OCRAnalyzerConfig
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -66,15 +76,15 @@ class OCRAnalyzer(AnalysisModule):
 
     @property
     def valid_analysis_modes(self):
-        return [_.strip() for _ in self.config.get('valid_analysis_modes', fallback='').split(',') if _.strip()]
+        return self.config.valid_analysis_modes
 
     @property
     def valid_alert_types(self):
-        return [_.strip() for _ in self.config.get('valid_alert_types', fallback='').split(',') if _.strip()]
+        return self.config.valid_alert_types
 
     @property
     def omp_thread_limit(self):
-        return self.config.get('omp_thread_limit', fallback=None)
+        return self.config.omp_thread_limit
 
     def custom_requirement(self, observable):
         if self.valid_analysis_modes:

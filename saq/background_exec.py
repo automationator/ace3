@@ -2,10 +2,12 @@ import json
 import logging
 import time
 import threading
+from typing import Type
 
 
 from saq.configuration import get_config
-from saq.constants import REDIS_DB_BG_TASKS
+from saq.configuration.schema import ServiceConfig
+from saq.constants import REDIS_DB_BG_TASKS, SERVICE_BACKGROUND_EXECUTOR
 from saq.database import get_db
 from saq.error import report_exception
 from saq.redis_client import get_redis_connection
@@ -23,7 +25,7 @@ def add_background_task(name: str, *args):
 
 class BackgroundExecutor(ACEServiceInterface):
     def __init__(self):
-        self.service_config = get_config()['service_background_executor']
+        self.service_config = get_config().get_service_config(SERVICE_BACKGROUND_EXECUTOR)
         self.service_started = False
         self.service_stopping = False
         self.shutdown_event = threading.Event()
@@ -44,6 +46,10 @@ class BackgroundExecutor(ACEServiceInterface):
     
     def wait(self):
         pass
+
+    @classmethod
+    def get_config_class(cls) -> Type[ServiceConfig]:
+        return ServiceConfig
 
     def execute_service(self):
         self.initialize_message_queue()

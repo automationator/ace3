@@ -13,21 +13,12 @@ from saq.analysis.errors import ExcessiveFileDataSizeError
 from saq.analysis.module_path import MODULE_PATH
 from saq.analysis.observable import Observable
 from saq.analysis.root import RootAnalysis
-from saq.configuration.adapter import ConfigAdapter
 from saq.configuration.config import (
     get_config,
-    get_config_value_as_boolean,
-    get_config_value_as_int,
-    get_config_value_as_list,
+    get_engine_config,
 )
 from saq.constants import (
     ANALYSIS_MODE_CORRELATION,
-    CONFIG_ENGINE,
-    CONFIG_ENGINE_ANALYSIS_MODES_IGNORE_CUMULATIVE_TIMEOUT,
-    CONFIG_ENGINE_COPY_ANALYSIS_ON_ERROR,
-    CONFIG_ENGINE_COPY_FILE_ON_ERROR,
-    CONFIG_ENGINE_STOP_ANALYSIS_ON_ANY_ALERT_DISPOSITION,
-    CONFIG_ENGINE_STOP_ANALYSIS_ON_DISPOSITIONS,
     DIRECTIVE_EXCLUDE_ALL,
     DISPOSITION_OPEN,
     EVENT_ANALYSIS_ADDED,
@@ -256,7 +247,7 @@ class AnalysisExecutor:
         self.single_threaded_mode = single_threaded_mode
 
         # we keep track of total analysis time per module
-        self.total_analysis_time = {}  # key = module.config_section_name, value = total_seconds
+        self.total_analysis_time = {}  # key = module.name, value = total_seconds
 
         # this is set to True to cancel the analysis going on in the process() function
         self._cancel_analysis_flag = False
@@ -289,7 +280,6 @@ class AnalysisExecutor:
                     delayed_analysis_interface=self.delayed_analysis_interface,
                     root=context.root,  # XXX needs adapter!
                     configuration_manager=self.configuration_manager,
-                    config=ConfigAdapter(),
                     filesystem=FileSystemAdapter(),
                     state_repository=state_repository,
                 )
@@ -385,6 +375,7 @@ class AnalysisExecutor:
                         analysis_mode, self.config.default_analysis_mode
                     )
                 )
+                logging.debug(f"analysis mode mapping: {self.configuration_manager.analysis_mode_mapping}")
                 result = self.configuration_manager.analysis_mode_mapping[self.config.default_analysis_mode]
 
         return result
@@ -404,17 +395,16 @@ class AnalysisExecutor:
             and work_item.observable.limited_analysis
         ):
             analysis_modules = []
-            for target_module in work_item.observable.limited_analysis:
-                target_module_section = "analysis_module_{}".format(target_module)
-                if target_module_section not in self.configuration_manager.analysis_module_name_mapping:
+            for target_module_name in work_item.observable.limited_analysis:
+                if target_module_name not in self.configuration_manager.analysis_module_name_mapping:
                     logging.error(
                         "{} specified unknown limited analysis {}".format(
-                            work_item, target_module
+                            work_item, target_module_name
                         )
                     )
                 else:
                     analysis_modules.append(
-                        self.configuration_manager.analysis_module_name_mapping[target_module_section]
+                        self.configuration_manager.analysis_module_name_mapping[target_module_name]
                     )
 
             logging.debug(
@@ -471,32 +461,31 @@ class AnalysisExecutor:
             self.get_analysis_modules_by_mode(context.root.analysis_mode),
             key=attrgetter("priority"),
         ):
-            if analysis_module.config_section_name not in state:
-                state[analysis_module.config_section_name] = None
+            if analysis_module.name not in state:
+                state[analysis_module.name] = None
 
             # has this post analysis already executed and completed?
             if (
-                state[analysis_module.config_section_name]
-                == AnalysisExecutionResult.COMPLETED
+                state[analysis_module.name] == AnalysisExecutionResult.COMPLETED
             ):
                 continue
 
             try:
                 # give the modules an opportunity to do something after all analysis has completed
                 logging.debug(
-                    f"executing post analysis for module {analysis_module.config_section_name} on {context.root}"
+                    f"executing post analysis for module {analysis_module.name} on {context.root}"
                 )
-                state[analysis_module.config_section_name] = (
+                state[analysis_module.name] = (
                     analysis_module.execute_post_analysis()
                 )
                 logging.debug(
-                    f"post analysis for module {analysis_module.config_section_name} on {context.root} returned {state[analysis_module.config_section_name]}"
+                    f"post analysis for module {analysis_module.name} on {context.root} returned {state[analysis_module.name]}"
                 )
             except Exception as e:
                 logging.error(
                     "post analysis module {} failed: {}".format(analysis_module, e)
                 )
-                state[analysis_module.config_section_name] = True
+                state[analysis_module.name] = True
                 report_exception()
 
     def _execute_pre_analysis(self, context) -> bool:
@@ -524,17 +513,17 @@ class AnalysisExecutor:
         for analysis_module in sorted(
             self.configuration_manager.analysis_mode_mapping[target_analysis_mode], key=attrgetter("priority")
         ):
-            if analysis_module.config_section_name not in state:
+            if analysis_module.name not in state:
                 try:
-                    state[analysis_module.config_section_name] = bool(
+                    state[analysis_module.name] = bool(
                         analysis_module.execute_pre_analysis()
                     )
-                except Exception as e:
+                except Exception:
                     logging.error(
                         "pre analysis module {} failed".format(analysis_module)
                     )
                     report_exception()
-                    state[analysis_module.config_section_name] = False
+                    state[analysis_module.name] = False
 
             if context.cancel_analysis_flag:
                 logging.debug(
@@ -753,7 +742,7 @@ class AnalysisExecutor:
                     if work_item.observable.value in exclusion:
                         excluded = True
                         break
-                except Exception as e:
+                except Exception:
                     logging.debug(
                         "{} probably is not an IP address".format(
                             work_item.observable.value
@@ -804,14 +793,8 @@ class AnalysisExecutor:
                 get_db().close()
 
                 # Get the two different stop analysis setting values
-                stop_analysis_on_any_alert_disposition = get_config_value_as_boolean(
-                    CONFIG_ENGINE,
-                    CONFIG_ENGINE_STOP_ANALYSIS_ON_ANY_ALERT_DISPOSITION,
-                    default=False,
-                )
-                stop_analysis_on_dispositions = get_config_value_as_list(
-                    CONFIG_ENGINE, CONFIG_ENGINE_STOP_ANALYSIS_ON_DISPOSITIONS
-                )
+                stop_analysis_on_any_alert_disposition = get_engine_config().stop_analysis_on_any_alert_disposition
+                stop_analysis_on_dispositions = get_engine_config().stop_analysis_on_dispositions
 
                 # Check to see if we need to stop analysis based on the settings
                 disposition = (
@@ -841,33 +824,27 @@ class AnalysisExecutor:
 
     def _get_maximum_cumulative_analysis_warning_time(self, analysis_mode: str) -> int:
         """Returns the maximum cumulative analysis warning time for the given analysis mode."""
-        section_name = "analysis_mode_{}".format(analysis_mode)
-        if section_name in get_config():
-            key = "maximum_cumulative_analysis_warning_time"
-            if key in get_config()[section_name]:
-                return get_config_value_as_int(section_name, key)
-
-        return self.config.maximum_cumulative_analysis_warning_time
+        analysis_mode_config = get_config().get_analysis_mode_config(analysis_mode)
+        if analysis_mode_config.maximum_cumulative_analysis_warning_time is not None:
+            return analysis_mode_config.maximum_cumulative_analysis_warning_time
+        else:
+            return get_config().global_settings.maximum_cumulative_analysis_warning_time
 
     def _get_maximum_cumulative_analysis_fail_time(self, analysis_mode: str) -> int:
         """Returns the maximum cumulative analysis fail time for the given analysis mode."""
-        section_name = "analysis_mode_{}".format(analysis_mode)
-        if section_name in get_config():
-            key = "maximum_cumulative_analysis_fail_time"
-            if key in get_config()[section_name]:
-                return get_config_value_as_int(section_name, key)
-
-        return self.config.maximum_cumulative_analysis_fail_time
+        analysis_mode_config = get_config().get_analysis_mode_config(analysis_mode)
+        if analysis_mode_config.maximum_cumulative_analysis_fail_time is not None:
+            return analysis_mode_config.maximum_cumulative_analysis_fail_time
+        else:
+            return get_config().global_settings.maximum_cumulative_analysis_fail_time
 
     def _get_maximum_analysis_time(self, analysis_mode: str) -> int:
         """Returns the maximum analysis time for the given analysis mode."""
-        section_name = "analysis_mode_{}".format(analysis_mode)
-        if section_name in get_config():
-            key = "maximum_analysis_time"
-            if key in get_config()[section_name]:
-                return get_config_value_as_int(section_name, key)
-
-        return self.config.maximum_analysis_time
+        analysis_mode_config = get_config().get_analysis_mode_config(analysis_mode)
+        if analysis_mode_config.maximum_analysis_time is not None:
+            return analysis_mode_config.maximum_analysis_time
+        else:
+            return get_config().global_settings.maximum_analysis_time
 
     def _check_for_analysis_timeout(
         self,
@@ -898,12 +875,7 @@ class AnalysisExecutor:
                     f"ACE has been analyzing {root} for {current_total_time} seconds ({work_item}) ({len(work_stack)})"
                 )
 
-        ignore_modes = [
-            _.strip()
-            for _ in get_config_value_as_list(
-                CONFIG_ENGINE, CONFIG_ENGINE_ANALYSIS_MODES_IGNORE_CUMULATIVE_TIMEOUT
-            )
-        ]
+        ignore_modes = get_engine_config().analysis_modes_ignore_cumulative_timeout
         if current_total_time >= maximum_cumulative_analysis_fail_time:
             if root.analysis_mode in ignore_modes:
                 logging.debug(f"ACE is ignoring cumulative timeout on {root}")
@@ -1209,9 +1181,7 @@ class AnalysisExecutor:
                 work_item.dependency.increment_status()
 
             # if analysis failed, copy all the details to error_reports for review
-            if get_config_value_as_boolean(
-                CONFIG_ENGINE, CONFIG_ENGINE_COPY_ANALYSIS_ON_ERROR
-            ):
+            if get_engine_config().copy_analysis_on_error:
                 error_report_stats_dir = None
                 if error_report_path and os.path.isdir(root.storage_dir):
                     analysis_dir = "{}.ace".format(error_report_path)
@@ -1245,11 +1215,8 @@ class AnalysisExecutor:
                 error_report_path
                 and work_item.observable is not None
                 and work_item.observable.type == F_FILE
-                and get_config_value_as_boolean(
-                    CONFIG_ENGINE, CONFIG_ENGINE_COPY_FILE_ON_ERROR
-                )
+                and get_engine_config().copy_file_on_error
             ):
-
                 target_dir = f"{error_report_path}.files"
                 try:
                     os.makedirs(target_dir, exist_ok=True)
@@ -1261,10 +1228,10 @@ class AnalysisExecutor:
             module_end_time = datetime.now()
 
             # keep track of some module execution time metrics
-            if analysis_module.config_section_name not in context.total_analysis_time:
-                context.total_analysis_time[analysis_module.config_section_name] = 0
+            if analysis_module.name not in context.total_analysis_time:
+                context.total_analysis_time[analysis_module.name] = 0
 
-            context.total_analysis_time[analysis_module.config_section_name] += (
+            context.total_analysis_time[analysis_module.name] += (
                 module_end_time - module_start_time
             ).total_seconds()
 

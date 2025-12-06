@@ -16,8 +16,7 @@ from minio import Minio
 from minio.error import S3Error
 
 
-from saq.configuration.config import get_config_value_as_str, get_config_value_as_boolean
-from saq.constants import CONFIG_MINIO, CONFIG_MINIO_ACCESS_KEY, CONFIG_MINIO_CERT_CHECK, CONFIG_MINIO_HOST, CONFIG_MINIO_PORT, CONFIG_MINIO_REGION, CONFIG_MINIO_SECRET_KEY, CONFIG_MINIO_SECURE
+from saq.configuration.config import get_config
 from saq.storage.interface import StorageInterface
 from saq.storage.error import StorageError
 
@@ -31,22 +30,22 @@ class S3Credentials:
 def get_s3_credentials_from_config() -> S3Credentials:
     """Get the S3 credentials from the configuration."""
     return S3Credentials(
-        access_key=get_config_value_as_str(CONFIG_MINIO, CONFIG_MINIO_ACCESS_KEY),
-        secret_key=get_config_value_as_str(CONFIG_MINIO, CONFIG_MINIO_SECRET_KEY),
-        region=get_config_value_as_str(CONFIG_MINIO, CONFIG_MINIO_REGION))
+        access_key=get_config().minio.access_key,
+        secret_key=get_config().minio.secret_key,
+        region=get_config().minio.region)
 
-def get_minio_client(section: str = CONFIG_MINIO) -> Minio:
+def get_minio_client() -> Minio:
     """Returns a MinIO client configured with the current configuration.
     By default the settings defined in the CONFIG_MINIO section are used.
     This can be overridden by passing a custom configuration section name."""
 
     s3_credentials = get_s3_credentials_from_config()
 
-    host = get_config_value_as_str(section, CONFIG_MINIO_HOST)
-    port = get_config_value_as_str(section, CONFIG_MINIO_PORT)
+    host = get_config().minio.host
+    port = get_config().minio.port
     endpoint = f"{host}:{port}"
-    secure = get_config_value_as_boolean(section, CONFIG_MINIO_SECURE)
-    cert_check = get_config_value_as_boolean(section, CONFIG_MINIO_CERT_CHECK)
+    secure = get_config().minio.secure
+    cert_check = get_config().minio.cert_check
 
     return Minio(
         endpoint=endpoint,

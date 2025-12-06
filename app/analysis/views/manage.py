@@ -72,12 +72,12 @@ def manage():
 
     # only show alerts from this node
     # NOTE: this will not be necessary once alerts are stored externally
-    if get_config()['gui'].getboolean('local_node_only', fallback=True):
+    if get_config().gui.local_node_only:
         query = query.filter(GUIAlert.location == g(G_SAQ_NODE))
-    elif get_config()['gui'].get('display_node_list', fallback=None):
+    elif get_config().gui.display_node_list:
         # alternatively we can display alerts for specific nodes
         # this was added on 05/02/2023 to support a DR mode of operation
-        display_node_list = [_.strip() for _ in get_config()['gui'].get('display_node_list').split(',') if _.strip()]
+        display_node_list = get_config().gui.display_node_list
         query = query.filter(GUIAlert.location.in_(display_node_list))
 
     # if we have a search query then apply it
@@ -150,7 +150,7 @@ def manage():
     if alerts:
         tag_query = get_db().query(Tag, GUIAlert.uuid).join(TagMapping, Tag.id == TagMapping.tag_id).join(GUIAlert, GUIAlert.id == TagMapping.alert_id)
         tag_query = tag_query.filter(GUIAlert.id.in_([a.id for a in alerts]))
-        ignore_tags = [tag for tag in get_config()['tags'].keys() if get_config()['tags'][tag] in ['special', 'hidden' ]]
+        ignore_tags = [tag for tag in get_config().tags.keys() if get_config().tags[tag] in ['special', 'hidden' ]]
         tag_query = tag_query.filter(Tag.name.notin_(ignore_tags))
         tag_query = tag_query.order_by(Tag.name.asc())
         for tag, alert_uuid in tag_query:

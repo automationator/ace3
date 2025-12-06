@@ -2,11 +2,13 @@ import logging
 import os
 import re
 from subprocess import PIPE, Popen
-from typing import override
+from typing import Optional, Type, override
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import DIRECTIVE_CRAWL_EXTRACTED_URLS, DIRECTIVE_EXTRACT_URLS, F_FILE, G_ANALYST_DATA_DIR, R_EXTRACTED_FROM, AnalysisExecutionResult
 from saq.environment import g
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.is_file_type import is_image, is_pdf_file
 from saq.observables.file import FileObservable
 
@@ -96,7 +98,13 @@ class QRCodeFilter:
 
         return False
 
+class QRCodeAnalyzerConfig(AnalysisModuleConfig):
+    filter_path: Optional[str] = Field(default=None, description="Path to a list of strings to exclude from the results relative to ANALYST_DATA_DIR.")
+
 class QRCodeAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return QRCodeAnalyzerConfig
 
     @property
     def generated_analysis_type(self):
@@ -108,7 +116,7 @@ class QRCodeAnalyzer(AnalysisModule):
 
     @property
     def qrcode_filter_path(self):
-        return os.path.join(g(G_ANALYST_DATA_DIR), self.config.get("filter_path")) if self.config.get("filter_path") else None
+        return os.path.join(g(G_ANALYST_DATA_DIR), self.config.filter_path) if self.config.filter_path else None
 
     def execute_analysis(self, _file: FileObservable) -> AnalysisExecutionResult:
         from saq.modules.file_analysis.hash import FileHashAnalyzer

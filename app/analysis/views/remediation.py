@@ -4,7 +4,8 @@ from flask import render_template, request
 from flask_login import current_user
 from app.auth.permissions import require_permission
 from app.blueprints import analysis
-from saq.configuration.config import get_config
+from saq.configuration.config import get_service_config
+from saq.constants import SERVICE_REMEDIATION
 from saq.remediation import RemediationTarget, get_remediation_targets
 
 # XXX there is a TODO list item for this -- call should not block like it does
@@ -19,7 +20,7 @@ def remediation_targets():
 
     # return rendered target selection table
     if request.method == 'POST':
-        unchecked_types = [_.strip() for _ in get_config()['service_remediation']['unchecked_types'].split(',')]
+        unchecked_types = [_.strip() for _ in get_service_config(SERVICE_REMEDIATION).unchecked_types]
         targets = get_remediation_targets(body['alert_uuids'])
         targets_by_type = {}
         for target in targets:
@@ -48,7 +49,7 @@ def remediation_targets():
 
     # wait until all remediations are complete or we run out of time
     complete = False
-    quit_time = time.time() + get_config()['service_remediation'].getint('request_wait_time', fallback=10)
+    quit_time = time.time() + get_service_config(SERVICE_REMEDIATION).request_wait_time
     while not complete and time.time() < quit_time:
         complete = True
         for target in body['targets']:

@@ -64,7 +64,7 @@ class SubmissionFilter:
         self.tuning_scanners = {} # key = tuning target (see VALID_TUNING_TARGETS), value = YaraScanner
 
         # temporary directory used for the "all" target
-        self.tuning_temp_dir = get_config()['collection']['tuning_temp_dir']
+        self.tuning_temp_dir = get_config().collection.tuning_temp_dir
         if not self.tuning_temp_dir:
             self.tuning_temp_dir = g(G_TEMP_DIR)
 
@@ -82,7 +82,7 @@ class SubmissionFilter:
                 self.tuning_temp_dir = None
 
         # controls how often submission filters check to see if the tuning rules are updated
-        self.tuning_update_frequency = create_timedelta(get_config()['collection']['tuning_update_frequency'])
+        self.tuning_update_frequency = create_timedelta(get_config().collection.tuning_update_frequency)
         self.next_update = None
 
     def load_tuning_rules(self):
@@ -92,15 +92,14 @@ class SubmissionFilter:
 
         # get the list of tuning rule directories we're going to track
         yara_dirs = []
-        for option, value in get_config()['collection'].items():
-            if option.startswith('tuning_dir_'):
-                value = abs_path(value)
-                if not os.path.isdir(value):
-                    logging.error(f"tuning directory {value} does not exist or is not a directory")
-                    continue
+        for yara_dir in get_config().collection.tuning_dirs:
+            yara_dir = abs_path(yara_dir)
+            if not os.path.isdir(yara_dir):
+                logging.error(f"tuning directory {yara_dir} does not exist or is not a directory")
+                continue
 
-                logging.debug(f"added tuning directory {value}")
-                yara_dirs.append(value)
+            logging.debug(f"added tuning directory {yara_dir}")
+            yara_dirs.append(yara_dir)
 
         # are we not tuning anything?
         if not yara_dirs:

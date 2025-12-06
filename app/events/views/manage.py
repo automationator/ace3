@@ -13,7 +13,7 @@ from saq.disposition import get_dispositions
 @events.route('/manage', methods=['GET', 'POST'])
 @require_permission('event', 'read')
 def manage():
-    if not get_config()['gui'].getboolean('display_events'):
+    if not get_config().gui.display_events:
         # redirect to index
         return redirect(url_for('analysis.index'))
 

@@ -5,7 +5,7 @@ import pytest
 
 from saq.analysis.root import RootAnalysis, Submission
 from saq.configuration.config import get_config
-from saq.constants import CONFIG_COLLECTION, CONFIG_COLLECTION_TUNING_DIR_DEFAULT, CONFIG_COLLECTION_TUNING_UPDATE_FREQUENCY, F_IPV4
+from saq.constants import CONFIG_COLLECTION_TUNING_UPDATE_FREQUENCY, F_IPV4
 from saq.submission_filter import TUNING_TARGET_ALL, TUNING_TARGET_FILES, TUNING_TARGET_SUBMISSION, SubmissionFilter
 
 from yara_scanner import YaraScanner
@@ -17,7 +17,7 @@ def mock_tuning_rules(monkeypatch, tmpdir):
     tuning_rules_dir = tmpdir / "tuning_rules_dir"
     tuning_rules_dir.mkdir()
 
-    monkeypatch.setitem(get_config()[CONFIG_COLLECTION], CONFIG_COLLECTION_TUNING_DIR_DEFAULT, str(tuning_rules_dir))
+    monkeypatch.setattr(get_config().collection, "tuning_dirs", [str(tuning_rules_dir)])
     return tuning_rules_dir
 
 def create_submission_filter():
@@ -41,7 +41,7 @@ def submission(tmpdir):
 
 @pytest.mark.unit
 def test_tuning_rule_reload(mock_tuning_rules, monkeypatch):
-    monkeypatch.setitem(get_config()[CONFIG_COLLECTION], CONFIG_COLLECTION_TUNING_UPDATE_FREQUENCY, "00:00:00")
+    monkeypatch.setattr(get_config().collection, CONFIG_COLLECTION_TUNING_UPDATE_FREQUENCY, "00:00:00")
     with open(os.path.join(mock_tuning_rules, 'test.yar'), 'w') as fp:
         fp.write("""
 rule test_submission {
@@ -74,7 +74,7 @@ rule test_submission {
 
 @pytest.mark.unit
 def test_tuning_rule_no_reload(mock_tuning_rules, monkeypatch):
-    monkeypatch.setitem(get_config()[CONFIG_COLLECTION], CONFIG_COLLECTION_TUNING_UPDATE_FREQUENCY, "01:00:00")
+    monkeypatch.setattr(get_config().collection, CONFIG_COLLECTION_TUNING_UPDATE_FREQUENCY, "01:00:00")
     with open(os.path.join(mock_tuning_rules, 'test.yar'), 'w') as fp:
         fp.write("""
 rule test_submission {

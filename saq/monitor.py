@@ -5,8 +5,7 @@ import sys
 from threading import RLock
 from typing import Any, Optional
 
-from saq.configuration.config import get_config_value_as_boolean
-from saq.constants import CONFIG_MONITOR, CONFIG_MONITOR_USE_CACHE, CONFIG_MONITOR_USE_LOGGING, CONFIG_MONITOR_USE_STDERR, CONFIG_MONITOR_USE_STDOUT
+from saq.configuration.config import get_config
 
 @dataclass
 class Monitor:
@@ -115,14 +114,14 @@ def enable_monitor_cache():
 def initialize_monitoring():
     reset_emitter()
 
-    if get_config_value_as_boolean(CONFIG_MONITOR, CONFIG_MONITOR_USE_STDOUT):
+    if get_config().monitor.use_stdout:
         enable_monitor_stdout()
 
-    if get_config_value_as_boolean(CONFIG_MONITOR, CONFIG_MONITOR_USE_STDERR):
+    if get_config().monitor.use_stderr:
         enable_monitor_stderr()
 
-    if get_config_value_as_boolean(CONFIG_MONITOR, CONFIG_MONITOR_USE_LOGGING):
+    if get_config().monitor.use_logging:
         enable_monitor_logging()
 
-    if get_config_value_as_boolean(CONFIG_MONITOR, CONFIG_MONITOR_USE_CACHE):
+    if get_config().monitor.use_cache:
         enable_monitor_cache()

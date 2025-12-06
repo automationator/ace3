@@ -1,7 +1,8 @@
 import os
 import pytest
 
-from saq.constants import F_FILE, AnalysisExecutionResult
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_LNK_PARSER, F_FILE, AnalysisExecutionResult
 from saq.modules.file_analysis.lnk_parser import LnkParseAnalysis, LnkParseAnalyzer, KEY_ERROR, KEY_INFO, get_target_path
 from tests.saq.test_util import create_test_context
 
@@ -471,15 +472,21 @@ class TestLnkParseAnalysis:
 class TestLnkParseAnalyzer:
     
     def test_generated_analysis_type(self):
-        analyzer = LnkParseAnalyzer(context=create_test_context())
+        analyzer = LnkParseAnalyzer(
+            context=create_test_context(),
+            config=get_analysis_module_config(ANALYSIS_MODULE_LNK_PARSER))
         assert analyzer.generated_analysis_type == LnkParseAnalysis
     
     def test_valid_observable_types(self):
-        analyzer = LnkParseAnalyzer(context=create_test_context())
+        analyzer = LnkParseAnalyzer(
+            context=create_test_context(),
+            config=get_analysis_module_config(ANALYSIS_MODULE_LNK_PARSER))
         assert analyzer.valid_observable_types == F_FILE
     
     def test_execute_analysis_file_not_exists(self, root_analysis, tmpdir):
-        analyzer = LnkParseAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = LnkParseAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_LNK_PARSER))
         
         # create a file observable for non-existent file by first creating it, then adding it, then deleting it
         test_file = tmpdir / "temp.lnk"
@@ -492,7 +499,9 @@ class TestLnkParseAnalyzer:
         assert result == AnalysisExecutionResult.COMPLETED
     
     def test_execute_analysis_not_lnk_file(self, root_analysis, tmpdir):
-        analyzer = LnkParseAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = LnkParseAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_LNK_PARSER))
         
         # create a non-lnk file
         test_file = tmpdir / "test.txt"
@@ -511,7 +520,9 @@ class TestLnkParseAnalyzer:
         assert not file_observable.has_tag("lnk")
     
     def test_execute_analysis_lnk_file(self, root_analysis, datadir):
-        analyzer = LnkParseAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = LnkParseAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_LNK_PARSER))
 
         # use the sample lnk file
         file_observable = root_analysis.add_file_observable(str(datadir / "INVOICE#BUSAPOMKDS03.lnk"))
@@ -543,7 +554,9 @@ class TestLnkParseAnalyzer:
 
     def test_execute_analysis_invoice_lnk_target_path(self, root_analysis, datadir):
         """test target_path extraction from INVOICE malicious lnk sample"""
-        analyzer = LnkParseAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = LnkParseAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_LNK_PARSER))
 
         file_observable = root_analysis.add_file_observable(str(datadir / "INVOICE#BUSAPOMKDS03.lnk"))
         result = analyzer.execute_analysis(file_observable)
@@ -570,7 +583,9 @@ class TestLnkParseAnalyzer:
 
     def test_execute_analysis_quickscan_lnk_target_path(self, root_analysis, datadir):
         """test target_path extraction from QuickScan malicious lnk sample"""
-        analyzer = LnkParseAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = LnkParseAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_LNK_PARSER))
 
         file_observable = root_analysis.add_file_observable(str(datadir / "QuickScan.lnk"))
         result = analyzer.execute_analysis(file_observable)
@@ -595,7 +610,9 @@ class TestLnkParseAnalyzer:
         assert "icon location:" in summary
     
     def test_execute_analysis_lnk_file_parsing_error(self, root_analysis, tmpdir):
-        analyzer = LnkParseAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = LnkParseAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_LNK_PARSER))
         
         # create a fake lnk file that will cause parsing error
         test_file = tmpdir / "fake.lnk"

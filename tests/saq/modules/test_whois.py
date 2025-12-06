@@ -1,7 +1,8 @@
 import pytest
 from datetime import datetime
 
-from saq.constants import F_FQDN, AnalysisExecutionResult
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_WHOIS_ANALYZER, F_FQDN, AnalysisExecutionResult
 from saq.modules.whois import WhoisAnalysis, WhoisAnalyzer
 from tests.saq.helpers import create_root_analysis
 from whois.exceptions import PywhoisError
@@ -104,7 +105,7 @@ def test_whois_analysis_generate_summary_empty():
 @pytest.mark.unit
 def test_whois_analyzer_properties():
     """Test WhoisAnalyzer properties."""
-    analyzer = WhoisAnalyzer()
+    analyzer = WhoisAnalyzer(config=get_analysis_module_config(ANALYSIS_MODULE_WHOIS_ANALYZER))
     
     assert analyzer.generated_analysis_type == WhoisAnalysis
     assert analyzer.valid_observable_types == F_FQDN
@@ -166,7 +167,9 @@ def test_whois_analyzer_success(test_context, monkeypatch):
     root.initialize_storage()
     observable = root.add_observable_by_spec(F_FQDN, "bv.com")
     
-    analyzer = WhoisAnalyzer(context=test_context)
+    analyzer = WhoisAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_WHOIS_ANALYZER))
     analyzer.root = root
     
     # Execute analysis
@@ -213,7 +216,9 @@ def test_whois_analyzer_pywhois_error(test_context, monkeypatch):
     root.initialize_storage()
     observable = root.add_observable_by_spec(F_FQDN, "unknown.tld")
     
-    analyzer = WhoisAnalyzer(context=test_context)
+    analyzer = WhoisAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_WHOIS_ANALYZER))
     analyzer.root = root
     
     # Execute analysis
@@ -247,7 +252,9 @@ def test_whois_analyzer_multiline_error(test_context, monkeypatch):
     root.initialize_storage()
     observable = root.add_observable_by_spec(F_FQDN, "error.domain")
     
-    analyzer = WhoisAnalyzer(context=test_context)
+    analyzer = WhoisAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_WHOIS_ANALYZER))
     analyzer.root = root
     
     # Execute analysis
@@ -295,7 +302,9 @@ def test_whois_analyzer_creation_date_list(test_context, monkeypatch):
     root.initialize_storage()
     observable = root.add_observable_by_spec(F_FQDN, "test.com")
     
-    analyzer = WhoisAnalyzer(context=test_context)
+    analyzer = WhoisAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_WHOIS_ANALYZER))
     analyzer.root = root
     
     # Execute analysis
@@ -345,7 +354,9 @@ def test_whois_analyzer_invalid_date_types(test_context, monkeypatch, caplog):
     root.initialize_storage()
     observable = root.add_observable_by_spec(F_FQDN, "test.com")
     
-    analyzer = WhoisAnalyzer(context=test_context)
+    analyzer = WhoisAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_WHOIS_ANALYZER))
     analyzer.root = root
     
     # Execute analysis
@@ -406,7 +417,9 @@ def test_whois_analyzer_negative_time_delta(test_context, monkeypatch):
     root.initialize_storage()
     observable = root.add_observable_by_spec(F_FQDN, "future.com")
     
-    analyzer = WhoisAnalyzer(context=test_context)
+    analyzer = WhoisAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_WHOIS_ANALYZER))
     analyzer.root = root
     
     # Execute analysis
@@ -456,7 +469,9 @@ def test_whois_analyzer_no_dates(test_context, monkeypatch):
     root.initialize_storage()
     observable = root.add_observable_by_spec(F_FQDN, "nodate.com")
     
-    analyzer = WhoisAnalyzer(context=test_context)
+    analyzer = WhoisAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_WHOIS_ANALYZER))
     analyzer.root = root
     
     # Execute analysis

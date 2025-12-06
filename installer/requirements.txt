@@ -7,6 +7,7 @@ construct
 croniter
 cryptography
 dateparser
+deepmerge
 dhash
 distorm3
 fakeredis

@@ -16,9 +16,8 @@ import tempfile
 import uuid as uuidlib
 
 from aceapi.json import json_result
-from saq.configuration import get_config
-from saq.configuration.config import get_config_value_as_str
-from saq.constants import CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR, G_COMPANY_ID, G_COMPANY_NAME, G_SAQ_NODE, G_TEMP_DIR
+from saq.configuration.config import get_engine_config
+from saq.constants import G_COMPANY_ID, G_COMPANY_NAME, G_SAQ_NODE, G_TEMP_DIR
 from saq.database.pool import get_db_connection
 from saq.environment import g, g_int
 
@@ -39,7 +38,7 @@ def download(uuid):
     validate_uuid(uuid)
 
     target_dir = storage_dir_from_uuid(uuid)
-    if get_config()['service_engine']['work_dir'] and not os.path.isdir(target_dir):
+    if get_engine_config().work_dir and not os.path.isdir(target_dir):
         target_dir = workload_storage_dir(uuid)
 
     if not os.path.isdir(target_dir):
@@ -207,7 +206,7 @@ def clear(uuid, lock_uuid):
             abort(Response("nope", 400))
 
     target_dir = storage_dir_from_uuid(uuid)
-    if get_config_value_as_str(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR) and not os.path.isdir(target_dir):
+    if get_engine_config().work_dir and not os.path.isdir(target_dir):
         target_dir = workload_storage_dir(uuid)
 
     if not os.path.isdir(target_dir):

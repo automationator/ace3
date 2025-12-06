@@ -1,19 +1,32 @@
 # vim: sw=4:ts=4:et
 
 import logging
+from typing import Type, Optional
+from pydantic import Field
 
-from saq.configuration import get_config_value_as_boolean, get_config_value_as_list
-from saq.constants import CONFIG_ENGINE, CONFIG_ENGINE_STOP_ANALYSIS_ON_ANY_ALERT_DISPOSITION, CONFIG_ENGINE_STOP_ANALYSIS_ON_DISPOSITIONS, DISPOSITION_OPEN, G_FORCED_ALERTS
+from saq.configuration.config import get_engine_config
+from saq.constants import DISPOSITION_OPEN, G_FORCED_ALERTS
 from saq.database import get_db_connection
 from saq.environment import g_boolean
 from saq.modules import AnalysisModule
 from saq.modules.base_module import AnalysisExecutionResult
+from saq.modules.config import AnalysisModuleConfig
+
+class ACEAlertDispositionAnalyzerConfig(AnalysisModuleConfig):
+    target_mode: Optional[str] = Field(default=None, description="The target analysis mode.")
+
+class ACEDetectionAnalyzerConfig(AnalysisModuleConfig):
+    target_mode: Optional[str] = Field(default=None, description="The target analysis mode to switch to when detections are found.")
 
 class ACEAlertDispositionAnalyzer(AnalysisModule):
     """Cancels any further analysis if the disposition has been set by the analyst."""
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return ACEAlertDispositionAnalyzerConfig
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.target_mode = self.config['target_mode']
+        self.target_mode = self.config.target_mode
 
     def execute_pre_analysis(self):
         self.check_disposition()
@@ -32,8 +45,8 @@ class ACEAlertDispositionAnalyzer(AnalysisModule):
                 self.get_engine().cancel_analysis()
 
             # Get the two different stop analysis setting values
-            stop_analysis_on_any_alert_disposition = get_config_value_as_boolean(CONFIG_ENGINE, CONFIG_ENGINE_STOP_ANALYSIS_ON_ANY_ALERT_DISPOSITION, default=False)
-            stop_analysis_on_dispositions = get_config_value_as_list(CONFIG_ENGINE, CONFIG_ENGINE_STOP_ANALYSIS_ON_DISPOSITIONS, default=[])
+            stop_analysis_on_any_alert_disposition = get_engine_config().stop_analysis_on_any_alert_disposition
+            stop_analysis_on_dispositions = get_engine_config().stop_analysis_on_dispositions
 
             # Check to see if we need to stop analysis based on the settings
             disposition = row[0]
@@ -47,9 +60,13 @@ class ACEAlertDispositionAnalyzer(AnalysisModule):
                 logging.info(f"alert {self.get_root()} dispositioned as {disposition} but continuing analysis")
 
 class ACEDetectionAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return ACEDetectionAnalyzerConfig
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.target_mode = self.config['target_mode']
+        self.target_mode = self.config.target_mode
 
     def execute_post_analysis(self) -> AnalysisExecutionResult:
         # do not alert on a root that has been whitelisted

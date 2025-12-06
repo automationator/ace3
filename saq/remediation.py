@@ -3,10 +3,15 @@ from datetime import UTC, datetime, timedelta
 import importlib
 import json
 import logging
+from typing import Type
+
+from pydantic import Field
 from saq.configuration import get_config
+from saq.configuration.config import get_service_config
+from saq.configuration.schema import ServiceConfig
+from saq.constants import SERVICE_REMEDIATION
 from saq.database import Remediation, ObservableRemediationMapping, get_db
 from saq.database.database_observable import upsert_observable
-from saq.database.model import Alert
 from saq.database.util.alert import get_alert_by_uuid
 from saq.error import report_exception
 from sqlalchemy import or_
@@ -65,9 +70,9 @@ def RemediationSuccess(message, restore_key=None):
     return RemediationResult(REMEDIATOR_STATUS_SUCCESS, message, restore_key=restore_key)
 
 class Remediator():
-    def __init__(self, config_section_name):        
-        self.name = config_section_name
-        self.config = get_config()[config_section_name]
+    def __init__(self, name: str):        
+        self.name = name
+        self.config = get_config()[name]
 
     @property
     def type(self): 
@@ -214,17 +219,30 @@ def get_remediation_targets(alert_uuids: list[str]) -> list[RemediationTarget]:
     # return sorted list of targets
     return sorted(targets, key=lambda x: f"{x.observable_database_id}|{x.type}|{x.value}")
 
+
+class RemediationServiceConfig(ServiceConfig):
+    max_threads: int = Field(..., description="the maximum number of threads for the remediation service")
+    batch_size: int = Field(..., description="the batch size for the remediation service")
+    delay_minutes: int = Field(..., description="the delay time in minutes for the remediation service")
+    lock_timeout_seconds: int = Field(..., description="the lock timeout in seconds for the remediation service")
+    request_wait_time: int = Field(..., description="the request wait time in seconds for the remediation service")
+    unchecked_types: list[str] = Field(..., description="the unchecked types for the remediation service")
+
 class RemediationService(ACEServiceInterface):
+    @classmethod
+    def get_config_class(cls) -> Type[ServiceConfig]:
+        return RemediationServiceConfig
+
     def __init__(self):
-        self.service_config = get_config()["service_remediation"]
+        self.service_config = get_service_config(SERVICE_REMEDIATION)
         self.service_started = False
         self.service_stopping = False
         self.remediators = []
         self.uuid = str(uuid.uuid4())
-        self.delay_time = timedelta(minutes=self.service_config.getint('delay_minutes', fallback=5))
-        self.batch_size = self.service_config.getint('batch_size', fallback=1)
-        self.max_threads = self.service_config.getint('max_threads', fallback=1)
-        self.lock_timeout = timedelta(seconds=self.service_config.getint('lock_timeout_seconds', fallback=60))
+        self.delay_time = timedelta(minutes=self.service_config.delay_minutes)
+        self.batch_size = self.service_config.batch_size
+        self.max_threads = self.service_config.max_threads
+        self.lock_timeout = timedelta(seconds=self.service_config.lock_timeout_seconds)
 
     def start(self):
         self.service_started = True

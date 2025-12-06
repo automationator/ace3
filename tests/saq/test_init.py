@@ -4,6 +4,7 @@ import logging
 import pytest
 
 from saq.configuration import get_config
+from saq.configuration.schema import ACEConfig
 from saq.configuration.yaml_parser import YAMLConfig
 from saq.constants import G_SAQ_NODE, G_SAQ_NODE_ID
 from saq.environment import g, g_int, set_g, set_node
@@ -69,4 +70,4 @@ def test_set_node():
 
 @pytest.mark.unit
 def test_get_config():
-    assert isinstance(get_config(), YAMLConfig)
+    assert isinstance(get_config(), ACEConfig)

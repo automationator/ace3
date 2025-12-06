@@ -1,6 +1,5 @@
 import logging
 import random
-from collections import defaultdict, deque
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -301,7 +300,7 @@ class MemoryWorkloadManager(WorkloadManagerInterface):
         request = DelayedAnalysisRequest(
             uuid=root.uuid,
             observable_uuid=observable.uuid,
-            analysis_module_str=analysis_module.config_section_name,
+            analysis_module_str=analysis_module.name,
             next_analysis=next_analysis,
             storage_dir=root.storage_dir,
             database_id=request_id

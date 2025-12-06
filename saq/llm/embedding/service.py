@@ -1,11 +1,12 @@
 import logging
 import multiprocessing
-from typing import Optional
+from typing import Optional, Type
 
 from pydantic import BaseModel
 
-from saq.configuration.config import get_config_value_as_boolean
-from saq.constants import CONFIG_SERVICE_LLM_EMBEDDING, CONFIG_SERVICE_LLM_EMBEDDING_ENABLED, REDIS_DB_BG_TASKS
+from saq.configuration.config import get_service_config
+from saq.configuration.schema import ServiceConfig
+from saq.constants import REDIS_DB_BG_TASKS, SERVICE_LLM_EMBEDDING
 from saq.database.pool import get_db
 from saq.error.reporting import report_exception
 from saq.llm.embedding.vector import vectorize
@@ -19,7 +20,7 @@ class EmbeddingTask(BaseModel):
 
 def submit_embedding_task(alert_uuid: str) -> bool:
     try:
-        if not get_config_value_as_boolean(CONFIG_SERVICE_LLM_EMBEDDING, CONFIG_SERVICE_LLM_EMBEDDING_ENABLED):
+        if not get_service_config(SERVICE_LLM_EMBEDDING).enabled:
             logging.debug(f"embedding service is not enabled, skipping task for {alert_uuid}")
             return False
 
@@ -28,6 +29,7 @@ def submit_embedding_task(alert_uuid: str) -> bool:
         return True
     except Exception as e:
         logging.error(f"error submitting embedding task for {alert_uuid}: {e}")
+        report_exception()
         return False
 
 class EmbeddingWorker:
@@ -149,3 +151,7 @@ class EmbeddingService(ACEServiceInterface):
 
     def wait(self):
         self.manager.wait()
+
+    @classmethod
+    def get_config_class(cls) -> Type[ServiceConfig]:
+        return ServiceConfig

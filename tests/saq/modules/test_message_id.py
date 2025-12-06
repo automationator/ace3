@@ -1,11 +1,12 @@
 import pytest
 
 from saq.configuration import get_config
+from saq.configuration.config import get_analysis_module_config
 import saq.email_archive
 import saq.modules.email.message_id
 
 from saq.analysis import RootAnalysis
-from saq.constants import F_MESSAGE_ID, F_FILE, DB_EMAIL_ARCHIVE, AnalysisExecutionResult
+from saq.constants import ANALYSIS_MODULE_MESSAGE_ID_ANALYZER_V2, F_MESSAGE_ID, F_FILE, DB_EMAIL_ARCHIVE, AnalysisExecutionResult
 from saq.database import get_db_connection
 from saq.modules.email.message_id import MessageIDAnalysisV2, MessageIDAnalyzerV2
 from tests.saq.test_util import create_test_context
@@ -35,7 +36,6 @@ def test_message_id_analysis_v2():
 
 @pytest.mark.integration
 def test_message_id_analyzer_v2(test_context, tmpdir, monkeypatch):
-    get_config()['analysis_module_config'] = {}
     root = RootAnalysis(storage_dir=str(tmpdir / "root"))
     root.initialize_storage()
     observable = root.add_observable_by_spec(F_MESSAGE_ID, "<test@local>")
@@ -45,7 +45,7 @@ def test_message_id_analyzer_v2(test_context, tmpdir, monkeypatch):
 
     monkeypatch.setattr(saq.modules.email.message_id, "iter_archived_email", mock_iter_archived_email)
     monkeypatch.setattr(saq.modules.email.message_id, "email_is_archived", lambda message_id: True)
-    analyzer = MessageIDAnalyzerV2(context=create_test_context(root=root))
+    analyzer = MessageIDAnalyzerV2(get_analysis_module_config(ANALYSIS_MODULE_MESSAGE_ID_ANALYZER_V2), context=create_test_context(root=root))
     analyzer.execute_analysis(observable)
     analysis = observable.get_and_load_analysis(analyzer.generated_analysis_type)
     observable = analysis.get_observable_by_type(F_FILE)
@@ -56,7 +56,6 @@ def test_message_id_analyzer_v2(test_context, tmpdir, monkeypatch):
 
 @pytest.mark.integration
 def test_message_id_analyzer_v2_emtpy_result(test_context, tmpdir, monkeypatch):
-    get_config()['analysis_module_config'] = {}
     root = RootAnalysis(storage_dir=str(tmpdir / "root"))
     root.initialize_storage()
     observable = root.add_observable_by_spec(F_MESSAGE_ID, "<test@local>")
@@ -65,13 +64,12 @@ def test_message_id_analyzer_v2_emtpy_result(test_context, tmpdir, monkeypatch):
         yield b""
 
     monkeypatch.setattr(saq.modules.email.message_id, "iter_archived_email", mock_iter_archived_email)
-    analyzer = MessageIDAnalyzerV2(context=create_test_context(root=root))
+    analyzer = MessageIDAnalyzerV2(get_analysis_module_config(ANALYSIS_MODULE_MESSAGE_ID_ANALYZER_V2), context=create_test_context(root=root))
     assert analyzer.execute_analysis(observable) == AnalysisExecutionResult.COMPLETED
     assert observable.get_and_load_analysis(analyzer.generated_analysis_type) is None
 
 @pytest.mark.integration
 def test_message_id_analyzer_v2_unknown_message_id(tmpdir, monkeypatch):
-    get_config()['analysis_module_config'] = {}
     root = RootAnalysis(storage_dir=str(tmpdir / "root"))
     root.initialize_storage()
     observable = root.add_observable_by_spec(F_MESSAGE_ID, "<test@local>")
@@ -82,14 +80,13 @@ def test_message_id_analyzer_v2_unknown_message_id(tmpdir, monkeypatch):
         raise RuntimeError("Unknown message id")
 
     monkeypatch.setattr(saq.modules.email.message_id, "iter_archived_email", mock_iter_archived_email)
-    analyzer = MessageIDAnalyzerV2(context=create_test_context(root=root))
+    analyzer = MessageIDAnalyzerV2(get_analysis_module_config(ANALYSIS_MODULE_MESSAGE_ID_ANALYZER_V2), context=create_test_context(root=root))
     analyzer.execute_analysis(observable)
     analysis = observable.get_and_load_analysis(analyzer.generated_analysis_type)
     assert analysis is None
 
 @pytest.mark.integration
 def test_message_id_analyzer_v2_target_file_exists(test_context, tmpdir, monkeypatch):
-    get_config()['analysis_module_config'] = {}
     root = RootAnalysis(storage_dir=str(tmpdir / "root"))
     root.initialize_storage()
     observable = root.add_observable_by_spec(F_MESSAGE_ID, "<test@local>")
@@ -104,7 +101,7 @@ def test_message_id_analyzer_v2_target_file_exists(test_context, tmpdir, monkeyp
 
     monkeypatch.setattr(saq.modules.email.message_id, "iter_archived_email", mock_iter_archived_email)
     monkeypatch.setattr(saq.modules.email.message_id, "email_is_archived", lambda message_id: True)
-    analyzer = MessageIDAnalyzerV2(context=create_test_context(root=root))
+    analyzer = MessageIDAnalyzerV2(get_analysis_module_config(ANALYSIS_MODULE_MESSAGE_ID_ANALYZER_V2), context=create_test_context(root=root))
     analyzer.execute_analysis(observable)
     analysis = observable.get_and_load_analysis(analyzer.generated_analysis_type)
     observable = analysis.get_observable_by_type(F_FILE)

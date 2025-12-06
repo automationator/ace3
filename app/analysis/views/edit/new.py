@@ -63,7 +63,7 @@ ORDER BY
     comment = ''
 
     tool = "gui"
-    tool_instance = get_config()['global']['instance_name']
+    tool_instance = get_config().global_settings.instance_name
     alert_type = ANALYSIS_TYPE_MANUAL
     description = request.form.get('new_alert_description', 'Manual Alert')
     is_local = request.form.get('is_local', None)
@@ -182,7 +182,7 @@ ORDER BY
 
                 result = ace_api.submit(
                     remote_host = translate_node(node_location),
-                    ssl_verification = abs_path(get_config()['SSL']['ca_chain_path']),
+                    ssl_verification = abs_path(get_config().SSL.ca_chain_path),
                     description = description,
                     analysis_mode = ANALYSIS_MODE_CORRELATION,
                     tool = tool,
@@ -195,7 +195,7 @@ ORDER BY
                     tags = tags,
                     queue = queue,
                     files = files,
-                    api_key = get_config()["api"]["api_key"])
+                    api_key = get_config().api.api_key)
 
                 if 'result' in result and 'uuid' in result['result']:
                     uuid = result['result']['uuid']
@@ -206,7 +206,7 @@ ORDER BY
                 for observable in observables:
                     result = ace_api.submit(
                         remote_host = translate_node(node_location),
-                        ssl_verification = abs_path(get_config()['SSL']['ca_chain_path']),
+                        ssl_verification = abs_path(get_config().SSL.ca_chain_path),
                         description = description + f" ({observable['value']})",
                         analysis_mode = ANALYSIS_MODE_CORRELATION,
                         tool = tool,
@@ -219,7 +219,7 @@ ORDER BY
                         tags = tags,
                         queue = queue,
                         files = files,
-                        api_key = get_config()["api"]["api_key"])
+                        api_key = get_config().api.api_key)
 
                     # in the case of multiple alerts we redirect to the last alert added
                     if 'result' in result and 'uuid' in result['result']:

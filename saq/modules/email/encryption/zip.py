@@ -1,15 +1,17 @@
 import logging
 import os
 from subprocess import PIPE, Popen
-from typing import override
+from typing import Type, override
 import zipfile
 
+from pydantic import Field
 from html2text import html2text
 from saq.analysis.analysis import Analysis
 from saq.analysis.search import search_down
 from saq.constants import DIRECTIVE_EXTRACT_URLS, F_FILE, AnalysisExecutionResult
 from saq.cracking import crack_password, generate_wordlist
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.observables.file import FileObservable
 
 
@@ -106,7 +108,19 @@ class ZipEncryptionAnalysis(Analysis):
             return f"{result}: could not decrypt"
 
 
+class ZipEncryptionAnalyzerConfig(AnalysisModuleConfig):
+    range_low: int = Field(..., description="The minimum size of the passwords to try.")
+    range_high: int = Field(..., description="The maximum size of the passwords to try.")
+    byte_limit: int = Field(..., description="How many bytes into the email do you want to look?")
+    list_limit: int = Field(..., description="The maximum size of the word list created.")
+    john_bin_path: str = Field(..., description="Full path to john the ripper binary.")
+    extract_timeout: int = Field(default=5, description="The maximum amount of time (in seconds) to wait for 7z to complete.")
+
 class ZipEncryptionAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return ZipEncryptionAnalyzerConfig
+
     @property
     def generated_analysis_type(self):
         return ZipEncryptionAnalysis
@@ -117,27 +131,27 @@ class ZipEncryptionAnalyzer(AnalysisModule):
 
     @property
     def range_low(self):
-        return self.config.getint('range_low')
+        return self.config.range_low
 
     @property
     def range_high(self):
-        return self.config.getint('range_high')
+        return self.config.range_high
 
     @property
     def byte_limit(self):
-        return self.config.getint('byte_limit')
+        return self.config.byte_limit
 
     @property
     def list_limit(self):
-        return self.config.getint('list_limit')
+        return self.config.list_limit
 
     @property
     def john_bin_path(self):
-        return self.config.get('john_bin_path')
+        return self.config.john_bin_path
 
     @property
     def extract_timeout(self):
-        return self.config.get('extract_timeout')
+        return self.config.extract_timeout
 
     def execute_analysis(self, _file) -> AnalysisExecutionResult:
         assert isinstance(_file, FileObservable)

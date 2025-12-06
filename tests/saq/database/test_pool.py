@@ -2,9 +2,9 @@ from multiprocessing import Process
 import threading
 import pytest
 
-from saq.configuration.config import get_config
-from saq.constants import CONFIG_DATABASE, CONFIG_DATABASE_MAX_CONNECTION_LIFETIME, DB_ACE
-from saq.database.pool import execute_with_db_cursor, get_db_connection, get_pool
+from saq.configuration.config import get_database_config
+from saq.constants import DB_ACE
+from saq.database.pool import execute_with_db_cursor, get_db_connection, get_pool, reset_pools
 from tests.saq.helpers import log_count, recv_test_message, send_test_message
 
 @pytest.mark.unit
@@ -33,7 +33,7 @@ def test_pooling():
         with get_db_connection() as db_2:
             assert get_pool().in_use_count == 2
             assert get_pool().available_count ==0
-            assert not db_1 is db_2
+            assert db_1 is not db_2
 
         assert get_pool().in_use_count == 1
         assert get_pool().available_count == 1
@@ -46,7 +46,10 @@ def test_pooling_old_connection():
     get_pool().clear()
 
     # make them invalid immediately
-    get_config()[CONFIG_DATABASE][CONFIG_DATABASE_MAX_CONNECTION_LIFETIME] = "00:00:00"
+    get_database_config(DB_ACE).max_connection_lifetime = "00:00:00"
+
+    # this is needed to reset the timeouts on the existing connections
+    reset_pools()
 
     with get_db_connection() as _:
         pass
@@ -59,8 +62,8 @@ def test_pooling_old_connection():
     assert log_count('got new database connection to') == 2
 
     # change it back and then we should start re-using the connections again
-    get_pool().clear()
-    get_config()[CONFIG_DATABASE][CONFIG_DATABASE_MAX_CONNECTION_LIFETIME] = "00:01:00"
+    get_database_config(DB_ACE).max_connection_lifetime = "00:01:00"
+    reset_pools()
 
     with get_db_connection() as _:
         pass
@@ -165,7 +168,7 @@ def test_pooling_threaded():
 
         def f():
             with get_db_connection() as conn_2:
-                assert not conn_1 is conn_2
+                assert conn_1 is not conn_2
                 assert get_pool().in_use_count == 2
                 assert get_pool().available_count == 0
 
@@ -216,7 +219,7 @@ def test_pooling_multi_process(test_comms):
 
             # so this connection should be different than conn_1
             with get_db_connection() as conn_2:
-                send_test_message(not (conn_1 is conn_2))
+                send_test_message(conn_1 is not conn_2)
                 send_test_message(get_pool().in_use_count == 1)
                 send_test_message(get_pool().available_count == 0)
 

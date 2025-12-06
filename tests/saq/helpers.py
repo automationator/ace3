@@ -4,7 +4,6 @@ from multiprocessing import Manager, Pipe, Process, RLock
 import os
 import secrets
 
-import sys
 import time
 from typing import List, Union
 import uuid
@@ -381,7 +380,7 @@ def start_api_server(remote_host=None, ssl_verification=None, listen_address=Non
     if remote_host is None:
         remote_host = g(G_API_PREFIX)
     if ssl_verification is None:
-        ssl_verification = get_config()['SSL']['ca_chain_path']
+        ssl_verification = get_config().SSL.ca_chain_path
 
     import ace_api
 
@@ -422,12 +421,12 @@ def execute_api_server(listen_address=None, listen_port=None, ssl_cert=None, ssl
     })
 
     if listen_address is None:
-        listen_address = get_config().get('api', 'listen_address')
+        listen_address = get_config().api.listen_address
     if listen_port is None:
-        listen_port = get_config().getint('api', 'listen_port')
+        listen_port = get_config().api.listen_port
     ssl_context = (
-        get_config().get('api', 'ssl_cert') if ssl_cert is None else ssl_cert,
-        get_config().get('api', 'ssl_key') if ssl_key is None else ssl_key )
+        get_config().api.ssl_cert if ssl_cert is None else ssl_cert,
+        get_config().api.ssl_key if ssl_key is None else ssl_key )
 
     # XXX really?
     #initialize_database()

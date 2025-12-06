@@ -6,7 +6,9 @@ from unittest.mock import Mock, patch
 import pytest
 
 from saq.collectors.email.journal import JournalEmailCollector, JournalEmailMessageLocation
-from saq.constants import ANALYSIS_MODE_EMAIL, ANALYSIS_TYPE_MAILBOX, DIRECTIVE_ARCHIVE, DIRECTIVE_NO_SCAN, DIRECTIVE_ORIGINAL_EMAIL
+from saq.configuration import get_config
+from saq.configuration.config import get_service_config
+from saq.constants import ANALYSIS_MODE_EMAIL, ANALYSIS_TYPE_MAILBOX, DIRECTIVE_ARCHIVE, DIRECTIVE_NO_SCAN, DIRECTIVE_ORIGINAL_EMAIL, SERVICE_JOURNAL_EMAIL_COLLECTOR
 
 
 pytestmark = pytest.mark.unit
@@ -16,28 +18,15 @@ class TestJournalEmailCollector:
     """Test suite for JournalEmailCollector class."""
 
     @pytest.fixture
-    def mock_config(self):
+    def mock_config(self, monkeypatch):
         """Mock configuration values."""
-        with patch("saq.collectors.email.journal.get_config_value_as_str") as mock_get_config_value_as_str, \
-             patch("saq.collectors.email.journal.get_config_value_as_int") as mock_get_config_value_as_int, \
-             patch("saq.collectors.email.journal.get_config_value_as_boolean") as mock_get_config_value_as_boolean:
-
-            mock_get_config_value_as_str.side_effect = lambda section, key: {
-                ("rabbitmq", "user"): "test_user",
-                ("rabbitmq", "password"): "test_password",
-                ("rabbitmq", "host"): "test_host",
-                ("rabbitmq", "port"): "5672",
-                ("service_journal_email_collector", "blacklist_yara_rule_path"): "/tmp/blacklist.yara",
-            }.get((section, key), "default_value")
-
-            mock_get_config_value_as_int.return_value = 60
-            mock_get_config_value_as_boolean.return_value = False
-
-            yield {
-                "get_config_value": mock_get_config_value_as_str,
-                "get_config_value_as_int": mock_get_config_value_as_int,
-                "get_config_value_as_boolean": mock_get_config_value_as_boolean,
-            }
+        monkeypatch.setattr(get_service_config(SERVICE_JOURNAL_EMAIL_COLLECTOR), "blacklist_yara_rule_path", "/tmp/blacklist.yara")
+        monkeypatch.setattr(get_service_config(SERVICE_JOURNAL_EMAIL_COLLECTOR), "blacklist_yara_rule_check_frequency", 60)
+        monkeypatch.setattr(get_service_config(SERVICE_JOURNAL_EMAIL_COLLECTOR), "delete_s3_objects", False)
+        monkeypatch.setattr(get_config().rabbitmq, "username", "test_user")
+        monkeypatch.setattr(get_config().rabbitmq, "password", "test_password")
+        monkeypatch.setattr(get_config().rabbitmq, "host", "test_host")
+        monkeypatch.setattr(get_config().rabbitmq, "port", 5672)
 
     @pytest.fixture
     def mock_minio_client(self):
@@ -446,10 +435,10 @@ class TestJournalEmailCollector:
             # Verify file was deleted
             mock_delete_file.assert_called_once()
 
-    def test_collect_with_s3_deletion_enabled(self, collector, mock_minio_client, tmpdir, mock_config):
+    def test_collect_with_s3_deletion_enabled(self, collector, mock_minio_client, tmpdir, mock_config, monkeypatch):
         """Test collect method with S3 object deletion enabled."""
         # Enable S3 object deletion
-        mock_config["get_config_value_as_boolean"].return_value = True
+        monkeypatch.setattr(get_service_config(SERVICE_JOURNAL_EMAIL_COLLECTOR), "delete_s3_objects", True)
 
         # Setup message in queue
         message = JournalEmailMessageLocation(
@@ -492,10 +481,10 @@ class TestJournalEmailCollector:
                 "test-bucket", "test-email.eml"
             )
 
-    def test_collect_s3_deletion_failure(self, collector, mock_minio_client, tmpdir, mock_config):
+    def test_collect_s3_deletion_failure(self, collector, mock_minio_client, tmpdir, mock_config, monkeypatch):
         """Test collect method handles S3 deletion failures gracefully."""
         # Enable S3 object deletion
-        mock_config["get_config_value_as_boolean"].return_value = True
+        monkeypatch.setattr(get_service_config(SERVICE_JOURNAL_EMAIL_COLLECTOR), "delete_s3_objects", True)
 
         # Setup message in queue
         message = JournalEmailMessageLocation(

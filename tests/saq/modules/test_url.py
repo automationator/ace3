@@ -3,9 +3,9 @@ import pytest
 from unittest.mock import Mock
 
 from saq.analysis.root import load_root
-from saq.configuration.config import get_config
+from saq.configuration.config import get_config, get_analysis_module_config
 from saq.util.uuid import get_storage_dir
-from saq.constants import ANALYSIS_MODE_CORRELATION, ANALYSIS_TYPE_MANUAL, DIRECTIVE_CRAWL, DIRECTIVE_EXTRACT_URLS, F_FILE, F_URL, G_ANALYST_DATA_DIR, R_DOWNLOADED_FROM
+from saq.constants import ANALYSIS_MODE_CORRELATION, ANALYSIS_MODULE_CRAWLPHISH, ANALYSIS_TYPE_MANUAL, DIRECTIVE_CRAWL, DIRECTIVE_EXTRACT_URLS, F_FILE, F_URL, G_ANALYST_DATA_DIR, R_DOWNLOADED_FROM
 from saq.engine.core import Engine
 from saq.engine.engine_configuration import EngineConfiguration
 from saq.engine.enums import EngineExecutionMode
@@ -14,13 +14,9 @@ from saq.modules.url.crawlphish import CrawlphishAnalysisV2, CrawlphishAnalyzer
 from tests.saq.helpers import log_count
 
 @pytest.fixture(autouse=True, scope="function")
-def disable_proxy():
-    # disable proxy for crawlphish
-    get_config()['proxy']['transport'] = ''
-    get_config()['proxy']['host'] = ''
-    get_config()['proxy']['port'] = ''
-    get_config()['proxy']['user'] = ''
-    get_config()['proxy']['password'] = ''
+def disable_proxy(monkeypatch):
+    monkeypatch.setattr(get_config().global_settings, "default_proxy", None)
+    get_config().clear_proxy_configs()
 
 @pytest.mark.integration
 def test_url_download_conditions_no_directive(root_analysis):
@@ -31,7 +27,7 @@ def test_url_download_conditions_no_directive(root_analysis):
     root_analysis.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_crawlphish', 'test_groups')
+    engine.configuration_manager.enable_module('crawlphish', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
     
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -69,7 +65,7 @@ def test_url_download_conditions_with_directive(root_analysis, monkeypatch, data
     monkeypatch.setattr('requests.Session.request', mock_request)
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_crawlphish', 'test_groups')
+    engine.configuration_manager.enable_module('crawlphish', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
     
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -107,7 +103,7 @@ def test_url_download_conditions_manual_alert(root_analysis, monkeypatch, datadi
     monkeypatch.setattr('requests.Session.request', mock_request)
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_crawlphish', 'test_groups')
+    engine.configuration_manager.enable_module('crawlphish', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
     
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -119,7 +115,7 @@ def test_url_download_conditions_manual_alert(root_analysis, monkeypatch, datadi
 @pytest.mark.integration
 def test_url_download_conditions_auto_crawl(root_analysis, monkeypatch, datadir):
 
-    get_config()['analysis_module_crawlphish']['auto_crawl_all_alert_urls'] = True
+    get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH).auto_crawl_all_alert_urls = True
     root_analysis.analysis_mode = "test_groups"
     root_analysis.analysis_mode = ANALYSIS_MODE_CORRELATION
     url = root_analysis.add_observable_by_spec(F_URL, 'http://example.com/test_file')
@@ -146,7 +142,7 @@ def test_url_download_conditions_auto_crawl(root_analysis, monkeypatch, datadir)
     monkeypatch.setattr('requests.Session.request', mock_request)
     
     engine = Engine(config=EngineConfiguration(local_analysis_modes=[ANALYSIS_MODE_CORRELATION]))
-    engine.configuration_manager.enable_module('analysis_module_crawlphish', 'correlation')
+    engine.configuration_manager.enable_module('crawlphish', 'correlation')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
     
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -184,7 +180,7 @@ def test_basic_download(root_analysis, monkeypatch, datadir):
     monkeypatch.setattr('requests.Session.request', mock_request)
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_crawlphish', 'test_groups')
+    engine.configuration_manager.enable_module('crawlphish', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
     
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -211,7 +207,7 @@ def test_download_multiple_uas_duplicate_content(root_analysis, monkeypatch, dat
     # tests the case where we are multiple multiple user agent strings
     # and each request returns the same data
 
-    get_config()['analysis_module_crawlphish']['user_agent_list_path'] = "test_uas.txt"
+    get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH).user_agent_list_path = "test_uas.txt"
 
     target_path = os.path.join(g(G_ANALYST_DATA_DIR), "test_uas.txt")
     with open(target_path, 'w') as fp:
@@ -243,7 +239,7 @@ def test_download_multiple_uas_duplicate_content(root_analysis, monkeypatch, dat
     monkeypatch.setattr('requests.Session.request', mock_request)
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_crawlphish', 'test_groups')
+    engine.configuration_manager.enable_module('crawlphish', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
     
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -299,7 +295,7 @@ def test_download_404(root_analysis, monkeypatch):
     monkeypatch.setattr('requests.Session.request', mock_request)
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_crawlphish', 'test_groups')
+    engine.configuration_manager.enable_module('crawlphish', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -328,8 +324,10 @@ def test_load_user_agent_list_file(monkeypatch, test_context):
         fp.write("test-ua-1\ntest-ua-2\n")
 
     try:
-        monkeypatch.setitem(get_config()['analysis_module_crawlphish'], 'user_agent_list_path', 'test_uas.txt')
-        analyzer = CrawlphishAnalyzer(context=test_context)
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH), 'user_agent_list_path', 'test_uas.txt')
+        analyzer = CrawlphishAnalyzer(
+            context=test_context,
+            config=get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH))
         analyzer.load_user_agent_list()
         assert analyzer.user_agent_list == [ "test-ua-1", "test-ua-2" ]
     finally:
@@ -342,8 +340,10 @@ def test_load_user_agent_list_file_with_comments(monkeypatch, test_context):
         fp.write("test-ua-1\n# this is a comment\ntest-ua-2\n")
 
     try:
-        monkeypatch.setitem(get_config()['analysis_module_crawlphish'], 'user_agent_list_path', 'test_uas.txt')
-        analyzer = CrawlphishAnalyzer(context=test_context)
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH), 'user_agent_list_path', 'test_uas.txt')
+        analyzer = CrawlphishAnalyzer(
+            context=test_context,
+            config=get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH))
         analyzer.load_user_agent_list()
         assert analyzer.user_agent_list == [ "test-ua-1", "test-ua-2" ]
     finally:
@@ -351,9 +351,11 @@ def test_load_user_agent_list_file_with_comments(monkeypatch, test_context):
 
 @pytest.mark.unit
 def test_missing_user_agent_list_file(monkeypatch, test_context):
-    monkeypatch.setitem(get_config()['analysis_module_crawlphish'], 'user_agent_list_path', 'missing_file.txt')
-    monkeypatch.setitem(get_config()['analysis_module_crawlphish'], 'user-agent', 'test ua')
-    analyzer = CrawlphishAnalyzer(context=test_context)
+    monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH), 'user_agent_list_path', 'missing_file.txt')
+    monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH), 'user_agent', 'test ua')
+    analyzer = CrawlphishAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH))
     analyzer.load_user_agent_list()
     assert analyzer.user_agent_list == [ "test ua" ]
 

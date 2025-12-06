@@ -104,6 +104,9 @@ global:
   # once this threshold is met, no more observables can be added
   # set to 0 to disable this functionality
   maximum_observable_count: 800
+  # optional default proxy to use for all http/https requests
+  # leave empty to not use a proxy at all
+  default_proxy:
 
 # LLM settings
 llm:
@@ -111,15 +114,17 @@ llm:
   embedding_model: all-MiniLM-L6-v2
 
 service_llm_embedding:
-  module: saq.llm.embedding.service
-  class: EmbeddingService
+  name: llm_embedding
+  python_module: saq.llm.embedding.service
+  python_class: EmbeddingService
   description: LLM Embedding - embeds alerts into a vector space
   enabled: true
 
 # cron settings
 service_cron:
-  module: saq.cron
-  class: ACECronService
+  name: cron
+  python_module: saq.cron
+  python_class: ACECronService
   description: ACE Cron Service - runs cron jobs
   enabled: true
   cron_config_path: etc/cron.yaml
@@ -151,6 +156,7 @@ minio:
 
 # global redis settings
 redis:
+  name: default
   host: redis
   port: 6379
   username: ace3
@@ -159,6 +165,7 @@ redis:
   #ssl_ca_path: /opt/ace/ssl/ca-chain.cert.pem
 
 redis-local:
+  name: local
   host: redis
   port: 6379
   username: ace3
@@ -173,12 +180,6 @@ qdrant:
   api_key: encrypted:qdrant.api_key
   # the collection name for ace3 alert data
   collection_alerts: ace3-alerts
-
-# global database settings
-database:
-  # how long (in HH:MM:SS format) a database connecton is considered valid
-  # connections that exceed this lifetime are terminated and recreated
-  max_connection_lifetime: "00:15:00"
 
 # sqlite3 settings
 sqlite3:
@@ -205,7 +206,9 @@ collection:
   # path (relative to SAQ_HOME) to directory that contains the yara rules used to tune collection
   # directories are specified by using the prefix tuning_dir_NAME where NAME is a unique name
   # see README.COLLECTION-TUNING
-  # tuning_dir_default: etc/collection/tuning (use service-specific YAML if needed)
+  tuning_dirs:
+    - etc/collection/tuning
+  tuning_dir_default: etc/collection/tuning (use service-specific YAML if needed)
   # path (relative to DATA_DIR) to use to store temporary file buffers for tuning
   # this should be a fast drive; defaults to tmp_dir set in the [global] section
   tuning_temp_dir: ""
@@ -215,19 +218,25 @@ collection:
   force_api: false
 
 # the default service configuration is none is provided
+# XXX not sure we need this?
 service_default:
+  name: default
+  python_module: saq.service
+  python_class: DisabledService
   description: default unconfigured service
   enabled: true
 
 service_background_executor:
-  module: saq.background_exec
-  class: BackgroundExecutor
+  name: background_executor
+  python_module: saq.background_exec
+  python_class: BackgroundExecutor
   description: Background Process Executor
   enabled: true
 
 service_email_collector:
-  module: saq.collectors.email.scanner
-  class: EmailCollectorService
+  name: email_collector
+  python_module: saq.collectors.email.scanner
+  python_class: EmailCollectorService
   description: Email Collector (AMS) - collects emails from remote AMS systems
   enabled: true
   workload_type: email
@@ -240,8 +249,9 @@ service_email_collector:
   blacklist_yara_rule_check_frequency: 10
 
 service_journal_email_collector:
-  module: saq.collectors.email.journal
-  class: JournalEmailCollectorService
+  name: journal_email_collector
+  python_module: saq.collectors.email.journal
+  python_class: JournalEmailCollectorService
   description: Journal Email Collector - collects journal emails from an S3 bucket
   enabled: true
   workload_type: journal
@@ -252,12 +262,15 @@ service_journal_email_collector:
   delete_s3_objects: true
   # any email that matches these rules are ignored
   blacklist_yara_rule_path: etc/blacklist.yar
+  # how often do we check to see if the blacklist yara rule has changed (in SECONDS)
+  blacklist_yara_rule_check_frequency: 10
 
 # ACE Services
 service_hunter:
+  name: hunter
   # ACE Hunter Collector
-  module: saq.collectors.hunter
-  class: HunterService
+  python_module: saq.collectors.hunter
+  python_class: HunterService
   description: Hunter - executes searches, queries and commands on external systems
   enabled: true
   delete_files: true
@@ -287,14 +300,15 @@ node_translation_gui: {}
 SSL:
   ca_chain_path: ssl/ca-chain.cert.pem
 
-proxy:
-  # leave these values blank if you do not need to use a proxy
-  transport: ""
-  host: ""
-  port: ""
-  user: ""
-  password: ""
-  # additional proxy sections can be added and referred to by analysis modules that might use more than one
+# Optional proxy configuration
+#proxy_default:
+#  name: default
+#  transport: http
+#  host: proxy.local
+#  port: 3128
+#  user:
+#  password:
+#  # additional proxy sections can be added and referred to by analysis modules that might use more than one
 
 api:
   # this is the single threaded developer server API config
@@ -400,8 +414,9 @@ gui:
 gui_favicons: {}
 
 service_network_semaphore:
-  module: saq.network_semaphore
-  class: NetworkSemaphoreServer
+  name: network_semaphore
+  python_module: saq.network_semaphore.service
+  python_class: NetworkSemaphoreService
   description: Network Semaphore - global network service for controlling concurrent access to limited resources
   enabled: true
   # the address of the network semaphore server (used to bind and listen)
@@ -415,12 +430,14 @@ service_network_semaphore:
   remote_port: 53559
   # comma separated list of source IP addresses that are allowed to connect
   # the code that blocks addresses not listed here is currently commented out
-  allowed_ipv4: 0.0.0.0
+  allowed_ipv4:
+    - 0.0.0.0
   # directory that contains metrics and current status of semaphores
   stats_dir: var/network_semaphore
   # SEMAPHORE CAPACITY LIMITS
   # each of these represents a resource and the number of simultaneous connections allowed to it
-  semaphore_pcap: 1
+  semaphore_capacity_limits:
+    pcap: 1
 
 network_configuration:
   # this section defines what the managed network looks like
@@ -494,6 +511,9 @@ database_ace:
   ssl_ca: ssl/ca-chain.cert.pem
   # ssl_key, ssl_cert, ssl_ca can be added if needed
   max_allowed_packet: 1073741824
+  # how long (in HH:MM:SS format) a database connecton is considered valid
+  # connections that exceed this lifetime are terminated and recreated
+  max_connection_lifetime: "00:15:00"
 
 database_collection:
   hostname: ace-db
@@ -504,6 +524,9 @@ database_collection:
   password: "env:ACE_DB_PASSWORD"
   ssl_ca: ssl/ca-chain.cert.pem
   max_allowed_packet: 1073741824
+  # how long (in HH:MM:SS format) a database connecton is considered valid
+  # connections that exceed this lifetime are terminated and recreated
+  max_connection_lifetime: "00:15:00"
 
 database_brocess:
   hostname: ace-db
@@ -518,6 +541,9 @@ database_brocess:
   # failure to complete the timeout will send the analysis module using brocess into cooldown mode
   query_timeout: 5
   max_allowed_packet: 1073741824
+  # how long (in HH:MM:SS format) a database connecton is considered valid
+  # connections that exceed this lifetime are terminated and recreated
+  max_connection_lifetime: "00:15:00"
 
 database_email_archive:
   hostname: ace-db
@@ -528,6 +554,9 @@ database_email_archive:
   password: "env:ACE_DB_PASSWORD"
   ssl_ca: ssl/ca-chain.cert.pem
   max_allowed_packet: 1073741824
+  # how long (in HH:MM:SS format) a database connecton is considered valid
+  # connections that exceed this lifetime are terminated and recreated
+  max_connection_lifetime: "00:15:00"
 
 ldap:
   # the LDAP server (probably your domain controller)
@@ -785,8 +814,9 @@ sip_observable_type_mappping:
   process_guid: ""
 
 service_yara:
-  module: saq.yara_scanning_service
-  class: YSSService
+  name: yara
+  python_module: saq.yara_scanning_service
+  python_class: YSSService
   description: Yara Scanner Service - local distributed yara scanner
   enabled: true
   # relative directory where the unix sockets for the yara scanner server are located (relative to DATA_DIR)
@@ -809,8 +839,8 @@ service_yara:
 malicious_files:
   # this is where we actually store copies of the files
   malicious_dir: malicious
-  # comma separated list of email accounts to send notifications to when new files are added
-  malicious_alert_recipients: ""
+  # list of email accounts to send notifications to when new files are added
+  malicious_alert_recipients: []
 
 # observable groups
 observable_group_internal:
@@ -850,7 +880,8 @@ custom_alerts:
   # directory containing all flask views, default = app/templates/
   template_dir: app/templates/
   # ;-separated list of dirs containing all custom alert views, default = analysis/custom
-  dir: analysis/custom
+  dirs: 
+    - analysis/custom
 
 # all deprecated custom_alert view definitions -- move old values here for full coverage
 custom_alerts_backward_compatibility:
@@ -861,7 +892,7 @@ custom_alerts_backward_compatibility:
 # ANALYSIS MODULES (only comments for select keys included below to preserve length)
 # configuration format is as follows
 # analysis_module_UNIQUE_MODULE_NAME:
-#   id: unique identifier for the module
+#   name: unique identifier for the module
 #   module: MODULE_PATH  # the module path the AnalysisModule class is located in
 #   class: MODULE_CLASS
 #   enabled: true | false
@@ -871,45 +902,45 @@ custom_alerts_backward_compatibility:
 #   # optional parameters include file_size_limit (bytes), priority (lower goes first)
 
 analysis_module_html_data_url_extraction:
-  id: html_data_url_extraction
-  module: saq.modules.file_analysis.html
-  class: HTMLDataURLAnalyzer
+  name: html_data_url_extraction
+  python_module: saq.modules.file_analysis.html
+  python_class: HTMLDataURLAnalyzer
   enabled: true
   # the maximum number of bytes to read from the file
   max_bytes: 104857600
 
 analysis_module_onenote_extraction:
-  id: onenote_extraction
-  module: saq.modules.file_analysis.one_note
-  class: OneNoteFileAnalyzer
+  name: onenote_extraction
+  python_module: saq.modules.file_analysis.one_note
+  python_class: OneNoteFileAnalyzer
   enabled: true
   # the maximum number of bytes to read from the file
   max_bytes: 104857600
 
 analysis_module_synchrony:
-  id: synchrony
-  module: saq.modules.file_analysis.js
-  class: SynchronyFileAnalyzer
+  name: synchrony
+  python_module: saq.modules.file_analysis.js
+  python_class: SynchronyFileAnalyzer
   enabled: true
 
 analysis_module_command_line_analyzer:
-  id: command_line_analyzer
-  module: saq.modules.command_line
-  class: CommandLineAnalyzer
+  name: command_line_analyzer
+  python_module: saq.modules.command_line
+  python_class: CommandLineAnalyzer
   enabled: true
   # the minimum length of a base64 encoded string to be extracted from a command line
   base64_minimum_length: 128
 
 analysis_module_mailbox_email_analyzer:
-  id: mailbox_email_analyzer
-  module: saq.modules.email.mailbox
-  class: MailboxEmailAnalyzer
+  name: mailbox_email_analyzer
+  python_module: saq.modules.email.mailbox
+  python_class: MailboxEmailAnalyzer
   enabled: true
 
 analysis_module_email_analyzer:
-  id: email_analyzer
-  module: saq.modules.email.rfc822
-  class: EmailAnalyzer
+  name: email_analyzer
+  python_module: saq.modules.email.rfc822
+  python_class: EmailAnalyzer
   enabled: true
   # relative path to the brotex custom whitelist file
   whitelist_path: etc/brotex.whitelist
@@ -921,9 +952,9 @@ analysis_module_email_analyzer:
   outbound_exceptions: ""
 
 analysis_module_email_archiver:
-  id: email_archiver
-  module: saq.modules.email.archive
-  class: EmailArchiveAction
+  name: email_archiver
+  python_module: saq.modules.email.archive
+  python_class: EmailArchiveAction
   enabled: false
   # the directory to contain the archived emails (relative to DATA_DIR)
   archive_dir: archive/email
@@ -931,38 +962,21 @@ analysis_module_email_archiver:
   expiration_days: 7
 
 analysis_module_encrypted_archive_analyzer:
-  id: encrypted_archive_analyzer
-  module: saq.modules.email.archive
-  class: EncryptedArchiveAnalyzer
+  name: encrypted_archive_analyzer
+  python_module: saq.modules.email.archive
+  python_class: EncryptedArchiveAnalyzer
   enabled: true
 
 analysis_module_file_path_analysis:
-  id: file_path_analysis
-  module: saq.modules.file_path
-  class: FilePathAnalyzer
+  name: file_path_analysis
+  python_module: saq.modules.file_path
+  python_class: FilePathAnalyzer
   enabled: true
 
-analysis_module_pcap_extraction:
-  id: pcap_extraction
-  module: saq.modules.pcap.sensor_extraction
-  class: PcapExtraction
-  enabled: false
-  semaphore: pcap
-  # relative time capture (see -d option of the extract script)
-  relative_duration: "00:01:00"
-  # pcap executable path
-  executable_path: bin/extract
-  # custom pcap extraction configuration path for ACE
-  config_path: etc/pcap_extract.ini
-  # we don't want to pull pcap for internal systems (too much data)
-  exclude_internal_network: observable_group:internal
-  # the maximum total number of pcap files we should get for a single alert
-  max_pcap_count: 2
-
 analysis_module_pcap_conversation_extraction:
-  id: pcap_conversation_extraction
-  module: saq.modules.pcap.sensor_extraction
-  class: PcapConversationExtraction
+  name: pcap_conversation_extraction
+  python_module: saq.modules.pcap.sensor_extraction
+  python_class: PcapConversationExtraction
   enabled: false
   semaphore: pcap
   # relative time capture (see -d option of the extract script)
@@ -979,122 +993,120 @@ analysis_module_pcap_conversation_extraction:
   max_size: 10
 
 analysis_module_network_identifier:
-  id: network_identifier
-  module: saq.modules.asset.network_identifier
-  class: NetworkIdentifier
+  name: network_identifier
+  python_module: saq.modules.asset.network_identifier
+  python_class: NetworkIdentifier
   enabled: true
   # the CSV file that contains the definitions
   csv_file: data/etc/local_networks.csv
 
 analysis_module_asset_analyzer:
-  id: asset_analyzer
-  module: saq.modules.asset.asset
-  class: AssetAnalyzer
+  name: asset_analyzer
+  python_module: saq.modules.asset.asset
+  python_class: AssetAnalyzer
   enabled: false
 
 analysis_module_netbios_analyzer:
-  id: netbios_analyzer
-  module: saq.modules.asset.netbios
-  class: NetBIOSAnalyzer
+  name: netbios_analyzer
+  python_module: saq.modules.asset.netbios
+  python_class: NetBIOSAnalyzer
   enabled: false
   # if this is set then the command is prefixed with ssh ssh_host so that it executes from another system
   # use this if you are in AWS and your target is inside target network
   ssh_host: ""
 
 analysis_module_parse_url:
-  id: parse_url
+  name: parse_url
   # Parse URL and add FQDN and URI path observables
-  module: saq.modules.url.parser
-  class: ParseURLAnalyzer
+  python_module: saq.modules.url.parser
+  python_class: ParseURLAnalyzer
   enabled: true
-  invalid_queues: internal
 
 analysis_module_fqdn_analyzer:
-  id: fqdn_analyzer
+  name: fqdn_analyzer
   # Add ip observables for FQDN resolutions
-  module: saq.modules.dns
-  class: FQDNAnalyzer
+  python_module: saq.modules.dns
+  python_class: FQDNAnalyzer
   enabled: true
 
 analysis_module_idna_analyzer:
-  id: idna_analyzer
-  module: saq.modules.url.idna
-  class: IDNAAnalyzer
+  name: idna_analyzer
+  python_module: saq.modules.url.idna
+  python_class: IDNAAnalyzer
   enabled: true
 
 analysis_module_dns_analyzer:
-  id: dns_analyzer
-  module: saq.modules.asset.dns
-  class: DNSAnalyzer
+  name: dns_analyzer
+  python_module: saq.modules.asset.dns
+  python_class: DNSAnalyzer
   enabled: true
   # if this is set then the command is prefixed with ssh ssh_host so that it executes from another system
   # use this if you are in AWS and your target is inside target network
   ssh_host: ""
 
 analysis_module_whois_analyzer:
-  id: whois_analyzer
-  module: saq.modules.whois
-  class: WhoisAnalyzer
+  name: whois_analyzer
+  python_module: saq.modules.whois
+  python_class: WhoisAnalyzer
   enabled: true
 
 analysis_module_active_directory_analyzer:
-  id: active_directory_analyzer
-  module: saq.modules.asset.active_directory
-  class: ActiveDirectoryAnalyzer
+  name: active_directory_analyzer
+  python_module: saq.modules.asset.active_directory
+  python_class: ActiveDirectoryAnalyzer
   enabled: true
 
 analysis_module_snort_signature_analysis_v1:
-  id: snort_signature_analysis_v1
+  name: snort_signature_analysis_v1
   # also see bin/update_snort_rules
-  module: saq.modules.snort
-  class: SnortSignatureAnalyzer_v1
+  python_module: saq.modules.snort
+  python_class: SnortSignatureAnalyzer_v1
   enabled: true
   # relative path to snort rules
   signature_path: data/snort/snort.rules
 
 analysis_module_user_analyzer:
-  id: user_analyzer
-  module: saq.modules.user
-  class: UserAnalyzer
+  name: user_analyzer
+  python_module: saq.modules.user
+  python_class: UserAnalyzer
   enabled: true
 
 analysis_module_email_conversation_frequency_analyzer:
-  id: email_conversation_frequency_analyzer
-  module: saq.modules.email.fa
-  class: EmailConversationFrequencyAnalyzer
+  name: email_conversation_frequency_analyzer
+  python_module: saq.modules.email.fa
+  python_class: EmailConversationFrequencyAnalyzer
   enabled: true
   # when two people email each other frequently we want to know that
   # this is the minimum number of times we've seen this email address email this other email address
   # that we consider to be "frequent"
   cooldown_period: 60
   conversation_count_threshold: 5
-  invalid_queues: internal
 
 analysis_module_email_conversation_attachment_analyzer:
-  id: email_conversation_attachment_analyzer
-  module: saq.modules.email.fa
-  class: EmailConversationAttachmentAnalyzer
+  name: email_conversation_attachment_analyzer
+  python_module: saq.modules.email.fa
+  python_class: EmailConversationAttachmentAnalyzer
   enabled: true
 
 analysis_module_email_conversation_link_analyzer:
-  id: email_conversation_link_analyzer
-  module: saq.modules.email.fa
-  class: EmailConversationLinkAnalyzer
+  name: email_conversation_link_analyzer
+  python_module: saq.modules.email.fa
+  python_class: EmailConversationLinkAnalyzer
   enabled: true
 
 analysis_module_url_email_pivot_analyzer:
-  id: url_email_pivot_analyzer
-  module: saq.modules.email.correlation
-  class: URLEmailPivotAnalyzer
+  name: url_email_pivot_analyzer
+  python_module: saq.modules.email.correlation
+  python_class: URLEmailPivotAnalyzer
   enabled: true
   # the maximum amount of results to download
   # if there are more emails, only the count is recorded
   result_limit: 35
 
 analysis_module_email_logger:
-  id: email_logger
-  module: saq.modules.email.logging
-  class: EmailLoggingAnalyzer
+  name: email_logger
+  python_module: saq.modules.email.logging
+  python_class: EmailLoggingAnalyzer
   enabled: true
   # this enabled an older style of logging suitable for a splunk heavy forwarder
   # if possible, use the JSON logger instead and send the logs to HEC
@@ -1120,10 +1132,9 @@ analysis_module_email_logger:
   json_log_path_format: logs/email/email-{pid}-%Y%m%d.log.json
 
 analysis_module_file_hash_analyzer:
-  id: file_hash_analyzer
-  module: saq.modules.file_analysis.hash
-  class: FileHashAnalyzer
-  invalid_queues: internal
+  name: file_hash_analyzer
+  python_module: saq.modules.file_analysis.hash
+  python_class: FileHashAnalyzer
   enabled: true
   # ignored file patterns (glob style pattern matching)
   ignore_pattern_pcap: "*.pcap"
@@ -1168,18 +1179,18 @@ analysis_module_file_hash_analyzer:
   ignore_pattern_pcode: "*.pcode.bas"
 
 analysis_module_correlated_tag_analyzer:
-  id: correlated_tag_analyzer
-  module: saq.modules.tag
-  class: CorrelatedTagAnalyzer
+  name: correlated_tag_analyzer
+  python_module: saq.modules.tag
+  python_class: CorrelatedTagAnalyzer
   enabled: false
   # powerpoint autoexec on mouse over to powershell
   definition_001_rule: ppt_mouse_over,ppt_program_action,ppt_powershell
   definition_001_text: openxml office document has mouseover event leading to powershell script
 
 analysis_module_ssdeep:
-  id: ssdeep
-  module: saq.modules.file_analysis.ssdeep
-  class: SsdeepAnalyzer
+  name: ssdeep
+  python_module: saq.modules.file_analysis.ssdeep
+  python_class: SsdeepAnalyzer
   enabled: false
   # the location of the ssdeep hashes to match against
   # generated using ssdeep files_to_hash > etc/ssdeep_hashes
@@ -1191,9 +1202,9 @@ analysis_module_ssdeep:
   ssdeep_match_threshold: 90
 
 analysis_module_archive:
-  id: archive
-  module: saq.modules.file_analysis.archive
-  class: ArchiveAnalyzer
+  name: archive
+  python_module: saq.modules.file_analysis.archive
+  python_class: ArchiveAnalyzer
   enabled: true
   # comma separated list of excluded mime types we do not want to extract
   excluded_mime_types: application/x-shockwave-flash,application/vnd.tcpdump.pcap,application/x-mach-binary
@@ -1209,18 +1220,18 @@ analysis_module_archive:
   java_class_decompile_limit: 30
 
 analysis_module_java_class_decompiler:
-  id: java_class_decompiler
-  module: saq.modules.file_analysis.java
-  class: JavaClassDecompilerAnalysisModule
+  name: java_class_decompiler
+  python_module: saq.modules.file_analysis.java
+  python_class: JavaClassDecompilerAnalysisModule
   enabled: true
 
   # the maximum amount of time (in seconds) to wait for the decompiler to complete
   timeout: 30
 
 analysis_module_olevba_v1_2:
-  id: olevba_v1_2
-  module: saq.modules.file_analysis.olevba
-  class: OLEVBA_Analyzer_v1_2
+  name: olevba_v1_2
+  python_module: saq.modules.file_analysis.olevba
+  python_class: OLEVBA_Analyzer_v1_2
   enabled: true
   # if set to yes then all extracted macros are merged into a single file called macros.bas
   merge_macros: false
@@ -1235,9 +1246,9 @@ analysis_module_olevba_v1_2:
   timeout: 30
 
 analysis_module_officeparser3:
-  id: officeparser3
-  module: saq.modules.file_analysis.officeparser3
-  class: OfficeParserAnalyzer3
+  name: officeparser3
+  python_module: saq.modules.file_analysis.officeparser3
+  python_class: OfficeParserAnalyzer3
   enabled: true
   # path to the officeparser3 executable (required)
   officeparser_path: /venv/bin/officeparser3
@@ -1247,9 +1258,9 @@ analysis_module_officeparser3:
   timeout: 90
 
 analysis_module_xlmdeobfuscator:
-  id: xlmdeobfuscator
-  module: saq.modules.file_analysis.xlm
-  class: XLMMacroDeobfuscatorAnalyzer
+  name: xlmdeobfuscator
+  python_module: saq.modules.file_analysis.xlm
+  python_class: XLMMacroDeobfuscatorAnalyzer
   enabled: true
   # amount of time to wait for the process to finish (in seconds)
   # if the process doesn't finish then we tag the file with xlmdeobfuscator_failed
@@ -1264,29 +1275,29 @@ analysis_module_xlmdeobfuscator:
     - Possible_XLM_in_XLSB
 
 analysis_module_mhtml:
-  id: mhtml
-  module: saq.modules.file_analysis.html
-  class: MHTMLAnalysisModule
+  name: mhtml
+  python_module: saq.modules.file_analysis.html
+  python_class: MHTMLAnalysisModule
   enabled: true
 
 analysis_module_pcodedmp:
-  id: pcodedmp
-  module: saq.modules.file_analysis.vbs
-  class: PCodeAnalyzer
+  name: pcodedmp
+  python_module: saq.modules.file_analysis.vbs
+  python_class: PCodeAnalyzer
   enabled: true
   # full path to the pcodedmp command line utility
   pcodedmp_path: /venv/bin/pcodedmp
 
 analysis_module_office_xml_rel:
-  id: office_xml_rel
-  module: saq.modules.file_analysis.msoffice
-  class: OfficeXMLRelationshipExternalURLAnalyzer
+  name: office_xml_rel
+  python_module: saq.modules.file_analysis.msoffice
+  python_class: OfficeXMLRelationshipExternalURLAnalyzer
   enabled: true
 
 analysis_module_msoffice_encryption_analyzer:
-  id: msoffice_encryption_analyzer
-  module: saq.modules.email.encryption.msoffice
-  class: MSOfficeEncryptionAnalyzer
+  name: msoffice_encryption_analyzer
+  python_module: saq.modules.email.encryption.msoffice
+  python_class: MSOfficeEncryptionAnalyzer
   enabled: true
   # for scanning the email for wordlists
   # what is the minimum
@@ -1303,23 +1314,23 @@ analysis_module_msoffice_encryption_analyzer:
   attempt_brute_force: true
 
 analysis_module_xml_binary_analyzer:
-  id: xml_binary_analyzer
-  module: saq.modules.file_analysis.xml
-  class: XMLBinaryDataAnalyzer
+  name: xml_binary_analyzer
+  python_module: saq.modules.file_analysis.xml
+  python_class: XMLBinaryDataAnalyzer
   enabled: true
 
 analysis_module_xml_plain_text_analyzer:
-  id: xml_plain_text_analyzer
-  module: saq.modules.file_analysis.xml
-  class: XMLPlainTextAnalyzer
+  name: xml_plain_text_analyzer
+  python_module: saq.modules.file_analysis.xml
+  python_class: XMLPlainTextAnalyzer
   enabled: true
   # the maximum size (in bytes) of a file that this module will analyze (expensive)
   maximum_size: 131072
 
 analysis_module_extracted_ole_analyzer:
-  id: extracted_ole_analyzer
-  module: saq.modules.file_analysis.ole
-  class: ExtractedOLEAnalyzer
+  name: extracted_ole_analyzer
+  python_module: saq.modules.file_analysis.ole
+  python_class: ExtractedOLEAnalyzer
   enabled: true
   # comma separated list of things to search for in the output of the file command
   suspect_file_type: ms windows shortcut
@@ -1327,133 +1338,128 @@ analysis_module_extracted_ole_analyzer:
   suspect_file_ext: vbs,jse,exe,jar,lnk,ps1,bat,scr,hta,wsf,cmd,vbe,wsc
 
 analysis_module_office_file_archiver:
-  id: office_file_archiver
-  module: saq.modules.file_analysis.msoffice
-  class: OfficeFileArchiver
+  name: office_file_archiver
+  python_module: saq.modules.file_analysis.msoffice
+  python_class: OfficeFileArchiver
   enabled: false
-  invalid_queues: internal
   # the directory (relative to SAQ_DATA) to store the archived office documents
   office_archive_dir: archive/office
 
 analysis_module_file_type:
-  id: file_type
-  module: saq.modules.file_analysis.file_type
-  class: FileTypeAnalyzer
+  name: file_type
+  python_module: saq.modules.file_analysis.file_type
+  python_class: FileTypeAnalyzer
   enabled: true
-  invalid_queues: internal
 
 analysis_module_pdf_analyzer:
-  id: pdf_analyzer
-  module: saq.modules.file_analysis.pdf
-  class: PDFAnalyzer
+  name: pdf_analyzer
+  python_module: saq.modules.file_analysis.pdf
+  python_class: PDFAnalyzer
   enabled: true
   # path to pdfparser
   pdfparser_path: bin/pdf-parser.py
-  invalid_queues: internal
 
 analysis_module_upx:
-  id: upx
-  module: saq.modules.file_analysis.upx
-  class: UPXAnalyzer
+  name: upx
+  python_module: saq.modules.file_analysis.upx
+  python_class: UPXAnalyzer
   enabled: true
 
 analysis_module_autoit:
-  id: autoit
-  module: saq.modules.file_analysis.autoit
-  class: AutoItAnalyzer
+  name: autoit
+  python_module: saq.modules.file_analysis.autoit
+  python_class: AutoItAnalyzer
   enabled: true
 
 analysis_module_lnk_parser:
-  id: lnk_parser
-  module: saq.modules.file_analysis.lnk_parser
-  class: LnkParseAnalyzer
+  name: lnk_parser
+  python_module: saq.modules.file_analysis.lnk_parser
+  python_class: LnkParseAnalyzer
   enabled: true
 
 analysis_module_de4dot:
-  id: de4dot
-  module: saq.modules.file_analysis.dotnet
-  class: De4dotAnalyzer
+  name: de4dot
+  python_module: saq.modules.file_analysis.dotnet
+  python_class: De4dotAnalyzer
   enabled: true
 
 analysis_module_ilspy:
-  id: ilspy
-  module: saq.modules.file_analysis.dotnet
-  class: IlspyAnalyzer
+  name: ilspy
+  python_module: saq.modules.file_analysis.dotnet
+  python_class: IlspyAnalyzer
   enabled: true
   binary_path: /opt/dotnet/ilspycmd
 
 analysis_module_ocr:
-  id: ocr
-  module: saq.modules.file_analysis.ocr
-  class: OCRAnalyzer
+  name: ocr
+  python_module: saq.modules.file_analysis.ocr
+  python_class: OCRAnalyzer
   enabled: true
   # this module is restricted to run since it's so CPU intensive
   # control the number of threads that tesseract uses
   # see https://github.com/tesseract-ocr/tesseract/issues/1600#issuecomment-393917656
   # leave empty to go with the default
-  valid_analysis_modes: ""
-  valid_alert_types: ""
+  valid_analysis_modes: []
+  valid_alert_types: []
   # not quite sure what value to use here, using 100MB for now
   file_size_limit: 104857600
   # do not run ocr on internal alerts
-  invalid_queues: internal
   # control the number of threads tesseract uses
   omp_thread_limit: 1
 
 analysis_module_qrcode:
-  id: qrcode
-  module: saq.modules.file_analysis.qrcode
-  class: QRCodeAnalyzer
+  name: qrcode
+  python_module: saq.modules.file_analysis.qrcode
+  python_class: QRCodeAnalyzer
   enabled: true
   # path to a list of strings to exclude from the results relative to ANALYST_DATA_DIR
   filter_path: qrcode.filter
 
 analysis_module_hidden_mime:
-  id: hidden_mime
-  module: saq.modules.file_analysis.mime
-  class: HiddenMIMEAnalyzer
+  name: hidden_mime
+  python_module: saq.modules.file_analysis.mime
+  python_class: HiddenMIMEAnalyzer
   enabled: true
 
 analysis_module_active_mime:
-  id: active_mime
-  module: saq.modules.file_analysis.mime
-  class: ActiveMimeAnalyzer
+  name: active_mime
+  python_module: saq.modules.file_analysis.mime
+  python_class: ActiveMimeAnalyzer
   enabled: true
 
 analysis_module_dmg_analyzer:
-  id: dmg_analyzer
-  module: saq.modules.file_analysis.dmg
-  class: DMGAnalyzer
+  name: dmg_analyzer
+  python_module: saq.modules.file_analysis.dmg
+  python_class: DMGAnalyzer
   enabled: true
 
 analysis_module_cve_2021_30657_analyzer:
-  id: cve_2021_30657_analyzer
-  module: saq.modules.file_analysis.cve
-  class: CVE_2021_30657_Analyzer
+  name: cve_2021_30657_analyzer
+  python_module: saq.modules.file_analysis.cve
+  python_class: CVE_2021_30657_Analyzer
   enabled: true
 
 analysis_module_exif:
-  id: exif
-  module: saq.modules.file_analysis.exif
-  class: ExifAnalyzer
+  name: exif
+  python_module: saq.modules.file_analysis.exif
+  python_class: ExifAnalyzer
   enabled: true
   # 80MB file limit
   file_size_limit: 83886080
 
 analysis_module_pdftotext:
-  id: pdftotext
-  module: saq.modules.file_analysis.pdf
-  class: PDFTextAnalyzer
+  name: pdftotext
+  python_module: saq.modules.file_analysis.pdf
+  python_class: PDFTextAnalyzer
   enabled: true
   timeout: 5
   # path to pdftotext
   pdftotext_path: /usr/bin/pdftotext
-  invalid_queues: internal
 
 analysis_module_yara_scanner_v3_4:
-  id: yara_scanner_v3_4
-  module: saq.modules.file_analysis.yara
-  class: YaraScanner_v3_4
+  name: yara_scanner_v3_4
+  python_module: saq.modules.file_analysis.yara
+  python_class: YaraScanner_v3_4
   enabled: true
   # NOTE yara configuration is in the global [yara] section
   context_bytes: 64
@@ -1465,27 +1471,25 @@ analysis_module_yara_scanner_v3_4:
   save_qa_scan_results: true
   # location of files and yara scan results for rules set to "qa mode" (relative to saq.DATA_DIR)
   qa_dir: var/qa
-  invalid_queues: internal
 
 analysis_module_binary_file_analyzer:
-  id: binary_file_analyzer
-  module: saq.modules.file_analysis.binary
-  class: BinaryFileAnalyzer
+  name: binary_file_analyzer
+  python_module: saq.modules.file_analysis.binary
+  python_class: BinaryFileAnalyzer
   enabled: true
-  invalid_queues: internal
 
 analysis_module_microsoft_script_encoding_analysis:
-  id: microsoft_script_encoding_analysis
-  module: saq.modules.file_analysis.mse
-  class: MicrosoftScriptEncodingAnalyzer
+  name: microsoft_script_encoding_analysis
+  python_module: saq.modules.file_analysis.mse
+  python_class: MicrosoftScriptEncodingAnalyzer
   enabled: true
   # the full path to the program used to decrypt these
   decryption_program: bin/jscript.decode.pl
 
 analysis_module_url_extraction:
-  id: url_extraction
-  module: saq.modules.file_analysis.url_extraction
-  class: URLExtractionAnalyzer
+  name: url_extraction
+  python_module: saq.modules.file_analysis.url_extraction
+  python_class: URLExtractionAnalyzer
   enabled: true
   maximum_analysis_time: 15
   # maximum file size in megabytes
@@ -1499,20 +1503,18 @@ analysis_module_url_extraction:
     - schemas.xmlsoap.org
   # the maximum number of urls to extract from a single file
   max_extracted_urls: 12
-  invalid_queues: internal
 
 analysis_module_x509_analyzer:
-  id: x509_analyzer
-  module: saq.modules.x509
-  class: X509Analyzer
+  name: x509_analyzer
+  python_module: saq.modules.x509
+  python_class: X509Analyzer
   enabled: true
-  invalid_queues: internal
 
 # XXX this needs fixed, I think it needs a local service running?
 analysis_module_google_safe_browsing_service:
-  id: google_safe_browsing_service
-  module: saq.modules.url.google_sb
-  class: GoogleSafeBrowsingAnalyzer
+  name: google_safe_browsing_service
+  python_module: saq.modules.url.google_sb
+  python_class: GoogleSafeBrowsingAnalyzer
   enabled: false
   server: ""
   port: 5000
@@ -1527,11 +1529,10 @@ analysis_module_google_safe_browsing_service:
 #
 
 analysis_module_crawlphish:
-  id: crawlphish
-  module: saq.modules.url.crawlphish
-  class: CrawlphishAnalyzer
+  name: crawlphish
+  python_module: saq.modules.url.crawlphish
+  python_class: CrawlphishAnalyzer
   enabled: false
-  invalid_queues: internal
   # path to whitelisted netloc
   whitelist_path: etc/crawlphish.whitelist
   # path to whitelisted path regexes
@@ -1553,8 +1554,7 @@ analysis_module_crawlphish:
   # update the brocess database with requests made with crawlphish
   update_brocess: true
   # comma separate list of proxies to use. The special value GLOBAL refers to the global proxy settings (see [proxy])
-  proxies:
-    - GLOBAL
+  proxies: []
   # enable automatic crawlphish analysis for all url observables
   auto_crawl_all_alert_urls: false
   # filtering capabilities
@@ -1572,15 +1572,15 @@ analysis_module_crawlphish:
   user_agent_list_path: crawlphish_uas.txt
 
 analysis_module_protected_url_analyzer:
-  id: protected_url_analyzer
-  module: saq.modules.url.protected
-  class: ProtectedURLAnalyzer
+  name: protected_url_analyzer
+  python_module: saq.modules.url.protected
+  python_class: ProtectedURLAnalyzer
   enabled: true
 
 analysis_module_rtfole:
-  id: rtfole
-  module: saq.modules.file_analysis.rtf
-  class: RTFOLEObjectAnalyzer
+  name: rtfole
+  python_module: saq.modules.file_analysis.rtf
+  python_class: RTFOLEObjectAnalyzer
   enabled: true
   # full path to the rtfobj.py script from oletools package
   rtfobj_path: /venv/bin/rtfobj
@@ -1589,9 +1589,9 @@ analysis_module_rtfole:
   suspect_mime_type: application/x-dosexec
 
 analysis_module_extracted_rtf_analyzer:
-  id: extracted_rtf_analyzer
-  module: saq.modules.file_analysis.rtf
-  class: ExtractedRTFAnalyzer
+  name: extracted_rtf_analyzer
+  python_module: saq.modules.file_analysis.rtf
+  python_class: ExtractedRTFAnalyzer
   enabled: true
   # comma separated list of extensions, mime types and file types that are automatically suspect if found inside an RTF
   suspect_ext: js,jse,vbs,vbe,ps1,exe,jar,zip,lnk
@@ -1599,15 +1599,15 @@ analysis_module_extracted_rtf_analyzer:
   suspect_file_type: PE32 executable,MS Windows shortcut
 
 analysis_module_message_id_analyzer_v2:
-  id: message_id_analyzer_v2
-  module: saq.modules.email.message_id
-  class: MessageIDAnalyzerV2
+  name: message_id_analyzer_v2
+  python_module: saq.modules.email.message_id
+  python_class: MessageIDAnalyzerV2
   enabled: true
 
 analysis_module_vbscript_analyzer:
-  id: vbscript_analyzer
-  module: saq.modules.file_analysis.vbs
-  class: VBScriptAnalyzer
+  name: vbscript_analyzer
+  python_module: saq.modules.file_analysis.vbs
+  python_class: VBScriptAnalyzer
   enabled: true
   # how many characters are considered to be a large hex string
   large_hex_string_size: 50
@@ -1618,24 +1618,24 @@ analysis_module_vbscript_analyzer:
   hex_string_percentage_limit: 0.15
 
 analysis_module_nowhitespace_analyzer:
-  id: nowhitespace_analyzer
-  module: saq.modules.file_analysis.rtf
-  class: NoWhiteSpaceAnalyzer
+  name: nowhitespace_analyzer
+  python_module: saq.modules.file_analysis.rtf
+  python_class: NoWhiteSpaceAnalyzer
   enabled: true
 
 analysis_module_meta_refresh_extraction:
-  id: meta_refresh_extraction
+  name: meta_refresh_extraction
   # NOTE this is only configured for the cloudphish engine
-  module: saq.modules.file_analysis.html
-  class: MetaRefreshExtractionAnalyzer
+  python_module: saq.modules.file_analysis.html
+  python_class: MetaRefreshExtractionAnalyzer
   enabled: true
 
 # TAGGING MODULES
 analysis_module_user_tagger:
-  id: user_tagger
+  name: user_tagger
   # tag people in specific groups in the organization
-  module: saq.modules.user
-  class: UserTaggingAnalyzer
+  python_module: saq.modules.user
+  python_class: UserTaggingAnalyzer
   enabled: true
   # location of the cache (use saq update-organization to build this file)
   json_path: data/etc/organization.json
@@ -1646,23 +1646,23 @@ analysis_module_user_tagger:
   # TAG = what tag to give people in this group
 
 analysis_module_user_defined_tagging:
-  id: user_defined_tagging
+  name: user_defined_tagging
   # tags observables as defined by the analysts in the database
-  module: saq.modules.tag
-  class: UserDefinedTaggingAnalyzer
+  python_module: saq.modules.tag
+  python_class: UserDefinedTaggingAnalyzer
   enabled: true
 
 analysis_module_configuration_defined_tagging:
-  id: configuration_defined_tagging
+  name: configuration_defined_tagging
   # tags observables as defined in the configuration
-  module: saq.modules.tag
-  class: ConfigurationDefinedTaggingAnalyzer
+  python_module: saq.modules.tag
+  python_class: ConfigurationDefinedTaggingAnalyzer
   enabled: false
 
 analysis_module_site_tagger:
-  id: site_tagger
-  module: saq.modules.tag
-  class: SiteTagAnalyzer
+  name: site_tagger
+  python_module: saq.modules.tag
+  python_class: SiteTagAnalyzer
   enabled: true
   # the CSV file that contains the tagging definitions
   # format is as follows
@@ -1675,9 +1675,9 @@ analysis_module_site_tagger:
   csv_file: data/etc/site_tags.csv
 
 analysis_module_zip_encryption_analyzer:
-  id: zip_encryption_analyzer
-  module: saq.modules.email.encryption.zip
-  class: ZipEncryptionAnalyzer
+  name: zip_encryption_analyzer
+  python_module: saq.modules.email.encryption.zip
+  python_class: ZipEncryptionAnalyzer
   enabled: true
   # for scanning the email for wordlists
   # what is the minimum
@@ -1695,9 +1695,9 @@ analysis_module_zip_encryption_analyzer:
   timeout: 5
 
 analysis_module_rar_encryption_analyzer:
-  id: rar_encryption_analyzer
-  module: saq.modules.email.encryption.rar
-  class: RarEncryptionAnalyzer
+  name: rar_encryption_analyzer
+  python_module: saq.modules.email.encryption.rar
+  python_class: RarEncryptionAnalyzer
   enabled: true
   # for scanning the email for wordlists
   # what is the minimum
@@ -1711,35 +1711,32 @@ analysis_module_rar_encryption_analyzer:
   # full path to john the ripper binary
   john_bin_path: /opt/tools/john-1.9.0-jumbo-1/run
   attempt_brute_force: true
-  invalid_queues: internal
 
 analysis_module_alert_added_to_event:
-  id: alert_added_to_event
-  module: saq.modules.event
-  class: AlertAddedToEventAnalyzer
+  name: alert_added_to_event
+  python_module: saq.modules.event
+  python_class: AlertAddedToEventAnalyzer
   enabled: true
 
 analysis_module_dhash:
-  id: dhash
-  module: saq.modules.dhash
-  class: DHashImageAnalyzer
+  name: dhash
+  python_module: saq.modules.dhash
+  python_class: DHashImageAnalyzer
   enabled: true
 
-# zero or more analysis module section names that should be disabled
-# for configurations that require that certain modules not run
-# for example: an environment where samples should not be submitted to sandboxes
-disabled_modules: {}
+# list of analysis modules that should be disabled globally
+disabled_modules: []
 
 analysis_module_observable_detection:
-  id: observable_detection
-  module: saq.modules.observable_detection
-  class: ObservableDetectionAnalyzer
+  name: observable_detection
+  python_module: saq.modules.observable_detection
+  python_class: ObservableDetectionAnalyzer
   enabled: true
 
 analysis_module_phishkit_analyzer:
-  id: phishkit_analyzer
-  module: saq.modules.phishkit
-  class: PhishkitAnalyzer
+  name: phishkit_analyzer
+  python_module: saq.modules.phishkit
+  python_class: PhishkitAnalyzer
   enabled: true
   # list of file extensions to enable for scanning
   valid_file_extensions:
@@ -1818,103 +1815,109 @@ tag_css_class:
   alert: danger
   critical: danger
 
-# MODULE GROUPS
 module_group_correlation:
-  # all the modules you'd want minus any special modules designed for specific systems
-  analysis_module_active_directory_analyzer: true
-  analysis_module_idna_analyzer: true
-  analysis_module_message_id_analyzer_v2: true
-  analysis_module_netbios_analyzer: true
-  analysis_module_network_identifier: true
-  analysis_module_parse_url: true
-  analysis_module_pcap_conversation_extraction: true
-  analysis_module_phishkit_analyzer: true
-  analysis_module_snort_signature_analysis_v1: true
-  analysis_module_url_email_pivot_analyzer: true
-  analysis_module_user_analyzer: true
-  analysis_module_whois_analyzer: true
+  name: correlation
+  modules:
+    - active_directory_analyzer
+    - idna_analyzer
+    - message_id_analyzer_v2
+    - netbios_analyzer
+    - network_identifier
+    - parse_url
+    - pcap_conversation_extraction
+    - phishkit_analyzer
+    - snort_signature_analysis_v1
+    - url_email_pivot_analyzer
+    - user_analyzer
+    - whois_analyzer
 
 module_group_yara:
-  # just yara analysis
-  analysis_module_yara_scanner_v3_4: true
+  name: yara
+  modules:
+    - yara_scanner_v3_4
 
 module_group_file:
-  # everything you would need for file analysis
-  analysis_module_active_mime: true
-  analysis_module_archive: true
-  analysis_module_autoit: true
-  analysis_module_binary_file_analyzer: true
-  analysis_module_cve_2021_30657_analyzer: true
-  analysis_module_de4dot: true
-  analysis_module_dhash: true
-  analysis_module_dmg_analyzer: true
-  analysis_module_exif: true
-  analysis_module_extracted_ole_analyzer: true
-  analysis_module_extracted_rtf_analyzer: true
-  analysis_module_file_hash_analyzer: true
-  analysis_module_file_path_analysis: true
-  analysis_module_file_type: true
-  analysis_module_hidden_mime: true
-  analysis_module_html_data_url_extraction: true
-  analysis_module_ilspy: true
-  analysis_module_java_class_decompiler: true
-  analysis_module_lnk_parser: true
-  analysis_module_mhtml: true
-  analysis_module_microsoft_script_encoding_analysis: true
-  analysis_module_msoffice_encryption_analyzer: true
-  analysis_module_nowhitespace_analyzer: true
-  analysis_module_ocr: true
-  analysis_module_office_file_archiver: true
-  analysis_module_officeparser3: true
-  analysis_module_olevba_v1_2: true
-  analysis_module_onenote_extraction: true
-  analysis_module_pcodedmp: true
-  analysis_module_pdf_analyzer: true
-  analysis_module_pdftotext: true
-  analysis_module_phishkit_analyzer: true
-  analysis_module_protected_url_analyzer: true
-  analysis_module_qrcode: true
-  analysis_module_rar_encryption_analyzer: true
-  analysis_module_rtfole: true
-  analysis_module_site_tagger: true
-  analysis_module_ssdeep: true
-  analysis_module_synchrony: true
-  analysis_module_upx: true
-  analysis_module_url_extraction: true
-  analysis_module_vbscript_analyzer: true
-  analysis_module_x509_analyzer: true
-  analysis_module_xlmdeobfuscator: true
-  analysis_module_xml_binary_analyzer: true
-  analysis_module_xml_plain_text_analyzer: true
-  analysis_module_yara_scanner_v3_4: true
-  analysis_module_zip_encryption_analyzer: true
+  name: file
+  modules:
+    - active_mime
+    - archive
+    - autoit
+    - binary_file_analyzer
+    - cve_2021_30657_analyzer
+    - de4dot
+    - dhash
+    - dmg_analyzer
+    - exif
+    - extracted_ole_analyzer
+    - extracted_rtf_analyzer
+    - file_hash_analyzer
+    - file_path_analysis
+    - file_type
+    - hidden_mime
+    - html_data_url_extraction
+    - ilspy
+    - java_class_decompiler
+    - lnk_parser
+    - mhtml
+    - microsoft_script_encoding_analysis
+    - msoffice_encryption_analyzer
+    - nowhitespace_analyzer
+    - ocr
+    - office_file_archiver
+    - officeparser3
+    - olevba_v1_2
+    - onenote_extraction
+    - pcodedmp
+    - pdf_analyzer
+    - pdftotext
+    - phishkit_analyzer
+    - protected_url_analyzer
+    - qrcode
+    - rar_encryption_analyzer
+    - rtfole
+    - site_tagger
+    - ssdeep
+    - synchrony
+    - upx
+    - url_extraction
+    - vbscript_analyzer
+    - x509_analyzer
+    - xlmdeobfuscator
+    - xml_binary_analyzer
+    - xml_plain_text_analyzer
+    - yara_scanner_v3_4
+    - zip_encryption_analyzer
 
 module_group_email:
-  # everything related to email scanning
-  analysis_module_email_analyzer: true
-  analysis_module_email_conversation_attachment_analyzer: true
-  analysis_module_email_conversation_frequency_analyzer: true
-  analysis_module_email_conversation_link_analyzer: true
-  analysis_module_encrypted_archive_analyzer: true
-  analysis_module_mailbox_email_analyzer: true
+  name: email
+  modules:
+    - email_analyzer
+    - email_conversation_attachment_analyzer
+    - email_conversation_frequency_analyzer
+    - email_conversation_link_analyzer
+    - encrypted_archive_analyzer
+    - mailbox_email_analyzer
 
 module_group_common:
-  analysis_module_configuration_defined_tagging: true
-  analysis_module_correlated_tag_analyzer: true
-  analysis_module_observable_detection: true
-  analysis_module_site_tagger: true
-  analysis_module_user_defined_tagging: true
-  analysis_module_user_tagger: true
+  name: common
+  modules:
+    - configuration_defined_tagging
+    - correlated_tag_analyzer
+    - observable_detection
+    - site_tagger
+    - user_defined_tagging
+    - user_tagger
 
 module_group_action:
-  # Special (observable) actions to be included in during analysis mode correlation
-  # but not analysis mode analysis (such as cloudphish submissions)
-  analysis_module_crawlphish: true
+  name: action
+  modules:
+    - crawlphish
 
 # ENGINE CONFIGURATION
 service_engine:
-  module: saq.engine.core
-  class: EngineService
+  name: engine
+  python_module: saq.engine.core
+  python_class: EngineService
   description: Analysis Correlation Engine - core analysis engine
   enabled: true
   # analysis pool settings
@@ -1933,8 +1936,8 @@ service_engine:
   # the default analysis mode if none is specified, or an unknown analysis mode is specified
   default_analysis_mode: analysis
   # local/excluded analysis modes
-  local_analysis_modes: ""
-  excluded_analysis_modes: ""
+  local_analysis_modes: []
+  excluded_analysis_modes: []
   # the nodes database table keeps track of all the ace nodes that are currently available
   # this settings specifies how often (in seconds) we update the table with our current information
   node_status_update_frequency: 30
@@ -1973,6 +1976,7 @@ service_engine:
 # COLLECTION GROUPS
 # Defines where collectors send submissions to.
 collection_group_default:
+  name: default
   enabled: true
   coverage: 100
   full_delivery: true
@@ -1980,51 +1984,54 @@ collection_group_default:
   database: ace
   company_id: 1
 
+#
 # ANALYSIS MODES
 # configures what analysis modules should run for the various analysis modes
+#
 analysis_mode_yara:
-  # mode used for just running yara
+  name: yara
   module_groups:
     - yara
   cleanup: true
-  maximum_cumulative_analysis_warning_time: 150
-  maximum_cumulative_analysis_fail_time: 300
-  maximum_analysis_time: 60
 
 analysis_mode_email:
+  name: email
   # mode used for email (rfc822 and SMTP stream) analysis
   module_groups:
     - common
     - file
     - email
   cleanup: true
-  analysis_module_email_archiver: true
-  analysis_module_email_logger: true
-  maximum_cumulative_analysis_warning_time: 150
-  maximum_cumulative_analysis_fail_time: 300
-  maximum_analysis_time: 60
+  enabled_modules:
+    - email_archiver
+    - email_logger
 
 analysis_mode_binary:
+  name: binary
   # default mode for binary (executable) file analysis
   module_groups:
     - common
     - file
   cleanup: true
-  maximum_cumulative_analysis_warning_time: 150
-  maximum_cumulative_analysis_fail_time: 300
-  maximum_analysis_time: 60
 
 analysis_mode_file:
+  name: file
   # mode used for generic file analysis
   module_groups:
     - common
     - file
   cleanup: true
-  maximum_cumulative_analysis_warning_time: 150
-  maximum_cumulative_analysis_fail_time: 300
-  maximum_analysis_time: 60
+
+analysis_mode_http:
+  name: http
+  # mode used for HTTP analysis
+  module_groups:
+    - common
+    - file
+  cleanup: true
 
 analysis_mode_correlation:
+  name: correlation
   # mode used for analyzing alerts
   module_groups:
     - common
@@ -2037,6 +2044,7 @@ analysis_mode_correlation:
   # analysis_module_detection: no
 
 analysis_mode_analysis:
+  name: analysis
   # default mode if none other is specified
   cleanup: true
   module_groups:
@@ -2045,7 +2053,7 @@ analysis_mode_analysis:
     - email
     - correlation
 
-analysis_mode_cli:
+  name: cli
   # more of a debug mode, used by the command line correlate subcommand of the ace executable script
   module_groups:
     - common
@@ -2056,27 +2064,29 @@ analysis_mode_cli:
   # analysis_module_alert_disposition_analyzer: no
 
 analysis_mode_dispositioned:
+  name: dispositioned
   # when an alert is dispositioned by an analyst, any current analysis stops and the mode is changed to dispositioned and re-analyzed
   # this gives certain analysis modules a chance to do something with the value of the disposition (limited list runs here)
   module_groups: []
   cleanup: false
-  analysis_module_alert_added_to_event: true
+  enabled_modules:
+    - alert_added_to_event
   # faster cumulative timeouts for dispositioned mode
-  maximum_cumulative_analysis_warning_time: 150
-  maximum_cumulative_analysis_fail_time: 300
-  maximum_analysis_time: 60
 
 analysis_mode_event:
+  name: event
   # mode used for when alerts are added to an event; allows more in-depth or time consuming analysis only for things inside of events
   module_groups: []
   cleanup: false
 
 analysis_mode_suricata_ids:
+  name: suricata_ids
   # used for suricata IDS detection of external attacks
   module_groups: []
   cleanup: true
-  analysis_module_snort_signature_analysis_v1: true
-  analysis_module_pcap_conversation_extraction: true
+  enabled_modules:
+    - snort_signature_analysis_v1
+    - pcap_conversation_extraction
 
 integrations: {}
 
@@ -2094,8 +2104,8 @@ settings:
 
 # yes/no to set any observables expires_on value to Null (never expire) if the observable is inside an event
 # that has a threat actor assigned to it.
-observable_expiration_mappings:
-  never_expire_with_threat_actor: true
+observable_expiration_mappings: {}
+  #never_expire_with_threat_actor: true
 
 # Events
 # The event status that you use to indicate that the event is closed or fully processed. The status listed here will

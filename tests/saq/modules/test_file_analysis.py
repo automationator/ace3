@@ -5,7 +5,8 @@ import pytest
 
 from saq.analysis import Observable
 from saq.configuration import get_config
-from saq.constants import DIRECTIVE_CRAWL_EXTRACTED_URLS, DIRECTIVE_EXTRACT_URLS, DIRECTIVE_EXTRACT_URLS_DOMAIN_AS_URL, F_FILE, F_URL, R_EXTRACTED_FROM, AnalysisExecutionResult
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_ARCHIVE, ANALYSIS_MODULE_AUTOIT, ANALYSIS_MODULE_DE4DOT, ANALYSIS_MODULE_EXIF, ANALYSIS_MODULE_FILE_HASH_ANALYZER, ANALYSIS_MODULE_FILE_TYPE, ANALYSIS_MODULE_HTML_DATA_URL_EXTRACTION, ANALYSIS_MODULE_LNK_PARSER, ANALYSIS_MODULE_OCR, ANALYSIS_MODULE_QRCODE, ANALYSIS_MODULE_SYNCHRONY, ANALYSIS_MODULE_URL_EXTRACTION, DIRECTIVE_CRAWL_EXTRACTED_URLS, DIRECTIVE_EXTRACT_URLS, DIRECTIVE_EXTRACT_URLS_DOMAIN_AS_URL, F_FILE, F_URL, R_EXTRACTED_FROM, AnalysisExecutionResult
 from saq.modules.file_analysis import ArchiveAnalysis, ArchiveAnalyzer, AutoItAnalyzer, De4dotAnalyzer, ExifAnalyzer, FileHashAnalysis, FileHashAnalyzer, FileTypeAnalysis, FileTypeAnalyzer, HTMLDataURLAnalysis, HTMLDataURLAnalyzer, LnkParseAnalyzer, OCRAnalysis, OCRAnalyzer, QRCodeAnalysis, QRCodeAnalyzer, SynchronyFileAnalysis, SynchronyFileAnalyzer, URLExtractionAnalysis, URLExtractionAnalyzer
 from saq.modules.file_analysis.dotnet import De4dotAnalysis
 
@@ -59,7 +60,9 @@ class TestUrlExtraction:
                 'wellsfargoadvisors.com':
                     ['https://www.wellsfargoadvisors.com/video/secureEmail/secureEmail.htm']}
 
-        url_extraction_analyzer = URLExtractionAnalyzer(context=test_context)
+        url_extraction_analyzer = URLExtractionAnalyzer(
+            context=test_context,
+            config=get_analysis_module_config(ANALYSIS_MODULE_URL_EXTRACTION))
         extracted_urls_ordered, extracted_urls_grouping = url_extraction_analyzer.order_urls_by_interest(extracted_urls_unordered)
 
         assert extracted_urls_ordered == expected_extracted_urls_ordered
@@ -84,7 +87,9 @@ class TestUrlExtraction:
                                             'https://www.wellsfargo.com/help/secure-email',
                                             'https://www.wellsfargoadvisors.com/video/secureEmail/secureEmail.htm']
 
-        url_extraction_analyzer = URLExtractionAnalyzer(context=test_context)
+        url_extraction_analyzer = URLExtractionAnalyzer(
+            context=test_context,
+            config=get_analysis_module_config(ANALYSIS_MODULE_URL_EXTRACTION))
         extracted_urls_filtered = list(filter(url_extraction_analyzer.filter_excluded_domains, extracted_urls_unfiltered))
 
         assert expected_extracted_urls_filtered == extracted_urls_filtered
@@ -97,7 +102,9 @@ class TestUrlExtraction:
 
         monkeypatch.setattr("saq.modules.AnalysisModule.wait_for_analysis", mock_analysis_module)
 
-        url_extraction_analyzer = AnalysisModuleAdapter(URLExtractionAnalyzer(context=create_test_context(root=root_analysis)))
+        url_extraction_analyzer = AnalysisModuleAdapter(URLExtractionAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_URL_EXTRACTION)))
         file_observable = root_analysis.add_file_observable(datadir / f"{test_file}.in")
 
         url_extraction_completed = url_extraction_analyzer.execute_analysis(file_observable)
@@ -132,7 +139,9 @@ def test_autoit_decompilation(caplog, datadir, monkeypatch, test_context):
     observable = root.add_file_observable(target_path)
 
     # Execute the analysis
-    analyzer = AnalysisModuleAdapter(AutoItAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(AutoItAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_AUTOIT)))
     result = analyzer.execute_analysis(observable)
 
     assert result == AnalysisExecutionResult.COMPLETED
@@ -150,7 +159,9 @@ def test_lnk_parser(caplog, datadir, monkeypatch, test_context):
     observable = root.add_file_observable(target_path)
 
     # Execute the analysis
-    analyzer = AnalysisModuleAdapter(LnkParseAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(LnkParseAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_LNK_PARSER)))
     result = analyzer.execute_analysis(observable)
 
     assert result == AnalysisExecutionResult.COMPLETED
@@ -195,7 +206,9 @@ def test_de4dot_analyzer(caplog, datadir, monkeypatch, test_context):
                 fp_out.write(bytes.fromhex(line))
 
     observable = root.add_file_observable(target_path)
-    analyzer = De4dotAnalyzer(context=create_test_context(root=root))
+    analyzer = De4dotAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_DE4DOT))
     analysis_result = analyzer.execute_analysis(observable)
 
     assert analysis_result == AnalysisExecutionResult.COMPLETED
@@ -238,10 +251,10 @@ def test_zipped_jar(datadir, monkeypatch, test_context):
     monkeypatch.setattr(saq.modules.file_analysis.archive, "Popen", popen)
 
     # run the module
-    get_config()['analysis_module_config'] = {
-        'max_jar_file_count': 100,
-    }
-    analyzer = AnalysisModuleAdapter(ArchiveAnalyzer(context=create_test_context(root=root)))
+    get_analysis_module_config(ANALYSIS_MODULE_ARCHIVE).max_jar_file_count = 100
+    analyzer = AnalysisModuleAdapter(ArchiveAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_ARCHIVE)))
     with pytest.raises(StopAnalysisException):
         analyzer.execute_analysis(observable)
 
@@ -254,7 +267,9 @@ def test_exif_analysis(caplog, datadir, monkeypatch, test_context):
     observable = root.add_file_observable(datadir / 'doc.docx')
 
     # Execute the analysis
-    analyzer = AnalysisModuleAdapter(ExifAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(ExifAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_EXIF)))
     analysis = analyzer.execute_analysis(observable)
 
     assert analysis == AnalysisExecutionResult.COMPLETED
@@ -268,7 +283,9 @@ def test_exif_analysis(caplog, datadir, monkeypatch, test_context):
     if observable:
 
         # Execute the analysis
-        analyzer = AnalysisModuleAdapter(ExifAnalyzer(context=create_test_context(root=root)))
+        analyzer = AnalysisModuleAdapter(ExifAnalyzer(
+            context=create_test_context(root=root),
+            config=get_analysis_module_config(ANALYSIS_MODULE_EXIF)))
         analysis = analyzer.execute_analysis(observable)
 
         assert analysis is False
@@ -279,7 +296,9 @@ def test_exif_analysis(caplog, datadir, monkeypatch, test_context):
     observable = root.add_file_observable(datadir / 'doc.doc')
 
     # Execute the analysis
-    analyzer = AnalysisModuleAdapter(ExifAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(ExifAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_EXIF)))
     analysis = analyzer.execute_analysis(observable)
 
     assert analysis == AnalysisExecutionResult.COMPLETED
@@ -299,29 +318,28 @@ def test_exif_analysis(caplog, datadir, monkeypatch, test_context):
 ])
 @pytest.mark.integration
 def test_ocr_analyzer_limits(monkeypatch, valid_analysis_modes, analysis_mode, valid_alert_types, alert_type, expected_result, test_context):
-    monkeypatch.setitem(get_config()['analysis_module_ocr'], 'valid_analysis_modes', valid_analysis_modes)
-    monkeypatch.setitem(get_config()['analysis_module_ocr'], 'valid_alert_types', valid_alert_types)
+    monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_OCR), 'valid_analysis_modes', valid_analysis_modes)
+    monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_OCR), 'valid_alert_types', valid_alert_types)
     root = create_root_analysis(analysis_mode=analysis_mode, alert_type=alert_type)
-    analyzer = OCRAnalyzer(context=create_test_context(root=root))
+    analyzer = OCRAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_OCR))
     assert analyzer.custom_requirement(Observable(F_FILE, 'blah')) == expected_result
 
 
 @pytest.mark.integration
 def test_ocr_analyzer_omp_thread_limit_set(monkeypatch, datadir, test_context):
-    import saq.modules.file_analysis
     monkeypatch.delenv('OMP_THREAD_LIMIT', raising=False)
-    def get_omp_thread_limit(self):
-        return "1"
-
-    monkeypatch.setattr(saq.modules.file_analysis.OCRAnalyzer, 'omp_thread_limit', property(get_omp_thread_limit))
-
+    monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_OCR), 'omp_thread_limit', '1')
     # Create a test alert with file observable
     root = create_root_analysis(analysis_mode='test_single')
     root.initialize_storage()
     observable = root.add_file_observable(datadir / 'fraudulent_text.png')
     
     # Create the OCRAnalyzer
-    analyzer = AnalysisModuleAdapter(OCRAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(OCRAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_OCR)))
     
     # Perform the OCR analysis
     result = analyzer.execute_analysis(observable)
@@ -331,12 +349,8 @@ def test_ocr_analyzer_omp_thread_limit_set(monkeypatch, datadir, test_context):
 
 @pytest.mark.integration
 def test_ocr_analyzer_omp_thread_limit_notset(monkeypatch, datadir, test_context):
-    import saq.modules.file_analysis
     monkeypatch.delenv('OMP_THREAD_LIMIT', raising=False)
-    def get_omp_thread_limit(self):
-        return ""
-
-    monkeypatch.setattr(saq.modules.file_analysis.OCRAnalyzer, 'omp_thread_limit', property(get_omp_thread_limit))
+    monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_OCR), 'omp_thread_limit', None)
 
     # Create a test alert with file observable
     root = create_root_analysis(analysis_mode='test_single')
@@ -345,7 +359,9 @@ def test_ocr_analyzer_omp_thread_limit_notset(monkeypatch, datadir, test_context
     observable = root.add_file_observable(target_file)
     
     # Create the OCRAnalyzer
-    analyzer = AnalysisModuleAdapter(OCRAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(OCRAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_OCR)))
     
     # Perform the OCR analysis
     result = analyzer.execute_analysis(observable)
@@ -367,7 +383,9 @@ def test_ocr_analyzer(datadir, monkeypatch, test_filename, expected_strings, exp
     observable = root.add_file_observable(target_file)
     
     # Create the OCRAnalyzer
-    analyzer = OCRAnalyzer(context=create_test_context(root=root))
+    analyzer = OCRAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_OCR))
     
     # Perform the OCR analysis
     result = analyzer.execute_analysis(observable)
@@ -404,7 +422,9 @@ def test_ocr_analyzer(datadir, monkeypatch, test_filename, expected_strings, exp
     monkeypatch.setattr("os.path.getsize", lambda x: 1)  # arbitrary filesize
 
     text_file_observable = analysis.observables[0]
-    analyzer = AnalysisModuleAdapter(URLExtractionAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(URLExtractionAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_URL_EXTRACTION)))
 
     # Perform the URL extraction analysis
     result = analyzer.execute_analysis(text_file_observable)
@@ -421,7 +441,9 @@ def test_html_data_url_extraction(datadir, test_context):
     root.initialize_storage()
     observable = root.add_file_observable(datadir / "ref.html")
     
-    analyzer = HTMLDataURLAnalyzer(context=create_test_context(root=root))
+    analyzer = HTMLDataURLAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_HTML_DATA_URL_EXTRACTION))
     
     result = analyzer.execute_analysis(observable)
     assert result == AnalysisExecutionResult.COMPLETED
@@ -437,10 +459,14 @@ def test_one_file_in_zip_detection(datadir):
     #shutil.copy(str(datadir / "evil.zip"), root.storage_dir)
     observable = root.add_file_observable(datadir / "evil.zip")
 
-    analyzer = AnalysisModuleAdapter(FileTypeAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(FileTypeAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_FILE_TYPE)))
     analyzer.execute_analysis(observable)
     
-    analyzer = AnalysisModuleAdapter(ArchiveAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(ArchiveAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_ARCHIVE)))
     
     result = analyzer.execute_analysis(observable)
     assert result == AnalysisExecutionResult.COMPLETED
@@ -468,7 +494,9 @@ def test_synchrony_analyzer(datadir, test_context, monkeypatch):
 
         return None
     
-    synchrony_analyzer = SynchronyFileAnalyzer(context=create_test_context(root=root))
+    synchrony_analyzer = SynchronyFileAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_SYNCHRONY))
     monkeypatch.setattr(synchrony_analyzer, "wait_for_analysis", mock_wait_for_analysis)
     analyzer = AnalysisModuleAdapter(synchrony_analyzer)
     
@@ -497,7 +525,9 @@ def test_synchrony_analyzer_skips_json_files(datadir, test_context, monkeypatch)
 
         return None
     
-    synchrony_analyzer = SynchronyFileAnalyzer(context=create_test_context(root=root))
+    synchrony_analyzer = SynchronyFileAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_SYNCHRONY))
     monkeypatch.setattr(synchrony_analyzer, "wait_for_analysis", mock_wait_for_analysis)
     analyzer = AnalysisModuleAdapter(synchrony_analyzer)
     
@@ -536,7 +566,9 @@ def test_empty_file_hash(datadir, test_context):
     root.initialize_storage()
     observable = root.add_file_observable(datadir / "empty")
     
-    analyzer = AnalysisModuleAdapter(FileHashAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(FileHashAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_FILE_HASH_ANALYZER)))
     
     result = analyzer.execute_analysis(observable)
     assert result == AnalysisExecutionResult.COMPLETED
@@ -549,7 +581,9 @@ def test_qrcode(datadir, test_context):
     root.initialize_storage()
     observable = root.add_file_observable(datadir / "2910293944.gif")
     
-    analyzer = AnalysisModuleAdapter(QRCodeAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(QRCodeAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_QRCODE)))
     
     result = analyzer.execute_analysis(observable)
     assert result == AnalysisExecutionResult.COMPLETED
@@ -570,7 +604,9 @@ def test_qrcode_inverted(datadir, test_context):
     root.initialize_storage()
     observable = root.add_file_observable(datadir / "inverted_qr.jpg")
     
-    analyzer = AnalysisModuleAdapter(QRCodeAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(QRCodeAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_QRCODE)))
     
     result = analyzer.execute_analysis(observable)
     assert result == AnalysisExecutionResult.COMPLETED
@@ -591,7 +627,9 @@ def test_qrcode_shipping_label(datadir, test_context):
     root.initialize_storage()
     observable = root.add_file_observable(datadir / "fedex.png")
     
-    analyzer = AnalysisModuleAdapter(QRCodeAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(QRCodeAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_QRCODE)))
     
     result = analyzer.execute_analysis(observable)
     assert result == AnalysisExecutionResult.COMPLETED

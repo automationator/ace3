@@ -512,9 +512,9 @@ services:
   dev:
     environment: *common-env
     image: ${ACE3_IMAGE_URL:-ace3:latest}
-    depends_on:
-      ace-setup:
-        condition: service_completed_successfully
+    #depends_on:
+      #ace-setup:
+        #condition: service_completed_successfully
     command: /bin/bash -c "/opt/ace/docker/startup/start_nothing.sh"
     restart: always
     volumes: *common-volumes

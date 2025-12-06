@@ -3,8 +3,9 @@ import logging
 import os
 import subprocess
 import threading
-from typing import Optional
+from typing import Optional, Type
 
+from saq.configuration.schema import ServiceConfig
 from saq.constants import CONFIG_GIT, CONFIG_GIT_REPOS
 from saq.service import ACEServiceInterface
 
@@ -190,5 +191,9 @@ class GitManagerService(ACEServiceInterface):
             logging.info(f"waiting for git repo manager thread {repo_name} to finish")
             thread.join()
             logging.info(f"git repo manager thread {repo_name} finished")
+
+    @classmethod
+    def get_config_class(cls) -> Type[ServiceConfig]:
+        return ServiceConfig
 
     

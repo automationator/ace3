@@ -1,20 +1,17 @@
 import pytest
 
+from saq.configuration.config import get_config
 from saq.gui import node_translate_gui, translate_alert_redirect
 
 @pytest.mark.unit
 def test_node_translate_gui(monkeypatch):
-    config = {}
-    def mock_get_config():
-        return config
 
-    import saq.configuration.config
-    monkeypatch.setattr(saq.configuration.config, "get_config", mock_get_config)
+    monkeypatch.setattr(get_config(), "node_translation_gui", None)
     assert node_translate_gui(None) is None
     assert node_translate_gui("node") == "node"
-    config["node_translation_gui"] = {}
+    monkeypatch.setattr(get_config(), "node_translation_gui", {})
     assert node_translate_gui("node") == "node"
-    config["node_translation_gui"]["node"] = "test"
+    monkeypatch.setattr(get_config(), "node_translation_gui", {"node": "test"})
     assert node_translate_gui("node") == "test"
     assert node_translate_gui("other node") == "other node"
 

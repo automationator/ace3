@@ -9,25 +9,11 @@ in the ConfigurationManager class, following the Single Responsibility Principle
 import logging
 from typing import Dict, List, Optional, Set
 
-from saq.configuration.adapter import ConfigAdapter
 from saq.configuration.config import (
     get_config,
-    get_config_value_as_boolean,
-    get_config_value_as_list,
 )
-from saq.constants import (
-    CONFIG_ANALYSIS_MODE_CLEANUP,
-    CONFIG_ANALYSIS_MODE_PREFIX,
-    CONFIG_ANALYSIS_MODULE_ENABLED,
-    CONFIG_ANALYSIS_MODULE_MODULE_GROUPS,
-    CONFIG_ANALYSIS_MODULE_PREFIX,
-    CONFIG_DISABLED_MODULES,
-    CONFIG_MODULE_GROUP_PREFIX,
-)
-from saq.engine.adapter import EngineAdapter
-from saq.filesystem.adapter import FileSystemAdapter
+from saq.configuration.schema import AnalysisModeConfig
 from saq.modules.adapter import load_module_from_config
-from saq.modules.context import AnalysisModuleContext
 from saq.modules.interfaces import AnalysisModuleInterface
 from saq.error import report_exception
 
@@ -106,43 +92,38 @@ class ModuleLoader:
         if analysis_mode in self.excluded_analysis_modes:
             return False
         
+        # TODO document this logic
         if not self.local_analysis_modes:
             return True
             
         return analysis_mode in self.local_analysis_modes
     
     def _build_analysis_mode_mapping(self) -> Dict[str, Set[str]]:
-        """Build mapping of analysis modes to their module configuration sections."""
-        analysis_mode_section_names_map: Dict[str, Set[str]] = {}
+        """Build mapping of analysis modes to their module names."""
+        analysis_mode_module_names_map: Dict[str, Set[str]] = {}
 
         unsupported_modes = []
         
-        # Process each analysis mode configuration section
-        for section_name in get_config().sections():
-            if not section_name.startswith(CONFIG_ANALYSIS_MODE_PREFIX):
-                continue
-            
-            mode = section_name[len(CONFIG_ANALYSIS_MODE_PREFIX):]
-            
-            # Validate cleanup configuration
-            if CONFIG_ANALYSIS_MODE_CLEANUP not in get_config()[section_name]:
-                logging.error(f"{section_name} missing cleanup key in configuration file")
+        # Process each analysis mode configuration
+        for analysis_mode_config in get_config().analysis_modes:
+            analysis_mode = analysis_mode_config.name
             
             # Check if mode is supported
-            if not self.is_analysis_mode_supported(mode):
-                unsupported_modes.append(mode)
+            if not self.is_analysis_mode_supported(analysis_mode):
+                unsupported_modes.append(analysis_mode)
                 continue
             
-            analysis_mode_section_names_map[mode] = set()
+            # maps the analysis mode to the set of modules that should run in that mode
+            analysis_mode_module_names_map[analysis_mode] = set()
             
-            # Add modules from module groups
-            self._add_modules_from_groups(section_name, mode, analysis_mode_section_names_map)
+            # each analysis mode has a list of module groups that should be included
+            self._add_modules_from_groups(analysis_mode_config, analysis_mode_module_names_map)
             
-            # Add/remove individual modules
-            self._add_individual_modules(section_name, mode, analysis_mode_section_names_map)
+            # as well as a list of individual modules that should be included
+            self._add_individual_modules(analysis_mode_config, analysis_mode_module_names_map)
             
             # Add locally mapped modules
-            self._add_locally_mapped_modules(mode, analysis_mode_section_names_map)
+            self._add_locally_mapped_modules(analysis_mode_config, analysis_mode_module_names_map)
         
         if unsupported_modes:
             logging.info(
@@ -151,85 +132,74 @@ class ModuleLoader:
                 f"(excluded analysis modes: {','.join(self.excluded_analysis_modes) if self.excluded_analysis_modes else 'none'})"
             )
 
-        return analysis_mode_section_names_map
+        return analysis_mode_module_names_map
     
-    def _add_modules_from_groups(self, section_name: str, mode: str, 
-                                analysis_mode_section_names_map: Dict[str, Set[str]]):
+    def _add_modules_from_groups(self, analysis_mode_config: AnalysisModeConfig, 
+                                analysis_mode_module_names_map: Dict[str, Set[str]]):
         """Add modules from module groups to the analysis mode mapping."""
-        for group_name in get_config_value_as_list(
-            section_name,
-            CONFIG_ANALYSIS_MODULE_MODULE_GROUPS,
-            default=[],
-            include_empty=False,
-        ):
-            group_section = f"{CONFIG_MODULE_GROUP_PREFIX}{group_name}"
-            if group_section not in get_config():
-                logging.error(f"{section_name} defines invalid module group {group_name}")
-                continue
-            
-            # Add each module in the group
-            for module_section in get_config()[group_section].keys():
-                if module_section not in get_config():
-                    logging.error(f"{group_section} references invalid analysis module {module_section}")
-                    continue
-                
-                analysis_mode_section_names_map[mode].add(module_section)
+        for module_group_name in analysis_mode_config.module_groups:
+            module_group_config = get_config().get_module_group_config(module_group_name)
+            for module_name in module_group_config.modules:
+                # make sure the module exists
+                get_config().get_analysis_module_config(module_name)
+                analysis_mode_module_names_map[analysis_mode_config.name].add(module_name)
     
-    def _add_individual_modules(self, section_name: str, mode: str,
-                               analysis_mode_section_names_map: Dict[str, Set[str]]):
+    def _add_individual_modules(self, analysis_mode_config: AnalysisModeConfig,
+                               analysis_mode_module_names_map: Dict[str, Set[str]]):
         """Add or remove individual modules for an analysis mode."""
-        for key_name in get_config()[section_name].keys():
-            if not key_name.startswith(CONFIG_ANALYSIS_MODULE_PREFIX):
-                continue
-            
-            analysis_module_name = key_name[len(CONFIG_ANALYSIS_MODULE_PREFIX):]
-            if key_name not in get_config():
-                logging.error(f"{section_name} references invalid analysis module {analysis_module_name}")
-                continue
-            
-            # Add or remove based on boolean value
-            if get_config_value_as_boolean(section_name, key_name):
-                analysis_mode_section_names_map[mode].add(key_name)
-            else:
-                analysis_mode_section_names_map[mode].discard(key_name)
+        # add any enabled modules
+        for key_name in analysis_mode_config.enabled_modules:
+            # make sure the referenced module exists
+            get_config().get_analysis_module_config(key_name)
+            analysis_mode_module_names_map[analysis_mode_config.name].add(key_name)
+
+        # and then remove any disabled modules
+        for key_name in analysis_mode_config.disabled_modules:
+            # make sure the referenced module exists
+            get_config().get_analysis_module_config(key_name)
+            analysis_mode_module_names_map[analysis_mode_config.name].discard(key_name)
     
-    def _add_locally_mapped_modules(self, mode: str, analysis_mode_section_names_map: Dict[str, Set[str]]):
+    def _add_locally_mapped_modules(self, analysis_mode_config: AnalysisModeConfig, analysis_mode_module_names_map: Dict[str, Set[str]]):
         """Add locally mapped modules for testing."""
-        if mode in self.locally_mapped_analysis_modes:
-            for analysis_module_section in self.locally_mapped_analysis_modes[mode]:
-                logging.debug(f"manual map for mode {mode} to {analysis_module_section}")
-                analysis_mode_section_names_map[mode].add(analysis_module_section)
+        assert isinstance(analysis_mode_config, AnalysisModeConfig)
+        assert isinstance(analysis_mode_module_names_map, dict)
+
+        if analysis_mode_config.name in self.locally_mapped_analysis_modes:
+            for analysis_module_name in self.locally_mapped_analysis_modes[analysis_mode_config.name]:
+                logging.debug(f"manual map for mode {analysis_mode_config.name} to {analysis_module_name}")
+                analysis_mode_module_names_map[analysis_mode_config.name].add(analysis_module_name)
     
-    def _should_load_module(self, section_name: str) -> bool:
+    def _should_load_module(self, analysis_module_name: str) -> bool:
         """Determine if a module should be loaded based on configuration."""
         if not self.locally_enabled_modules:
-            # Check global disabled modules
-            if get_config_value_as_boolean(CONFIG_DISABLED_MODULES, section_name, False):
-                logging.debug(f"{section_name} is disabled")
+            module_config = get_config().get_analysis_module_config(analysis_module_name)
+            # is this module disabled?
+            if not module_config.enabled:
+                logging.debug(f"{analysis_module_name} is disabled")
                 return False
             
-            # Check module enabled flag
-            if not get_config_value_as_boolean(section_name, CONFIG_ANALYSIS_MODULE_ENABLED, False):
-                logging.debug(f"analysis module {section_name} disabled (globally)")
+            # is this module disabled globally?
+            if analysis_module_name in get_config().disabled_modules:
+                logging.debug(f"analysis module {analysis_module_name} disabled (globally)")
                 return False
         else:
             # Check local enablement
-            if section_name not in self.locally_enabled_modules:
+            if analysis_module_name not in self.locally_enabled_modules:
                 return False
         
         return True
     
-    def _load_single_module(self, section_name: str) -> Optional[AnalysisModuleInterface]:
+    def _load_single_module(self, analysis_module_name: str) -> Optional[AnalysisModuleInterface]:
         """Load a single analysis module from configuration."""
         try:
-            analysis_module = load_module_from_config(section_name)
+            analysis_module = load_module_from_config(analysis_module_name)
             if analysis_module is None:
-                logging.warning(f"load_module({section_name}) failed to return a value - skipping")
+                logging.warning(f"load_module({analysis_module_name}) failed to return a value - skipping")
                 return None
             
             return analysis_module
             
         except Exception as e:
-            logging.error(f"failed to load analysis module {section_name}: {e}")
+            logging.error(f"failed to load analysis module {analysis_module_name}: {e}")
             report_exception()
             return None 

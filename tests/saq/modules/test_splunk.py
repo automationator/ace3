@@ -2,7 +2,8 @@ import datetime
 from unittest.mock import Mock, patch
 import pytest
 
-from saq.constants import F_EMAIL_SUBJECT
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_SPLUNK_API, F_EMAIL_SUBJECT
 from saq.analysis import RootAnalysis
 from saq.modules.api_analysis import AnalysisDelay
 from saq.modules.splunk import SplunkAPIAnalyzer, SplunkAPIAnalysis
@@ -46,7 +47,9 @@ def test_splunk_api_analyzer_search_url(test_context):
         mock_splunk_client.return_value = mock_splunk
 
         # init analyzer
-        analyzer = SplunkAPIAnalyzer(context=test_context)
+        analyzer = SplunkAPIAnalyzer(
+            context=test_context,
+            config=get_analysis_module_config(ANALYSIS_MODULE_SPLUNK_API))
         analyzer.target_query = 'hello'
 
         # test no param
@@ -66,7 +69,9 @@ def test_splunk_api_analyzer_execute_query(test_context):
         mock_splunk_client.return_value = mock_splunk
 
         # init
-        analyzer = SplunkAPIAnalyzer(context=test_context)
+        analyzer = SplunkAPIAnalyzer(
+            context=test_context,
+            config=get_analysis_module_config(ANALYSIS_MODULE_SPLUNK_API))
         analyzer.target_query = 'hello'
         analyzer.analysis = SplunkAPIAnalysis()
 
@@ -94,7 +99,9 @@ def test_splunk_api_analyzer_fill_timespec(test_context):
         mock_splunk_client.return_value = mock_splunk
 
         # init
-        analyzer = SplunkAPIAnalyzer(context=test_context)
+        analyzer = SplunkAPIAnalyzer(
+            context=test_context,
+            config=get_analysis_module_config(ANALYSIS_MODULE_SPLUNK_API))
         analyzer.target_query = 'hello <O_TIMESPEC> world'
         analyzer.analysis = SplunkAPIAnalysis()
 
@@ -115,7 +122,9 @@ def test_splunk_api_analyzer_escape_value(test_context):
         mock_splunk_client.return_value = mock_splunk
 
         observable = RootAnalysis().add_observable_by_spec(F_EMAIL_SUBJECT, 'Hello, "World"')
-        analyzer = SplunkAPIAnalyzer(context=test_context)
+        analyzer = SplunkAPIAnalyzer(
+            context=test_context,
+            config=get_analysis_module_config(ANALYSIS_MODULE_SPLUNK_API))
         analyzer.target_query_base = '<O_VALUE>'
         analyzer.analysis = SplunkAPIAnalysis()
         analyzer.build_target_query(observable, source_event_time=datetime.datetime.now())

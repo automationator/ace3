@@ -5,15 +5,15 @@
 # routines dealing with responing to something in some form or fashion
 #
 
-import os, os.path
+import os
+import os.path
 import configparser
 import logging
 import smtplib
 
 from email.message import EmailMessage
 
-from saq.configuration import get_config_value_as_str, get_config_value_as_boolean
-from saq.constants import CONFIG_SMTP, CONFIG_SMTP_ENABLED, CONFIG_SMTP_MAIL_FROM, CONFIG_SMTP_SERVER
+from saq.configuration.config import get_config
 
 def send_email_notification(notification_config: configparser.SectionProxy,
                             disposition, 
@@ -24,7 +24,7 @@ def send_email_notification(notification_config: configparser.SectionProxy,
     """Sends an email notification to a user."""
 
     # is SMTP enabled?
-    if not get_config_value_as_boolean(CONFIG_SMTP, CONFIG_SMTP_ENABLED):
+    if not get_config().smtp.enabled:
         logging.debug("smtp is not enabled. Aborting email notification")
         return False
 
@@ -70,7 +70,7 @@ def send_email_notification(notification_config: configparser.SectionProxy,
     message = EmailMessage()
     message['Subject'] = notification_config['email_subject']
 
-    message['From'] = get_config_value_as_str(CONFIG_SMTP, CONFIG_SMTP_MAIL_FROM)
+    message['From'] = get_config().smtp.mail_from
     message['To'] = (recipient,)
     message['CC'] = notification_config['cc_list'].split(',')
     message['BCC'] = notification_config['bcc_list'].split(',')
@@ -79,7 +79,7 @@ def send_email_notification(notification_config: configparser.SectionProxy,
     if html_content:
         message.add_alternative(html_content, subtype='html')
 
-    with smtplib.SMTP(get_config_value_as_str(CONFIG_SMTP, CONFIG_SMTP_SERVER)) as smtp_server:
+    with smtplib.SMTP(get_config().smtp.server) as smtp_server:
         smtp_server.set_debuglevel(2)
         logging.info(f"sending email notification to {recipient} with subject {message['Subject']}")
         smtp_server.send_message(message)

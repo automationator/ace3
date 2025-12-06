@@ -12,5 +12,5 @@ def test_report_exception():
     except Exception as e:
         report_exception()
 
-    error_reporting_dir = os.path.join(get_data_dir(), get_config()['global']['error_reporting_dir'])
+    error_reporting_dir = os.path.join(get_data_dir(), get_config().global_settings.error_reporting_dir)
     assert len(os.listdir(error_reporting_dir)) == 1

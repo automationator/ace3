@@ -1,7 +1,7 @@
 import logging
 
-from saq.configuration import get_config_value_as_str
-from saq.constants import CONFIG_TAG_CSS_CLASS, CONFIG_TAGS, TAG_LEVEL_ALERT, TAG_LEVEL_CRITICAL, TAG_LEVEL_FALSE_POSITIVE, TAG_LEVEL_INFO, TAG_LEVEL_WARNING
+from saq.configuration.config import get_config
+from saq.constants import TAG_LEVEL_ALERT, TAG_LEVEL_CRITICAL, TAG_LEVEL_FALSE_POSITIVE, TAG_LEVEL_INFO, TAG_LEVEL_WARNING
 
 
 class Tag:
@@ -28,7 +28,7 @@ class Tag:
             tag_name_lookup = tag_name_lookup.split(':', 1)[0]
 
         # does this tag exist in the configuration file?
-        self.level = get_config_value_as_str(CONFIG_TAGS, tag_name_lookup)
+        self.level = get_config().tags.get(tag_name_lookup)
         if not self.level:
             self.level = TAG_LEVEL_INFO
 
@@ -44,7 +44,7 @@ class Tag:
             self.score = 10
 
         try:
-            self.css_class = get_config_value_as_str(CONFIG_TAG_CSS_CLASS, self.level)
+            self.css_class = get_config().tag_css_class.get(self.level)
         except KeyError:
             logging.error("invalid tag level {}".format(self.level))
     

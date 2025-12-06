@@ -11,8 +11,8 @@ import uuid
 from saq.analysis.analysis import Analysis
 from saq.analysis.observable import Observable
 from saq.analysis.root import RootAnalysis
-from saq.configuration.config import get_config_value_as_str
-from saq.constants import ANALYSIS_MODE_CORRELATION, ANALYSIS_MODE_DISPOSITIONED, CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR, F_FILE, LockManagerType, WorkloadManagerType
+from saq.configuration.config import get_engine_config
+from saq.constants import ANALYSIS_MODE_CORRELATION, ANALYSIS_MODE_DISPOSITIONED, F_FILE, LockManagerType, WorkloadManagerType
 from saq.database.pool import get_db
 from saq.engine.analysis_orchestrator import AnalysisOrchestrator
 from saq.engine.configuration_manager import ConfigurationManager
@@ -399,7 +399,7 @@ class Worker:
                 return
 
         try:
-            work_dir = get_config_value_as_str(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR)
+            work_dir = get_engine_config().work_dir
 
             if (
                 # if the work target is a root analysis object,

@@ -1,5 +1,7 @@
 import logging
 import re
+from typing import Type
+from pydantic import Field, ConfigDict
 from saq.analysis.analysis import Analysis
 from saq.analysis.observable import Observable
 from saq.analysis.search import search_down
@@ -7,6 +9,7 @@ from saq.brocess import query_brocess_by_email_conversation, query_brocess_by_so
 from saq.constants import DIRECTIVE_SANDBOX, F_EMAIL_CONVERSATION, F_FILE, F_URL, parse_email_conversation, AnalysisExecutionResult
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 
 
 class EmailConversationFrequencyAnalysis(Analysis):
@@ -44,17 +47,23 @@ class EmailConversationFrequencyAnalysis(Analysis):
 
         return f"{result} {self.source_count} emails received before, {self.dest_count} to this user"
 
+class EmailConversationFrequencyAnalyzerConfig(AnalysisModuleConfig):
+    conversation_count_threshold: int = Field(..., description="When two people email each other frequently we want to know that. This is the minimum number of times we've seen this email address email this other email address that we consider to be 'frequent'.")
+
 class EmailConversationFrequencyAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return EmailConversationFrequencyAnalyzerConfig
+
     def verify_environment(self):
-        self.verify_config_exists('cooldown_period')
-        self.verify_config_exists('conversation_count_threshold')
+        pass
 
     @property
     def conversation_count_threshold(self):
         # when two people email each other frequently we want to know that
         # this is the minimum number of times we've seen this email address email this other email address
         # that we consider to be "frequent"
-        return self.config.getint('conversation_count_threshold')
+        return self.config.conversation_count_threshold
 
     @property
     def generated_analysis_type(self):
@@ -174,20 +183,28 @@ class EmailConversationLinkAnalysis(Analysis):
     """Has someone who has never sent us an email before sent us a potentially malicious link?"""
     pass
 
+class EmailConversationLinkAnalyzerConfig(AnalysisModuleConfig):
+    # Dynamic keys like url_pattern_* are allowed via extra fields
+    model_config = ConfigDict(extra='allow')
+
 class EmailConversationLinkAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return EmailConversationLinkAnalyzerConfig
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
         # load the list of url patterns we want to alert on
         self.url_patterns = []
-        for key in self.config.keys():
+        config_dict = self.config.model_dump()
+        for key in config_dict.keys():
             if key.startswith('url_pattern_'):
                 try:
-                    pattern = self.config[key]
+                    pattern = config_dict[key]
                     self.url_patterns.append(re.compile(pattern))
                 except Exception as e:
-                    logging.error(f"unable to add pattern {self.config[key.value]}: {e}")
+                    logging.error(f"unable to add pattern {pattern}: {e}")
 
     @property
     def generated_analysis_type(self):

@@ -6,14 +6,10 @@ import time
 from saq.analysis.root import RootAnalysis
 from saq.configuration.config import (
     get_config,
-    get_config_value_as_boolean,
-    get_config_value_as_list,
+    get_engine_config,
 )
 from saq.constants import (
     ANALYSIS_MODE_CORRELATION,
-    CONFIG_ENGINE,
-    CONFIG_ENGINE_STOP_ANALYSIS_ON_ANY_ALERT_DISPOSITION,
-    CONFIG_ENGINE_STOP_ANALYSIS_ON_DISPOSITIONS,
     DISPOSITION_OPEN,
     G_FORCED_ALERTS,
     G_MODULE_STATS_DIR,
@@ -172,14 +168,8 @@ class AnalysisOrchestrator:
             get_db().close()
 
             # Get the two different stop analysis setting values
-            stop_analysis_on_any_alert_disposition = get_config_value_as_boolean(
-                CONFIG_ENGINE,
-                CONFIG_ENGINE_STOP_ANALYSIS_ON_ANY_ALERT_DISPOSITION,
-                default=False,
-            )
-            stop_analysis_on_dispositions = get_config_value_as_list(
-                CONFIG_ENGINE, CONFIG_ENGINE_STOP_ANALYSIS_ON_DISPOSITIONS
-            )
+            stop_analysis_on_any_alert_disposition = get_engine_config().stop_analysis_on_any_alert_disposition
+            stop_analysis_on_dispositions = get_engine_config().stop_analysis_on_dispositions
 
             # Check to see if we need to stop analysis based on the settings
             disposition = (
@@ -210,6 +200,7 @@ class AnalysisOrchestrator:
 
         except Exception as e:
             logging.error(f"unable to check for disposition of {execution_context.work_item}: {e}")
+            report_exception()
 
         return False
 
@@ -438,12 +429,11 @@ class AnalysisOrchestrator:
 
     def _handle_cleanup(self, execution_context: EngineExecutionContext):
         """Handle cleanup if the analysis mode supports it."""
-        
+
         # is this analysis_mode one that we want to clean up?
         if (
             execution_context.root.analysis_mode is not None
-            and f"analysis_mode_{execution_context.root.analysis_mode}" in get_config()
-            and get_config_value_as_boolean(f"analysis_mode_{execution_context.root.analysis_mode}", "cleanup")
+            and get_config().get_analysis_mode_config(execution_context.root.analysis_mode).cleanup
         ):
             self._cleanup_if_no_outstanding_work(execution_context)
 

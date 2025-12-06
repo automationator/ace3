@@ -36,8 +36,8 @@ from pydantic import BaseModel, Field, field_validator
 import pytz
 
 from saq.collectors.hunter.loader import load_from_yaml
-from saq.configuration import get_config_value_as_str
-from saq.constants import ANALYSIS_MODE_CORRELATION, CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR, QUEUE_DEFAULT, ExecutionMode
+from saq.configuration.config import get_config
+from saq.constants import ANALYSIS_MODE_CORRELATION, QUEUE_DEFAULT, ExecutionMode
 from saq.environment import get_data_dir
 from saq.error import report_exception
 from saq.gui.icon import IconConfiguration
@@ -86,7 +86,7 @@ class InvalidHuntTypeError(ValueError):
 
 def get_hunt_state_dir(hunt_type: str, hunt_name: str) -> str:
     "Returns the path to the directory that contains persitence information about this hunt."""
-    return os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR), 'hunt', hunt_type, hunt_name)
+    return os.path.join(get_data_dir(), get_config().collection.persistence_dir, 'hunt', hunt_type, hunt_name)
 
 def write_persistence_data(hunt_type: str, hunt_name: str, value_name: str, value):
     """Writes the given persistence data for this hunt."""
@@ -241,7 +241,7 @@ class Hunt:
     @property
     def hunt_state_dir(self) -> str:
         "Returns the path to the directory that contains persitence information about this hunt."""
-        return os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR), 'hunt', self.type, self.name)
+        return os.path.join(get_data_dir(), get_config().collection.persistence_dir, 'hunt', self.type, self.name)
 
     #@property
     #def type(self):

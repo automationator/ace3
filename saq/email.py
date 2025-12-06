@@ -8,8 +8,9 @@ import socket
 
 from email.utils import parseaddr
 from email.header import decode_header
-from saq.configuration import get_config, get_config_value_as_str, get_config_value_as_list
-from saq.constants import CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_PRIMARY, CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_EMAIL_DOMAINS
+from saq.configuration import get_config
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_EMAIL_ARCHIVER
 from saq.database import get_db_connection
 from saq.util import is_subdomain
 
@@ -108,33 +109,11 @@ def is_local_email_domain(email_address):
     email_domain = get_email_domain(email_address)
     if email_domain is not None:
         # if that doesn't work then use the old-style configuration option
-        local_domains = get_config_value_as_list(CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_EMAIL_DOMAINS)
+        local_domains = get_config().global_settings.local_email_domains
 
         for local_domain in local_domains:
             if is_subdomain(email_domain, local_domain):
                 return True
-
-    return False
-
-def is_local_email_domain_OLD(email_address):
-    """Returns True if the given email addresses matches at least one entry in the local_email_domains list 
-       in the [global] section of the configuration."""
-
-    local_domains = [_.strip() for _ in get_config_value_as_list(CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_EMAIL_DOMAINS) if _.strip()]
-    if not local_domains:
-        return False
-
-    email_address = normalize_email_address(email_address)
-
-    try:
-        email_domain = email_address.split('@', 1)[1]
-    except Exception as e:
-        logging.debug(f"email address {email_address} failed to split on @: {e}")
-        return False
-
-    for local_domain in local_domains:
-        if is_subdomain(email_domain, local_domain):
-            return True
 
     return False
 
@@ -178,10 +157,10 @@ def get_email_archive_sections():
        Includes the primary and any secondary."""
 
     result = []
-    if get_config_value_as_str(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_PRIMARY):
-        result.append(get_config_value_as_str(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_PRIMARY))
+    if get_config().email_archive.primary:
+        result.append(get_config().email_archive.primary)
     
-    for section in get_config().keys():
+    for section in get_config().raw._data.keys():
         if section.startswith('database_email_archive_'):
             if section not in result:
                 result.append(section[len('database_'):])
@@ -196,13 +175,13 @@ def maintain_archive(verbose=False):
         _log = logging.info
 
     hostname = socket.gethostname()
-    section = get_config()['analysis_module_email_archiver']
-    if not section.getboolean('enabled'):
+    email_archiver_config = get_analysis_module_config(ANALYSIS_MODULE_EMAIL_ARCHIVER)
+    if not email_archiver_config.enabled:
         _log("email archives are not enabled")
         return
 
-    expiration_days = section.getint('expiration_days')
-    archive_dir = section['archive_dir']
+    expiration_days = email_archiver_config.expiration_days
+    archive_dir = email_archiver_config.archive_dir
     
     # get our current server id
     with get_db_connection('email_archive') as db:

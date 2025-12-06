@@ -139,12 +139,12 @@ def export_alerts_to_csv():
 
     # only show alerts from this node
     # NOTE: this will not be necessary once alerts are stored externally
-    if get_config()['gui'].getboolean('local_node_only', fallback=True):
+    if get_config().gui.local_node_only:
         query = query.filter(GUIAlert.location == g(G_SAQ_NODE))
-    elif get_config()['gui'].get('display_node_list', fallback=None):
+    elif get_config().gui.display_node_list:
         # alternatively we can display alerts for specific nodes
         # this was added on 05/02/2023 to support a DR mode of operation
-        display_node_list = [_.strip() for _ in get_config()['gui'].get('display_node_list').split(',') if _.strip()]
+        display_node_list = get_config().gui.display_node_list
         query = query.filter(GUIAlert.location.in_(display_node_list))
 
     # group by id to prevent duplicates
@@ -203,10 +203,10 @@ def export_alerts_to_csv():
 @require_permission('alert', 'read')
 def send_alert_to():
     remote_host = request.json['remote_host']
-    if f"send_to_{remote_host}" not in get_config():    
+    if f"send_to_{remote_host}" not in get_config().raw._data:    
         return f"Unknown remote host: {remote_host}", 400
 
-    remote_path = get_config()[f"send_to_{remote_host}"].get("remote_path")
+    remote_path = get_config().raw._data[f"send_to_{remote_host}"].get("remote_path")
     alert_uuid = request.json['alert_uuid']
 
     # NOTE: If we require the alert to be locked first, it can't be sent to the remote host until it finished analyzing.
@@ -339,7 +339,7 @@ def download_file():
         response.headers['Content-Type'] = 'text/html'
         return response
     elif mode == 'malicious':
-        maliciousdir = os.path.join(get_base_dir(), get_config()["malicious_files"]["malicious_dir"])
+        maliciousdir = os.path.join(get_base_dir(), get_config().malicious_files.malicious_dir)
         if not os.path.isdir(maliciousdir):
             logging.error("malicious_dir {} does not exist")
             return "internal error (review logs)", 404
@@ -382,21 +382,21 @@ def download_file():
         alert.sync()
 
         # who gets these alerts?
-        malicious_alert_recipients = get_config()['malicious_files']['malicious_alert_recipients'].split(',')
+        malicious_alert_recipients = get_config().malicious_files.malicious_alert_recipients
 
         msg = MIMEText('{} has identified a malicious file in alert {}.\r\n\r\nACE Direct Link: {}\r\n\r\nRemote Storage: {}'.format(
             current_user.username,
             alert.description,
-            '{}/analysis?direct={}'.format(get_config()['gui']['base_uri'], alert.uuid),
+            '{}/analysis?direct={}'.format(get_config().gui.base_uri, alert.uuid),
             lnname))
 
         msg['Subject'] = "malicious file detected - {}".format(os.path.basename(file_observable.value))
-        msg['From'] = get_config().get("smtp", "mail_from")
+        msg['From'] = get_config().smtp.mail_from
         msg['To'] = ', '.join(malicious_alert_recipients)
 
-        with smtplib.SMTP(get_config().get("smtp", "server")) as mail:
+        with smtplib.SMTP(get_config().smtp.server) as mail:
             mail.send_message(msg, 
-                from_addr=get_config().get("smtp", "mail_from"), 
+                from_addr=get_config().smtp.mail_from, 
                 to_addrs=malicious_alert_recipients)
 
         return "analysis?direct=" + alert.uuid, 200
@@ -474,21 +474,11 @@ def email_file():
         full_path += ".zip"
 
     if encrypt == "on":
-        try:
-            passphrase = get_config().get("gpg", "symmetric_password")
-        except:
-            logging.warning("passphrase not specified in configuration, using default value of infected")
-            passphrase = "infected"
-
-        if not os.path.exists(full_path + ".gpg"):
-            p = Popen(['gpg', '-c', '--passphrase', passphrase, full_path], stdout=PIPE)
-            (stdout, stderr) = p.communicate()
-
-        full_path += ".gpg"
+        raise NotImplementedError("encryption is not implemented")
 
     try:
-        smtphost = get_config().get("smtp", "server")
-        smtpfrom = get_config().get("smtp", "mail_from")
+        smtphost = get_config().smtp.server
+        smtpfrom = get_config().smtp.mail_from
         msg = MIMEMultipart()
         msg['From'] = smtpfrom
         msg['To'] = COMMASPACE.join(toemails)

@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import patch
 
+from saq.configuration.config import get_config
 from saq.gui.alert import GUIAlert
 
 
@@ -32,30 +33,30 @@ def test_icon_matches_alert_type_file():
 
 
 @pytest.mark.unit
-def test_icon_no_matching_alert_type_file():
+def test_icon_no_matching_alert_type_file(monkeypatch):
     """test icon falls back to token matching when alert_type file doesn't exist"""
     alert = create_test_alert(alert_type="custom_alert", description="test splunk alert")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {"splunk": "splunk_icon"})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png', 'mailbox.png', 'splunk.png']
-        mock_config.return_value = {'gui_favicons': {'splunk': 'splunk_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         assert alert.legacy_icon == "splunk"
 
 
 @pytest.mark.unit
-def test_icon_matches_description_token():
+def test_icon_matches_description_token(monkeypatch):
     """test icon matches token from description when no alert_type file exists"""
     alert = create_test_alert(description="virustotal detection alert")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {'virustotal': 'vt_icon', 'detection': 'det_icon'})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png', 'mailbox.png']
-        mock_config.return_value = {'gui_favicons': {'virustotal': 'vt_icon', 'detection': 'det_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         icon = alert.legacy_icon
@@ -63,15 +64,15 @@ def test_icon_matches_description_token():
 
 
 @pytest.mark.unit
-def test_icon_matches_tool_token():
+def test_icon_matches_tool_token(monkeypatch):
     """test icon matches token from tool when description doesn't match"""
     alert = create_test_alert(tool="splunk hunter", description="no matching tokens here")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {'splunk': 'splunk_icon', 'hunter': 'hunter_icon'})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {'gui_favicons': {'splunk': 'splunk_icon', 'hunter': 'hunter_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         icon = alert.legacy_icon
@@ -79,15 +80,15 @@ def test_icon_matches_tool_token():
 
 
 @pytest.mark.unit
-def test_icon_matches_alert_type_token():
+def test_icon_matches_alert_type_token(monkeypatch):
     """test icon matches token from alert_type when description and tool don't match"""
     alert = create_test_alert(alert_type="manual analysis", tool="test tool", description="some description")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {'manual': 'manual_icon', 'analysis': 'analysis_icon'})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {'gui_favicons': {'manual': 'manual_icon', 'analysis': 'analysis_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         icon = alert.legacy_icon
@@ -95,45 +96,45 @@ def test_icon_matches_alert_type_token():
 
 
 @pytest.mark.unit
-def test_icon_returns_default_when_no_matches():
+def test_icon_returns_default_when_no_matches(monkeypatch):
     """test icon returns 'default' when no tokens match available favicons"""
     alert = create_test_alert(alert_type="custom", tool="custom_tool", description="custom description")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {'splunk': 'splunk_icon', 'virustotal': 'vt_icon'})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {'gui_favicons': {'splunk': 'splunk_icon', 'virustotal': 'vt_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         assert alert.legacy_icon == "default"
 
 
 @pytest.mark.unit
-def test_icon_token_matching_case_insensitive():
+def test_icon_token_matching_case_insensitive(monkeypatch):
     """test icon token matching is case insensitive"""
     alert = create_test_alert(description="VirusTotal Detection")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {'virustotal': 'vt_icon'})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {'gui_favicons': {'virustotal': 'vt_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         assert alert.legacy_icon == "virustotal"
 
 
 @pytest.mark.unit
-def test_icon_splits_description_by_space_and_underscore():
+def test_icon_splits_description_by_space_and_underscore(monkeypatch):
     """test icon splits description tokens by both space and underscore"""
     alert = create_test_alert(description="virus_total detection")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {'virus': 'virus_icon', 'total': 'total_icon'})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {'gui_favicons': {'virus': 'virus_icon', 'total': 'total_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         icon = alert.legacy_icon
@@ -141,60 +142,60 @@ def test_icon_splits_description_by_space_and_underscore():
 
 
 @pytest.mark.unit
-def test_icon_prefers_description_over_tool():
+def test_icon_prefers_description_over_tool(monkeypatch):
     """test icon prefers description token matches over tool token matches"""
     alert = create_test_alert(tool="manual tool", description="splunk detection")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {'splunk': 'splunk_icon', 'manual': 'manual_icon'})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {'gui_favicons': {'splunk': 'splunk_icon', 'manual': 'manual_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         assert alert.legacy_icon == "splunk"
 
 
 @pytest.mark.unit
-def test_icon_prefers_tool_over_alert_type():
+def test_icon_prefers_tool_over_alert_type(monkeypatch):
     """test icon prefers tool token matches over alert_type token matches"""
     alert = create_test_alert(alert_type="manual check", tool="splunk hunter", description="some description")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {'splunk': 'splunk_icon', 'manual': 'manual_icon'})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {'gui_favicons': {'splunk': 'splunk_icon', 'manual': 'manual_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         assert alert.legacy_icon == "splunk"
 
 
 @pytest.mark.unit
-def test_icon_with_empty_gui_favicons():
+def test_icon_with_empty_gui_favicons(monkeypatch):
     """test icon returns default when gui_favicons config is empty"""
     alert = create_test_alert()
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {'gui_favicons': {}}
         mock_base_dir.return_value = '/opt/ace'
 
         assert alert.legacy_icon == "default"
 
 
 @pytest.mark.unit
-def test_icon_with_special_characters_in_description():
+def test_icon_with_special_characters_in_description(monkeypatch):
     """test icon handles special characters in description gracefully"""
     alert = create_test_alert(description="splunk: detection (high priority)")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {'splunk': 'splunk_icon', 'detection': 'det_icon'})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {'gui_favicons': {'splunk': 'splunk_icon', 'detection': 'det_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         icon = alert.legacy_icon
@@ -215,21 +216,19 @@ def test_icon_alert_type_with_hyphen():
 
 
 @pytest.mark.unit
-def test_icon_pop_returns_single_value():
+def test_icon_pop_returns_single_value(monkeypatch):
     """test icon returns a single value when multiple tokens match"""
     alert = create_test_alert(description="splunk virustotal manual")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {
+        'splunk': 'splunk_icon',
+        'virustotal': 'vt_icon',
+        'manual': 'manual_icon'
+    })
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {
-            'gui_favicons': {
-                'splunk': 'splunk_icon',
-                'virustotal': 'vt_icon',
-                'manual': 'manual_icon'
-            }
-        }
         mock_base_dir.return_value = '/opt/ace'
 
         icon = alert.legacy_icon
@@ -238,15 +237,15 @@ def test_icon_pop_returns_single_value():
 
 
 @pytest.mark.unit
-def test_icon_handles_empty_alert_type():
+def test_icon_handles_empty_alert_type(monkeypatch):
     """test icon handles empty alert_type gracefully"""
     alert = create_test_alert(alert_type="", tool="splunk")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {'splunk': 'splunk_icon'})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {'gui_favicons': {'splunk': 'splunk_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         assert alert.legacy_icon == "splunk"
@@ -266,15 +265,15 @@ def test_icon_handles_single_word_alert_type():
 
 
 @pytest.mark.unit
-def test_icon_splits_tool_by_space():
+def test_icon_splits_tool_by_space(monkeypatch):
     """test icon splits tool tokens by space"""
     alert = create_test_alert(tool="hunter collector", description="test")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {'hunter': 'hunter_icon', 'collector': 'collector_icon'})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {'gui_favicons': {'hunter': 'hunter_icon', 'collector': 'collector_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         icon = alert.legacy_icon
@@ -282,15 +281,15 @@ def test_icon_splits_tool_by_space():
 
 
 @pytest.mark.unit
-def test_icon_splits_alert_type_by_space():
+def test_icon_splits_alert_type_by_space(monkeypatch):
     """test icon splits alert_type tokens by space"""
     alert = create_test_alert(alert_type="manual upload", tool="test", description="test")
 
+    monkeypatch.setattr(get_config(), "gui_favicons", {'manual': 'manual_icon', 'upload': 'upload_icon'})
+
     with patch('saq.gui.alert.os.listdir') as mock_listdir, \
-         patch('saq.gui.alert.get_config') as mock_config, \
          patch('saq.gui.alert.get_base_dir') as mock_base_dir:
         mock_listdir.return_value = ['default.png']
-        mock_config.return_value = {'gui_favicons': {'manual': 'manual_icon', 'upload': 'upload_icon'}}
         mock_base_dir.return_value = '/opt/ace'
 
         icon = alert.legacy_icon

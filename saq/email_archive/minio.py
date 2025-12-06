@@ -5,8 +5,7 @@ from typing import Optional
 
 from minio import Minio
 from minio.error import S3Error
-from saq.configuration.config import get_config_value_as_str
-from saq.constants import CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_S3_BUCKET, CONFIG_EMAIL_ARCHIVE_S3_CONFIG
+from saq.configuration.config import get_config
 from saq.email_archive.local import EmailArchiveLocal
 from saq.storage.minio import get_minio_client
 
@@ -22,11 +21,11 @@ def _extract_sha256_from_file_name(file_path: str) -> str:
     return os.path.basename(file_path).split('.')[0]
 
 def _get_email_archive_minio_client() -> Minio:
-    return get_minio_client(get_config_value_as_str(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_S3_CONFIG))
+    return get_minio_client()
 
 class EmailArchiveMinio(EmailArchiveLocal):
     def email_exists_in_s3(self, sha256_hash: str) -> bool:
-        bucket = get_config_value_as_str(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_S3_BUCKET)
+        bucket = get_config().email_archive.s3_bucket
         s3_client = _get_email_archive_minio_client()
 
         try:
@@ -41,11 +40,11 @@ class EmailArchiveMinio(EmailArchiveLocal):
             raise e
 
     def upload_to_s3(self, local_path: str, message_id: str, sha256_hash: str) -> bool:
-        bucket = get_config_value_as_str(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_S3_BUCKET)
+        bucket = get_config().email_archive.s3_bucket
         metadata = { "message_id": message_id }
         logging.info(f"uploading email archive {sha256_hash} to {bucket} with metadata {metadata}")
         s3_client = _get_email_archive_minio_client()
-        result = s3_client.fput_object(bucket_name=bucket, object_name=sha256_hash, file_path=local_path, user_metadata=metadata)
+        result = s3_client.fput_object(bucket_name=bucket, object_name=sha256_hash, file_path=local_path, metadata=metadata)
         logging.debug(f"uploaded email archive {sha256_hash} to {bucket}: {result}")
         return True
 
@@ -69,7 +68,7 @@ class EmailArchiveMinio(EmailArchiveLocal):
         s3_client = _get_email_archive_minio_client()
         logging.info(f"downloading email archive {sha256_hash} to {temp_path}")
         s3_client.fget_object(
-            get_config_value_as_str(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_S3_BUCKET),
+            get_config().email_archive.s3_bucket,
             sha256_hash,
             temp_path)
 

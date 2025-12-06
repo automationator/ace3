@@ -1,12 +1,14 @@
 import logging
 import os
-from typing import Optional, List, override
+from typing import Optional, List, Type, override
 
+from pydantic import Field
 from saq.analysis import Analysis
 from saq.analysis.observable import Observable
 from saq.constants import ANALYSIS_MODE_CORRELATION, DIRECTIVE_CRAWL, DIRECTIVE_RENDER, F_URL, F_FILE, AnalysisExecutionResult
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.observables.file import FileObservable
 from saq.phishkit import get_async_scan_result, scan_file, scan_url
 from saq.util.filesystem import create_temporary_directory
@@ -130,7 +132,15 @@ class PhishkitAnalysis(Analysis):
             return f"{self.display_name}: completed"
 
 
+class PhishkitAnalyzerConfig(AnalysisModuleConfig):
+    valid_file_extensions: list[str] = Field(..., description="List of file extensions to enable for scanning.")
+    valid_mime_types: list[str] = Field(..., description="List of mime types to enable for scanning.")
+
 class PhishkitAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return PhishkitAnalyzerConfig
+
     """Analyzes URLs and files using Phishkit for phishing detection."""
 
     @property
@@ -140,11 +150,6 @@ class PhishkitAnalyzer(AnalysisModule):
     @property
     def valid_observable_types(self):
         return [F_URL, F_FILE]
-
-    def verify_environment(self):
-        """Verify that the required configuration exists."""
-        self.verify_config_item_has_value('valid_file_extensions')
-        self.verify_config_item_has_value('valid_mime_types')
 
     def custom_requirement(self, observable: Observable) -> bool:
         """Custom requirement for phishkit analysis."""
@@ -216,7 +221,7 @@ class PhishkitAnalyzer(AnalysisModule):
             # first check the file extension
             assert isinstance(observable, FileObservable)
             file_extension = os.path.splitext(observable.file_name)[1].lower()
-            if file_extension in self.config['valid_file_extensions']:
+            if file_extension in self.config.valid_file_extensions:
                 logging.debug(f"file {observable} extension {file_extension} enabled for phishkit analysis")
                 file_accepted = True
 
@@ -224,7 +229,7 @@ class PhishkitAnalyzer(AnalysisModule):
             from saq.modules.file_analysis import FileTypeAnalysis
             file_type_analysis = self.wait_for_analysis(observable, FileTypeAnalysis)
 
-            if file_type_analysis is not None and file_type_analysis.mime_type in self.config['valid_mime_types']:
+            if file_type_analysis is not None and file_type_analysis.mime_type in self.config.valid_mime_types:
                 file_accepted = True
                 logging.debug(f"file {observable} mime type {file_type_analysis.mime_type} enabled for phishkit analysis")
 

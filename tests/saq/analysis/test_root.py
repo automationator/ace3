@@ -7,8 +7,8 @@ from saq.analysis.analysis import Analysis
 from saq.analysis.errors import ExcessiveObservablesError
 from saq.analysis.io_tracking import _get_io_read_count, _get_io_write_count
 from saq.analysis.root import RootAnalysis, Submission
-from saq.configuration.config import get_config_value_as_str, get_config_value_as_int
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_COMPANY_ID, CONFIG_GLOBAL_COMPANY_NAME, CONFIG_GLOBAL_NODE, DISPOSITION_DELIVERY, F_FQDN, F_TEST, G_OBSERVABLE_LIMIT
+from saq.configuration.config import get_config
+from saq.constants import DISPOSITION_DELIVERY, F_FQDN, F_TEST, G_OBSERVABLE_LIMIT
 from saq.database.database_observable import get_observable_disposition_history
 from saq.database.model import Alert
 from saq.database.util.alert import ALERT, get_alert_by_uuid
@@ -147,9 +147,9 @@ def test_create():
     assert isinstance(root.action_counters, dict)
     assert root.details == {}
     assert isinstance(root.state, dict)
-    assert root.location == get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_NODE)
-    assert root.company_id == get_config_value_as_int(CONFIG_GLOBAL, CONFIG_GLOBAL_COMPANY_ID)
-    assert root.company_name == get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_COMPANY_NAME)
+    assert root.location == get_config().global_settings.node
+    assert root.company_id == get_config().global_settings.company_id
+    assert root.company_name == get_config().global_settings.company_name
     assert root.submission is None
 
 @pytest.mark.unit

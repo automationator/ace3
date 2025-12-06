@@ -1,15 +1,13 @@
-from saq.constants import CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_TARGET
-from saq.configuration.config import get_config_value_as_str
+from saq.configuration.config import get_config
 from saq.email_archive.adapter import EmailArchiveAdapter
 from saq.email_archive.interface import EmailArchiveInterface
-from saq.email_archive.local import EmailArchiveLocal
 from saq.email_archive.minio import EmailArchiveMinio
 from saq.email_archive.s3 import EmailArchiveS3
 from saq.email_archive.types import EmailArchiveTargetType
 
 def get_email_archive_type() -> EmailArchiveTargetType:
     """Get the email archive type from the configuration."""
-    return EmailArchiveTargetType(get_config_value_as_str(CONFIG_EMAIL_ARCHIVE, CONFIG_EMAIL_ARCHIVE_TARGET))
+    return EmailArchiveTargetType(get_config().email_archive.target)
 
 
 class EmailArchiveFactory:

@@ -1,7 +1,6 @@
 import os
 import os.path
-import pickle
-from typing import Generator, Optional, override
+from typing import Generator, override
 
 import pytest
 
@@ -10,7 +9,6 @@ from saq.collectors.base_collector import CollectorService, get_collection_error
 from saq.collectors.collector_configuration import CollectorServiceConfiguration
 from saq.collectors.remote_node import save_submission_for_review
 from saq.configuration import get_config
-from saq.constants import ANALYSIS_MODE_CORRELATION, ANALYSIS_TYPE_MANUAL
 from saq.collectors.base_collector import Collector
 
 import pymysql.err
@@ -45,15 +43,20 @@ def test_save_submission_for_review(monkeypatch, tmpdir, root_analysis):
 
 @pytest.mark.unit
 def test_schedule_submission_interface_error_no_recovery(root_analysis, monkeypatch):
-    # configure the collector
-    get_config()['service_generic_collector'] = { 
-        "workload_type": "generic",
-        "delete_files": True,
-    }
+    get_config().add_service_config('service_generic_collector', CollectorServiceConfiguration(
+        name="service_generic_collector",
+        python_module="placeholder",
+        python_class="placeholder",
+        description="Generic Collector Service",
+        enabled=True,
+        workload_type="generic",
+        delete_files=True,
+    ))
 
     collector = CollectorService(
         collector=TestCollector(), 
-        config=CollectorServiceConfiguration.from_config(get_config()['service_generic_collector']))
+        config=get_config().get_service_config('service_generic_collector'))
+
     assert collector.submission_scheduler is not None
 
     import saq.collectors.workload_repository

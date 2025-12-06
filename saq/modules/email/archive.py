@@ -2,7 +2,9 @@ import gzip
 import logging
 import os
 import shutil
-from typing import Optional
+from typing import Optional, Type
+
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.analysis.observable import Observable
 from saq.analysis.search import recurse_tree
@@ -13,6 +15,7 @@ from saq.email_archive import archive_email, index_email_archive
 from saq.environment import g_boolean
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.observables.file import FileObservable
 from saq.util.time import local_time
 
@@ -92,6 +95,10 @@ KEY_ARCHIVE_ID = "archive_id"
 KEY_ARCHIVE_PATH = "archive_path"
 KEY_HASH = "hash"
 
+class EmailArchiveActionConfig(AnalysisModuleConfig):
+    archive_dir: str = Field(..., description="The directory to contain the archived emails (relative to DATA_DIR).")
+    expiration_days: int = Field(..., description="The number of days to keep archived emails.")
+
 class EmailArchiveResults(Analysis):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -141,6 +148,10 @@ class EmailArchiveResults(Analysis):
         return f"Archive Path: {self.archive_path}"
 
 class EmailArchiveAction(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return EmailArchiveActionConfig
+
     @property
     def valid_observable_types(self):
         return [ F_FILE ]

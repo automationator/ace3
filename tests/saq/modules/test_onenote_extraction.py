@@ -3,7 +3,8 @@ import base64
 
 import pytest
 
-from saq.constants import F_FILE, AnalysisExecutionResult
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_ONENOTE_EXTRACTION, F_FILE, AnalysisExecutionResult
 
 from saq.modules.file_analysis import OneNoteFileAnalyzer, OneNoteFileAnalysis
 from saq.modules.adapter import AnalysisModuleAdapter
@@ -21,7 +22,9 @@ def test_html_data_url_extraction(datadir, test_context):
 
     observable = root.add_file_observable(target_path)
     
-    analyzer = AnalysisModuleAdapter(OneNoteFileAnalyzer(context=test_context))
+    analyzer = AnalysisModuleAdapter(OneNoteFileAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_ONENOTE_EXTRACTION)))
     analyzer.root = root
     
     result = analyzer.execute_analysis(observable)

@@ -9,6 +9,7 @@ from saq.analysis.interfaces import RootAnalysisInterface
 from saq.analysis.observable import Observable
 from saq.engine.interface import EngineInterface
 from saq.constants import AnalysisExecutionResult
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.context import AnalysisModuleContext
 
 @runtime_checkable
@@ -66,7 +67,7 @@ class AnalysisModuleInterface(Protocol):
     """Protocol defining the interface for analysis modules."""
 
     @property
-    def module_id(self) -> str:
+    def name(self) -> str:
         """Returns the name of the module."""
         ...
 
@@ -86,8 +87,8 @@ class AnalysisModuleInterface(Protocol):
     
     # Configuration properties
     @property
-    def config_section_name(self) -> str:
-        """Get the name of the configuration section."""
+    def config(self) -> AnalysisModuleConfig:
+        """Get the configuration for this module."""
         ...
 
     @property

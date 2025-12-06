@@ -3,7 +3,8 @@ import pytest
 from unittest.mock import Mock, patch
 from subprocess import TimeoutExpired
 
-from saq.constants import F_FILE, AnalysisExecutionResult, R_EXTRACTED_FROM
+from saq.configuration.config import get_config, get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_DE4DOT, ANALYSIS_MODULE_ILSPY, F_FILE, AnalysisExecutionResult, R_EXTRACTED_FROM
 from saq.modules.file_analysis.dotnet import (
     De4dotAnalysis,
     De4dotAnalyzer,
@@ -17,7 +18,6 @@ from saq.modules.file_analysis.dotnet import (
 )
 from saq.observables.file import FileObservable
 from tests.saq.test_util import create_test_context
-from saq.configuration.config import get_config
 
 
 @pytest.mark.unit
@@ -100,15 +100,21 @@ class TestDe4dotAnalysis:
 class TestDe4dotAnalyzer:
 
     def test_generated_analysis_type(self):
-        analyzer = De4dotAnalyzer(context=create_test_context())
+        analyzer = De4dotAnalyzer(
+            context=create_test_context(),
+            config=get_analysis_module_config(ANALYSIS_MODULE_DE4DOT))
         assert analyzer.generated_analysis_type == De4dotAnalysis
 
     def test_valid_observable_types(self):
-        analyzer = De4dotAnalyzer(context=create_test_context())
+        analyzer = De4dotAnalyzer(
+            context=create_test_context(),
+            config=get_analysis_module_config(ANALYSIS_MODULE_DE4DOT))
         assert analyzer.valid_observable_types == F_FILE
 
     def test_execute_analysis_file_not_exists(self, root_analysis, tmpdir):
-        analyzer = De4dotAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = De4dotAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_DE4DOT))
 
         # create a file observable for non-existent file by first creating it, then adding it, then deleting it
         test_file = tmpdir / "temp.exe"
@@ -123,7 +129,9 @@ class TestDe4dotAnalyzer:
     @patch("saq.modules.file_analysis.dotnet.is_dotnet")
     def test_execute_analysis_not_dotnet_file(self, mock_is_dotnet, root_analysis, tmpdir):
         mock_is_dotnet.return_value = False
-        analyzer = De4dotAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = De4dotAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_DE4DOT))
 
         # create a non-dotnet file
         test_file = tmpdir / "test.txt"
@@ -148,7 +156,9 @@ class TestDe4dotAnalyzer:
         mock_process.communicate.return_value = (b"No obfuscation detected", b"")
         mock_popen.return_value = mock_process
 
-        analyzer = De4dotAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = De4dotAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_DE4DOT))
 
         test_file = tmpdir / "test.exe"
         test_file.write("fake dotnet content")
@@ -173,7 +183,9 @@ class TestDe4dotAnalyzer:
         mock_process.kill = Mock()
         mock_popen.return_value = mock_process
 
-        analyzer = De4dotAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = De4dotAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_DE4DOT))
 
         test_file = tmpdir / "test.exe"
         test_file.write("fake dotnet content")
@@ -194,7 +206,9 @@ class TestDe4dotAnalyzer:
         # mock the -d detection check to raise an exception
         mock_popen.side_effect = Exception("Test exception")
 
-        analyzer = De4dotAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = De4dotAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_DE4DOT))
 
         test_file = tmpdir / "test.exe"
         test_file.write("fake dotnet content")
@@ -223,7 +237,9 @@ class TestDe4dotAnalyzer:
 
         mock_popen.side_effect = [mock_detect_process, mock_deobfuscate_process]
 
-        analyzer = De4dotAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = De4dotAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_DE4DOT))
 
         test_file = tmpdir / "test.exe"
         test_file.write("fake dotnet content")
@@ -276,7 +292,9 @@ class TestDe4dotAnalyzer:
 
         mock_popen.side_effect = [mock_detect_process, mock_deobfuscate_process]
 
-        analyzer = De4dotAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = De4dotAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_DE4DOT))
 
         test_file = tmpdir / "test.exe"
         test_file.write("fake dotnet content")
@@ -306,7 +324,9 @@ class TestDe4dotAnalyzer:
         # mock the deobfuscation process to raise an exception
         mock_popen.side_effect = [mock_detect_process, Exception("Test exception")]
 
-        analyzer = De4dotAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = De4dotAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_DE4DOT))
 
         test_file = tmpdir / "test.exe"
         test_file.write("fake dotnet content")
@@ -386,32 +406,30 @@ class TestIlspyAnalysis:
 @pytest.mark.unit
 class TestIlspyAnalyzer:
 
-    @pytest.fixture
-    def ilspy_config(self):
-        """fixture to set up ilspy configuration"""
-        config = get_config()
-        # add the ilspy analyzer config section if it doesn't exist
-        if "analysis_module_saq.modules.file_analysis.dotnet:IlspyAnalyzer" not in config:
-            config.add_section("analysis_module_saq.modules.file_analysis.dotnet:IlspyAnalyzer")
-        config["analysis_module_saq.modules.file_analysis.dotnet:IlspyAnalyzer"]["binary_path"] = "/usr/bin/ilspy"
-        return config
-
-    def test_generated_analysis_type(self, ilspy_config):
-        analyzer = IlspyAnalyzer(context=create_test_context())
+    def test_generated_analysis_type(self):
+        analyzer = IlspyAnalyzer(
+            context=create_test_context(),
+            config=get_analysis_module_config(ANALYSIS_MODULE_ILSPY))
         assert analyzer.generated_analysis_type == IlspyAnalysis
 
-    def test_valid_observable_types(self, ilspy_config):
-        analyzer = IlspyAnalyzer(context=create_test_context())
+    def test_valid_observable_types(self):
+        analyzer = IlspyAnalyzer(
+            context=create_test_context(),
+            config=get_analysis_module_config(ANALYSIS_MODULE_ILSPY))
         assert analyzer.valid_observable_types == F_FILE
 
-    def test_binary_path_property(self, ilspy_config):
-        analyzer = IlspyAnalyzer(context=create_test_context())
+    def test_binary_path_property(self):
+        analyzer = IlspyAnalyzer(
+            context=create_test_context(),
+            config=get_analysis_module_config(ANALYSIS_MODULE_ILSPY))
         # just verify the property returns something (it reads from config)
         assert analyzer.binary_path is not None
         assert isinstance(analyzer.binary_path, str)
 
-    def test_execute_analysis_file_not_exists(self, ilspy_config, root_analysis, tmpdir):
-        analyzer = IlspyAnalyzer(context=create_test_context(root=root_analysis))
+    def test_execute_analysis_file_not_exists(self, root_analysis, tmpdir):
+        analyzer = IlspyAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_ILSPY))
 
         # create a file observable for non-existent file by first creating it, then adding it, then deleting it
         test_file = tmpdir / "temp.exe"
@@ -424,10 +442,12 @@ class TestIlspyAnalyzer:
         assert result == AnalysisExecutionResult.COMPLETED
 
     @patch("saq.modules.file_analysis.dotnet.is_dotnet")
-    def test_execute_analysis_not_dotnet_file(self, mock_is_dotnet, ilspy_config, root_analysis, tmpdir):
+    def test_execute_analysis_not_dotnet_file(self, mock_is_dotnet, root_analysis, tmpdir):
         mock_is_dotnet.return_value = False
 
-        analyzer = IlspyAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = IlspyAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_ILSPY))
 
         # create a non-dotnet file
         test_file = tmpdir / "test.txt"
@@ -444,7 +464,7 @@ class TestIlspyAnalyzer:
 
     @patch("saq.modules.file_analysis.dotnet.Popen")
     @patch("saq.modules.file_analysis.dotnet.is_dotnet")
-    def test_execute_analysis_successful(self, mock_is_dotnet, mock_popen, ilspy_config, root_analysis, tmpdir):
+    def test_execute_analysis_successful(self, mock_is_dotnet, mock_popen, root_analysis, tmpdir):
         mock_is_dotnet.return_value = True
 
         # mock the ilspy process
@@ -453,7 +473,9 @@ class TestIlspyAnalyzer:
         mock_process.returncode = 0
         mock_popen.return_value = mock_process
 
-        analyzer = IlspyAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = IlspyAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_ILSPY))
 
         test_file = tmpdir / "test.exe"
         test_file.write("fake dotnet content")
@@ -485,7 +507,7 @@ class TestIlspyAnalyzer:
 
     @patch("saq.modules.file_analysis.dotnet.Popen")
     @patch("saq.modules.file_analysis.dotnet.is_dotnet")
-    def test_execute_analysis_with_stderr(self, mock_is_dotnet, mock_popen, ilspy_config, root_analysis, tmpdir):
+    def test_execute_analysis_with_stderr(self, mock_is_dotnet, mock_popen, root_analysis, tmpdir):
         mock_is_dotnet.return_value = True
 
         # mock the ilspy process with stderr
@@ -494,7 +516,9 @@ class TestIlspyAnalyzer:
         mock_process.returncode = 1
         mock_popen.return_value = mock_process
 
-        analyzer = IlspyAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = IlspyAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_ILSPY))
 
         test_file = tmpdir / "test.exe"
         test_file.write("fake dotnet content")
@@ -512,7 +536,7 @@ class TestIlspyAnalyzer:
 
     @patch("saq.modules.file_analysis.dotnet.Popen")
     @patch("saq.modules.file_analysis.dotnet.is_dotnet")
-    def test_execute_analysis_timeout(self, mock_is_dotnet, mock_popen, ilspy_config, root_analysis, tmpdir):
+    def test_execute_analysis_timeout(self, mock_is_dotnet, mock_popen, root_analysis, tmpdir):
         mock_is_dotnet.return_value = True
 
         # mock the ilspy process to timeout on first communicate, then return on second
@@ -524,7 +548,9 @@ class TestIlspyAnalyzer:
         mock_process.kill = Mock()
         mock_popen.return_value = mock_process
 
-        analyzer = IlspyAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = IlspyAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_ILSPY))
 
         test_file = tmpdir / "test.exe"
         test_file.write("fake dotnet content")
@@ -543,13 +569,15 @@ class TestIlspyAnalyzer:
 
     @patch("saq.modules.file_analysis.dotnet.Popen")
     @patch("saq.modules.file_analysis.dotnet.is_dotnet")
-    def test_execute_analysis_exception(self, mock_is_dotnet, mock_popen, ilspy_config, root_analysis, tmpdir):
+    def test_execute_analysis_exception(self, mock_is_dotnet, mock_popen, root_analysis, tmpdir):
         mock_is_dotnet.return_value = True
 
         # mock the ilspy process to raise an exception
         mock_popen.side_effect = Exception("Test exception")
 
-        analyzer = IlspyAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = IlspyAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_ILSPY))
 
         test_file = tmpdir / "test.exe"
         test_file.write("fake dotnet content")
@@ -566,7 +594,7 @@ class TestIlspyAnalyzer:
 
     @patch("saq.modules.file_analysis.dotnet.Popen")
     @patch("saq.modules.file_analysis.dotnet.is_dotnet")
-    def test_execute_analysis_duplicate_filename(self, mock_is_dotnet, mock_popen, ilspy_config, root_analysis, tmpdir):
+    def test_execute_analysis_duplicate_filename(self, mock_is_dotnet, mock_popen, root_analysis, tmpdir):
         mock_is_dotnet.return_value = True
 
         # mock the ilspy process
@@ -575,7 +603,9 @@ class TestIlspyAnalyzer:
         mock_process.returncode = 0
         mock_popen.return_value = mock_process
 
-        analyzer = IlspyAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = IlspyAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_ILSPY))
 
         test_file = tmpdir / "test.exe"
         test_file.write("fake dotnet content")
@@ -608,10 +638,12 @@ class TestIlspyAnalyzer:
 
     @patch("saq.modules.file_analysis.dotnet.Popen")
     @patch("saq.modules.file_analysis.dotnet.is_dotnet")
-    def test_execute_analysis_max_duplicates(self, mock_is_dotnet, mock_popen, ilspy_config, root_analysis, tmpdir):
+    def test_execute_analysis_max_duplicates(self, mock_is_dotnet, mock_popen, root_analysis, tmpdir):
         mock_is_dotnet.return_value = True
 
-        analyzer = IlspyAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = IlspyAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_ILSPY))
 
         test_file = tmpdir / "test.exe"
         test_file.write("fake dotnet content")

@@ -7,6 +7,7 @@ import os.path
 import re
 import ipaddress
 from typing import Optional, Type, Union
+from pydantic import Field, ConfigDict
 
 from saq.analysis import Analysis
 from saq.configuration.config import get_config
@@ -16,10 +17,18 @@ from saq.database.pool import get_db_connection
 from saq.environment import get_base_dir
 from saq.modules import AnalysisModule
 from saq.modules.base_module import AnalysisExecutionResult
+from saq.modules.config import AnalysisModuleConfig
 from saq.util import is_subdomain
 
 KEY_TAGS_ADDED = "tags_added"
 KEY_TAGS_DETECTABLE = "tags_detectable"
+
+class SiteTagAnalyzerConfig(AnalysisModuleConfig):
+    csv_file: str = Field(..., description="The CSV file that contains the tagging definitions.")
+
+class CorrelatedTagAnalyzerConfig(AnalysisModuleConfig):
+    # Dynamic keys like definition_001_rule, definition_001_text are allowed via extra fields
+    model_config = ConfigDict(extra='allow')
 
 class ConfigurationDefinedTaggingAnalysis(Analysis):
     """Tags observables defined in the configuration"""
@@ -33,7 +42,7 @@ class ConfigurationDefinedTaggingAnalyzer(AnalysisModule):
 
     def load_config_tag_mapping(self) -> dict[str, str]:
         tag_mapping = {}
-        for tag_name, tag_value in get_config()[CONFIG_TAGS].items():
+        for tag_name, tag_value in get_config().tags.items():
             tag_mapping[tag_name] = tag_value
 
         return tag_mapping
@@ -204,6 +213,10 @@ class _tag_mapping:
         return is_subdomain(value, self.value)
 
 class SiteTagAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return SiteTagAnalyzerConfig
+
     def load_exclusions(self):
         pass
 
@@ -211,12 +224,11 @@ class SiteTagAnalyzer(AnalysisModule):
         return False 
 
     def verify_environment(self):
-        self.verify_config_exists('csv_file')
         self.verify_path_exists(self.csv_file)
 
     @property
     def csv_file(self):
-        path = self.config['csv_file']
+        path = self.config.csv_file
         if os.path.isabs(path):
             return path
 
@@ -293,21 +305,27 @@ class CorrelatedTagDefinition(object):
 
 class CorrelatedTagAnalyzer(AnalysisModule):
     """Does this combination of tagging exist on objects with a common ancestry?"""
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return CorrelatedTagAnalyzerConfig
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.definitions = []
         
-        for config_item in self.config.keys():
+        # Access config as dict for dynamic keys (definition_*_rule, definition_*_text)
+        config_dict = self.config.model_dump()
+        for config_item in config_dict.keys():
             if config_item.startswith('definition_') and config_item.endswith('_rule'):
                 config_rule = config_item
                 config_text = config_item.replace('_rule', '_text')
-                if config_text not in self.config:
+                if config_text not in config_dict:
                     logging.error("missing text description for config rule {}".format(config_item))
                     continue
 
-                self.definitions.append(CorrelatedTagDefinition(self.config[config_text], 
-                                         [x.strip() for x in self.config[config_rule].split(',')]))
+                self.definitions.append(CorrelatedTagDefinition(config_dict[config_text], 
+                                         [x.strip() for x in config_dict[config_rule].split(',')]))
                 logging.debug("loaded definition for {}".format(config_rule))
 
     def execute_post_analysis(self) -> AnalysisExecutionResult:

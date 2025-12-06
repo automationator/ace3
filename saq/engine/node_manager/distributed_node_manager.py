@@ -4,14 +4,11 @@ import socket
 from typing import Optional
 
 from saq.constants import (
-    CONFIG_ENGINE,
-    CONFIG_ENGINE_NODE_STATUS_UPDATE_FREQUENCY,
-    CONFIG_NODE_TRANSLATION,
     G_API_PREFIX,
     G_SAQ_NODE,
     G_SAQ_NODE_ID,
 )
-from saq.configuration.config import get_config, get_config_value_as_str, get_config_value_as_int
+from saq.configuration.config import get_config, get_engine_config
 from saq.database.pool import get_db_connection
 from saq.database.retry import execute_with_retry
 from saq.database.util.locking import clear_expired_locks
@@ -58,8 +55,8 @@ def update_node_status(
 
 def translate_node(node: str) -> str:
     """Return the correct node taking node translation into account."""
-    for key in get_config()[CONFIG_NODE_TRANSLATION].keys():
-        src, target = get_config_value_as_str(CONFIG_NODE_TRANSLATION, key).split(",")
+    for key in get_config().node_translation.keys():
+        src, target = get_config().node_translation[key].split(",")
         if node == src:
             logging.debug("translating node {} to {}".format(node, target))
             return target
@@ -83,9 +80,7 @@ class DistributedNodeManager(NodeManagerInterface):
         self.config = configuration_manager.config
 
         # how often do we update the nodes database table for this engine (in seconds)
-        self.node_status_update_frequency = get_config_value_as_int(
-            CONFIG_ENGINE, CONFIG_ENGINE_NODE_STATUS_UPDATE_FREQUENCY
-        )
+        self.node_status_update_frequency = get_engine_config().node_status_update_frequency
 
         # and then when will be the next time we make this update?
         self.next_status_update_time = None

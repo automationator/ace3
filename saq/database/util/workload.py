@@ -1,6 +1,6 @@
 import logging
 from typing import TYPE_CHECKING
-from saq.configuration.config import get_config
+from saq.configuration.config import get_engine_config
 from saq.constants import G_SAQ_NODE_ID
 from saq.database.retry import execute_with_retry
 from saq.database.util.node import initialize_node
@@ -23,8 +23,8 @@ def add_workload(root: "RootAnalysis"):
     # NOTE you should always specify an analysis mode
     if root.analysis_mode is None:
         logging.warning(f"missing analysis mode for call to add_workload({root}) - "
-                        f"using engine default {get_config()['service_engine']['default_analysis_mode']}")
-        root.analysis_mode = get_config()['service_engine']['default_analysis_mode']
+                        f"using engine default {get_engine_config().default_analysis_mode}")
+        root.analysis_mode = get_engine_config().default_analysis_mode
 
     # make sure we've initialized our node id
     if g_int(G_SAQ_NODE_ID) is None:

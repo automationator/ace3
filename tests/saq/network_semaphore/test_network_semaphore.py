@@ -6,8 +6,8 @@ import time
 
 import pytest
 
-from saq.configuration import get_config
-from saq.constants import CONFIG_NETWORK_SEMAPHORE
+from saq.configuration.config import get_service_config
+from saq.constants import SERVICE_NETWORK_SEMAPHORE
 from saq.network_semaphore import NetworkSemaphoreServer, NetworkSemaphoreClient
 from saq.network_semaphore.logging import LoggingSemaphore
 from saq.network_semaphore.fallback import (
@@ -85,7 +85,7 @@ def test_acquire_release_undefined_network_semaphore():
 @pytest.mark.system
 def test_acquire_release_defined_network_semaphore():
     server = NetworkSemaphoreServer()
-    server.config.semaphore_limits["test"] = 3
+    server.config.semaphore_capacity_limits["test"] = 3
     server.start()
     server.wait_for_start(timeout=5)
 
@@ -167,7 +167,7 @@ def test_acquire_after_wait_network_semaphore():
 @pytest.mark.system
 def test_multiple_locks_network_semaphore():
     server = NetworkSemaphoreServer()
-    server.config.semaphore_limits["test"] = 3
+    server.config.semaphore_capacity_limits["test"] = 3
     server.start()
     server.wait_for_start(timeout=5)
 
@@ -242,7 +242,7 @@ def test_acquire_release_undefined_fallback_semaphore():
 
 @pytest.mark.integration
 def test_acquire_release_defined_fallback_semaphore():
-    get_config()[CONFIG_NETWORK_SEMAPHORE]["semaphore_test"] = "3"
+    get_service_config(SERVICE_NETWORK_SEMAPHORE).semaphore_capacity_limits["test"] = 3
     initialize_fallback_semaphores(force=True)
 
     assert get_defined_fallback_semaphore("test") is not None

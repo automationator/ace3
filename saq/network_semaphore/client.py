@@ -2,10 +2,11 @@ from datetime import datetime, timedelta
 import logging
 import socket
 from threading import Event, Thread
-from saq.configuration.config import get_config
-from saq.constants import G_SEMAPHORES_ENABLED
+from saq.configuration.config import get_service_config
+from saq.constants import G_SEMAPHORES_ENABLED, SERVICE_NETWORK_SEMAPHORE
 from saq.environment import g_boolean
 from saq.error.reporting import report_exception
+from saq.network_semaphore.config import NetworkSemaphoreConfig
 from saq.network_semaphore.fallback import add_undefined_fallback_semaphore, get_defined_fallback_semaphores, get_undefined_fallback_semaphores, get_undefined_fallback_semaphores_lock, maintain_undefined_semaphores
 
 
@@ -22,7 +23,7 @@ class NetworkSemaphoreClient:
         # set when the semaphore is released (causing the failsafe thread to exit)
         self.release_event = None
         # reference to the relavent configuration section
-        self.config = get_config()['service_network_semaphore']
+        self.config: NetworkSemaphoreConfig = get_service_config(SERVICE_NETWORK_SEMAPHORE)
         # if we ended up using a fallback semaphore
         self.fallback_semaphore = None
         # use this to cancel the request to acquire a semaphore
@@ -51,9 +52,9 @@ class NetworkSemaphoreClient:
 
         try:
             self.socket = socket.socket()
-            logging.debug("attempting connection to {} port {}".format(self.config['remote_address'], self.config.getint('remote_port')))
+            logging.debug("attempting connection to {} port {}".format(self.config.remote_address, self.config.remote_port))
 
-            self.socket.connect((self.config['remote_address'], self.config.getint('remote_port')))
+            self.socket.connect((self.config.remote_address, self.config.remote_port))
             logging.info(f"requesting semaphore {semaphore_name}")
 
             # request the semaphore
@@ -92,7 +93,7 @@ class NetworkSemaphoreClient:
 
                     try:
                         self.socket.close()
-                    except Exception as e:
+                    except Exception:
                         pass
 
                     return False
@@ -101,7 +102,7 @@ class NetworkSemaphoreClient:
 
             try:
                 self.socket.close()
-            except Exception as e:
+            except Exception:
                 pass
 
             return False

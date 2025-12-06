@@ -280,7 +280,7 @@ def index():
     # sort the tags by score
     alert_tags = filter_special_tags(sorted(all_tags, key=lambda x: (-x.score, x.name.lower())))
     # we don't show "special" tags in the display
-    special_tag_names = [tag for tag in get_config()['tags'].keys() if get_config()['tags'][tag] == 'special']
+    special_tag_names = [tag for tag in get_config().tags.keys() if get_config().tags[tag] == 'special']
     alert_tags = [tag for tag in alert_tags if tag.name not in special_tag_names]
 
     # XXX refactor this omg
@@ -312,7 +312,7 @@ def index():
 
             # if the show_root_observables config option is True then
             # also all observables in the root node
-            if get_config()['gui'].getboolean('show_root_observables'):
+            if get_config().gui.show_root_observables:
                 for child in display_tree.children:
                     child.visible = True
 

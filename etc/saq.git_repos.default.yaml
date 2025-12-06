@@ -2,8 +2,9 @@ git:
   repos: []
 
 service_git:
-  module: saq.git
-  class: GitManagerService
+  name: git
+  python_module: saq.git
+  python_class: GitManagerService
   description: Git Manager Service - manages git repositories
   enabled: true
   instance_type: ANY

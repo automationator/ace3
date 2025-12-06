@@ -43,7 +43,7 @@ def upload_file():
     if not alert_uuid:
         root = RootAnalysis()
         root.tool = 'Manual File Upload - '+file_name
-        root.tool_instance = get_config()['global']['instance_name']
+        root.tool_instance = get_config().global_settings.instance_name
         root.alert_type = 'manual_upload'
         root.description = 'Manual File upload {0}'.format(file_name)
         root.event_time = datetime.now()

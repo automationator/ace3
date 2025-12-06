@@ -1,10 +1,12 @@
 import logging
 import os
-from typing import override
+from typing import Type, override
+from pydantic import Field, model_validator
 from saq.analysis.analysis import Analysis
 from saq.constants import DIRECTIVE_SANDBOX, F_FILE, AnalysisExecutionResult
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.is_file_type import is_office_ext, is_ole_file, is_rtf_file, is_zip_file
 from saq.observables.file import FileObservable
 
@@ -80,7 +82,19 @@ class OLEVBA_Analysis_v1_2(Analysis):
 
         return result
 
+class OLEVBA_AnalyzerConfig(AnalysisModuleConfig):
+    merge_macros: bool = Field(default=False, description="If set to yes then all extracted macros are merged into a single file called macros.bas.")
+    timeout: int = Field(default=30, description="Amount of time to wait for the process to finish (in seconds).")
+    threshold_autoexec: int = Field(default=1, description="Minimum threshold required for autoexec analysis type.")
+    threshold_suspicious: int = Field(default=1, description="Minimum threshold required for suspicious analysis type.")
+    
+    class Config:
+        extra = "allow"  # Allow extra fields for dynamic threshold_* options
+
 class OLEVBA_Analyzer_v1_2(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return OLEVBA_AnalyzerConfig
 
     @property
     def generated_analysis_type(self):
@@ -92,7 +106,7 @@ class OLEVBA_Analyzer_v1_2(AnalysisModule):
 
     @property
     def merge_macros(self):
-        return self.config.getboolean('merge_macros')
+        return self.config.merge_macros
 
     def execute_analysis(self, _file: FileObservable) -> AnalysisExecutionResult:
 
@@ -196,7 +210,9 @@ class OLEVBA_Analyzer_v1_2(AnalysisModule):
 
                     # do the counts exceed the thresholds?
                     threshold_exceeded = True
-                    for option in self.config.keys():
+                    # Access dynamic threshold_* fields from config
+                    config_dict = self.config.model_dump()
+                    for option, threshold_value in config_dict.items():
                         if option.startswith("threshold_"):
                             _, kw_type = option.split('_', 1)
 
@@ -205,14 +221,14 @@ class OLEVBA_Analyzer_v1_2(AnalysisModule):
                                 threshold_exceeded = False
                                 break
 
-                            if analysis.keyword_summary[kw_type] < self.config.getint(option):
+                            if analysis.keyword_summary[kw_type] < threshold_value:
                                 logging.debug("count for {} ({}) does not meet threshold {} for {}".format(
-                                              kw_type, analysis.keyword_summary[kw_type], self.config.getint(option), local_file_path))
+                                              kw_type, analysis.keyword_summary[kw_type], threshold_value, local_file_path))
                                 threshold_exceeded = False
                                 break
 
                             logging.debug("count for {} ({}) meets threshold {} for {}".format(
-                                kw_type, analysis.keyword_summary[kw_type], self.config.getint(option), local_file_path))
+                                kw_type, analysis.keyword_summary[kw_type], threshold_value, local_file_path))
 
                     # all thresholds passed (otherwise we would have returned by now)
                     if threshold_exceeded:

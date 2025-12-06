@@ -4,7 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from saq.constants import ANALYSIS_MODE_CORRELATION, DIRECTIVE_CRAWL, DIRECTIVE_RENDER, F_FILE, F_URL, AnalysisExecutionResult
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODE_CORRELATION, ANALYSIS_MODULE_PHISHKIT_ANALYZER, DIRECTIVE_CRAWL, DIRECTIVE_RENDER, F_FILE, F_URL, AnalysisExecutionResult
 from saq.modules.phishkit import (
     PhishkitAnalysis, 
     PhishkitAnalyzer,
@@ -110,7 +111,7 @@ def test_phishkit_analysis_generate_summary():
 @pytest.mark.integration
 def test_phishkit_analyzer_properties():
     """Test PhishkitAnalyzer properties."""
-    analyzer = PhishkitAnalyzer()
+    analyzer = PhishkitAnalyzer(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER))
     
     assert analyzer.generated_analysis_type == PhishkitAnalysis
     assert analyzer.valid_observable_types == [F_URL, F_FILE]
@@ -119,7 +120,10 @@ def test_phishkit_analyzer_properties():
 @pytest.mark.integration
 def test_phishkit_analyzer_verify_environment(test_context):
     """Test PhishkitAnalyzer environment verification."""
-    analyzer = PhishkitAnalyzer(context=test_context)
+    analyzer = PhishkitAnalyzer(
+        get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+        context=test_context
+    )
     
     # This should raise an exception if config items are missing
     try:
@@ -157,7 +161,9 @@ def test_phishkit_analyzer_execute_analysis_url_success(monkeypatch, test_contex
     
     monkeypatch.setattr("saq.util.filesystem.create_temporary_directory", mock_create_temporary_directory)
     
-    analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+    analyzer = PhishkitAnalyzer(
+        get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+        context=create_test_context(root=root))
     result = analyzer.execute_analysis(url_observable)
     
     assert result == AnalysisExecutionResult.COMPLETED
@@ -178,7 +184,9 @@ def test_phishkit_analyzer_execute_analysis_url_no_directive(test_context):
     # Create URL observable without directive
     url_observable = root.add_observable_by_spec(F_URL, "https://example.com/phish")
     
-    analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+    analyzer = PhishkitAnalyzer(
+        get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+        context=create_test_context(root=root))
     result = analyzer.execute_analysis(url_observable)
     
     assert result == AnalysisExecutionResult.COMPLETED
@@ -216,7 +224,9 @@ def test_phishkit_analyzer_execute_analysis_url_with_crawl_directive(monkeypatch
     
     monkeypatch.setattr("saq.util.filesystem.create_temporary_directory", mock_create_temporary_directory)
     
-    analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+    analyzer = PhishkitAnalyzer(
+        get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+        context=create_test_context(root=root))
     result = analyzer.execute_analysis(url_observable)
     
     assert result == AnalysisExecutionResult.COMPLETED
@@ -249,7 +259,9 @@ def test_phishkit_analyzer_execute_analysis_url_error(monkeypatch, test_context)
     
     monkeypatch.setattr("saq.util.filesystem.create_temporary_directory", mock_create_temporary_directory)
     
-    analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+    analyzer = PhishkitAnalyzer(
+        get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+        context=create_test_context(root=root))
     result = analyzer.execute_analysis(url_observable)
     
     assert result == AnalysisExecutionResult.COMPLETED
@@ -282,16 +294,12 @@ def test_phishkit_analyzer_execute_analysis_file_success(monkeypatch, test_conte
         file_observable.add_analysis(file_type_analysis)
         
         # Configure analyzer to accept html files
-        analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+        analyzer = PhishkitAnalyzer(
+        get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+        context=create_test_context(root=root))
         
-        def mock_config_get(key):
-            if key == 'valid_file_extensions':
-                return ['.html']
-            elif key == 'valid_mime_types':
-                return ['text/html']
-            return []
-        
-        monkeypatch.setattr(analyzer.config, '__getitem__', mock_config_get)
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER), 'valid_file_extensions', ['.html'])
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER), 'valid_mime_types', ['text/html'])
         
         # Mock saq.phishkit functions
         def mock_scan_file(file_path, output_dir, is_async=True):
@@ -348,17 +356,13 @@ def test_phishkit_analyzer_execute_analysis_file_invalid_extension(monkeypatch, 
         file_observable = root.add_file_observable(test_file_path)
         
         # Configure analyzer to only accept html files
-        analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+        analyzer = PhishkitAnalyzer(
+            get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+            context=create_test_context(root=root))
         
-        def mock_config_get(key):
-            if key == 'valid_file_extensions':
-                return ['.html']  # Only accept HTML files, not .txt
-            elif key == 'valid_mime_types':
-                return ['text/html']
-            return []
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER), 'valid_file_extensions', ['.html'])
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER), 'valid_mime_types', ['text/html'])
         
-        monkeypatch.setattr(analyzer.config, '__getitem__', mock_config_get)
-
         # Mock file type analysis
         file_type_analysis = FileTypeAnalysis()
         file_type_analysis.details = {'type': 'Plain text', 'mime': 'text/plain'}
@@ -404,16 +408,12 @@ def test_phishkit_analyzer_execute_analysis_file_invalid_mime_type(monkeypatch, 
         file_observable.add_analysis(file_type_analysis)
         
         # Configure analyzer to only accept html MIME types
-        analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+        analyzer = PhishkitAnalyzer(
+            get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+            context=create_test_context(root=root))
         
-        def mock_config_get(key):
-            if key == 'valid_file_extensions':
-                return ['.html']
-            elif key == 'valid_mime_types':
-                return ['text/html']  # Only accept text/html, not text/plain
-            return []
-        
-        monkeypatch.setattr(analyzer.config, '__getitem__', mock_config_get)
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER), 'valid_file_extensions', ['.html'])
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER), 'valid_mime_types', ['text/html'])
         
         # Mock wait_for_analysis
         def mock_wait_for_analysis(observable, analysis_type):
@@ -456,16 +456,12 @@ def test_phishkit_analyzer_execute_analysis_file_error(monkeypatch, test_context
         file_observable.add_analysis(file_type_analysis)
         
         # Configure analyzer to accept html files
-        analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+        analyzer = PhishkitAnalyzer(
+        get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+        context=create_test_context(root=root))
         
-        def mock_config_get(key):
-            if key == 'valid_file_extensions':
-                return ['.html']
-            elif key == 'valid_mime_types':
-                return ['text/html']
-            return []
-        
-        monkeypatch.setattr(analyzer.config, '__getitem__', mock_config_get)
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER), 'valid_file_extensions', ['.html'])
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER), 'valid_mime_types', ['text/html'])
         
         # Mock saq.phishkit functions to raise exception
         def mock_scan_file(file_path, output_dir, is_async=True):
@@ -511,7 +507,9 @@ def test_phishkit_analyzer_continue_analysis_no_job_id(test_context):
     # Don't set job_id
     url_observable.add_analysis(analysis)
     
-    analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+    analyzer = PhishkitAnalyzer(
+        get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+        context=create_test_context(root=root))
     result = analyzer.continue_analysis(url_observable, analysis)
     
     assert result == AnalysisExecutionResult.COMPLETED
@@ -535,7 +533,9 @@ def test_phishkit_analyzer_continue_analysis_not_ready(monkeypatch, test_context
     
     monkeypatch.setattr("saq.modules.phishkit.get_async_scan_result", mock_get_async_scan_result)
     
-    analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+    analyzer = PhishkitAnalyzer(
+        get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+        context=create_test_context(root=root))
     
     # Mock delay_analysis to return the expected result
     def mock_delay_analysis(*args, **kwargs):
@@ -587,7 +587,9 @@ def test_phishkit_analyzer_continue_analysis_success(monkeypatch, test_context):
         
         monkeypatch.setattr("saq.modules.phishkit.get_async_scan_result", mock_get_async_scan_result)
         
-        analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+        analyzer = PhishkitAnalyzer(
+            get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+            context=create_test_context(root=root))
         result = analyzer.continue_analysis(url_observable, analysis)
         
         assert result == AnalysisExecutionResult.COMPLETED
@@ -623,16 +625,12 @@ def test_phishkit_analyzer_file_not_analyzed_in_non_correlation_mode(monkeypatch
         file_observable.add_analysis(file_type_analysis)
         
         # Configure analyzer to accept html files
-        analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+        analyzer = PhishkitAnalyzer(
+        get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+        context=create_test_context(root=root))
         
-        def mock_config_get(key):
-            if key == 'valid_file_extensions':
-                return ['.html']
-            elif key == 'valid_mime_types':
-                return ['text/html']
-            return []
-        
-        monkeypatch.setattr(analyzer.config, '__getitem__', mock_config_get)
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER), 'valid_file_extensions', ['.html'])
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER), 'valid_mime_types', ['text/html'])
         
         # Mock wait_for_analysis
         def mock_wait_for_analysis(observable, analysis_type):
@@ -671,16 +669,12 @@ def test_phishkit_analyzer_file_analyzed_after_mode_switch_to_correlation(monkey
         file_observable.add_analysis(file_type_analysis)
         
         # Configure analyzer to accept html files
-        analyzer = PhishkitAnalyzer(context=create_test_context(root=root))
+        analyzer = PhishkitAnalyzer(
+        get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER),
+        context=create_test_context(root=root))
         
-        def mock_config_get(key):
-            if key == 'valid_file_extensions':
-                return ['.html']
-            elif key == 'valid_mime_types':
-                return ['text/html']
-            return []
-        
-        monkeypatch.setattr(analyzer.config, '__getitem__', mock_config_get)
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER), 'valid_file_extensions', ['.html'])
+        monkeypatch.setattr(get_analysis_module_config(ANALYSIS_MODULE_PHISHKIT_ANALYZER), 'valid_mime_types', ['text/html'])
         
         # Mock wait_for_analysis
         def mock_wait_for_analysis(observable, analysis_type):

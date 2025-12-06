@@ -8,13 +8,16 @@ import pytest
 from saq.analysis.root import RootAnalysis
 from saq.collectors.hunter import HuntManager, HunterCollector
 from saq.collectors.hunter.splunk_hunter import SplunkHunt
-from saq.configuration.config import get_config
+from saq.configuration.config import get_config, get_splunk_config
+from saq.configuration.schema import HuntTypeConfig, SplunkConfig
 from saq.constants import ANALYSIS_MODE_CORRELATION, F_FILE, F_FILE_NAME
 from saq.environment import get_data_dir
 from saq.util.time import create_timedelta
 
-SPLUNK_URI = 'https://localhost:8089'
-SPLUNK_ALT_URI = 'https://localhost:8091'
+SPLUNK_HOST = 'localhost'
+SPLUNK_PORT = 8089
+SPLUNK_ALT_HOST = 'localhost'
+SPLUNK_ALT_PORT = 8091
 
 # TODO move test hunts to datadir
 
@@ -41,9 +44,9 @@ def manager_kwargs(rules_dir):
         'rule_dirs': [ rules_dir, ],
         'hunt_cls': SplunkHunt,
         'concurrency_limit': 1,
-        'persistence_dir': os.path.join(get_data_dir(), get_config()['collection']['persistence_dir']),
+        'persistence_dir': os.path.join(get_data_dir(), get_config().collection.persistence_dir),
         'update_frequency': 60,
-        'config': {}
+        'config': get_splunk_config()
     }
 
 @pytest.fixture
@@ -54,9 +57,9 @@ def manager_kwargs_alt(rules_dir):
         'rule_dirs': [ rules_dir, ],
         'hunt_cls': SplunkHunt,
         'concurrency_limit': 1,
-        'persistence_dir': os.path.join(get_data_dir(), get_config()['collection']['persistence_dir']),
+        'persistence_dir': os.path.join(get_data_dir(), get_config().collection.persistence_dir),
         'update_frequency': 60,
-        'config': {'splunk_config': 'splunk_alt'}
+        'config': get_config().get_splunk_config("splunk_alt")
     }
 
 @pytest.fixture(autouse=True, scope="function")
@@ -64,8 +67,9 @@ def setup(rules_dir):
     #ips_txt = 'hunts/test/splunk/ips.txt'
     #with open(ips_txt, 'w') as fp:
         #fp.write('1.1.1.1\n')
-
-    get_config()['splunk']['uri'] = SPLUNK_URI
+    
+    get_splunk_config().host = SPLUNK_HOST
+    get_splunk_config().port = SPLUNK_PORT
 
 @pytest.mark.integration
 def test_load_hunt_ini(manager_kwargs):
@@ -160,7 +164,7 @@ def test_splunk_query(manager_kwargs, datadir):
         for tag in ["tag1", "tag2"]:
             assert submission.root.has_tag(tag)
 
-        assert submission.root.tool_instance == get_config()[hunt.splunk_config]['uri']
+        assert submission.root.tool_instance == hunt.splunk_config.host
         assert submission.root.alert_type == 'hunter - splunk - test'
 
         if submission.root.description == 'Test Splunk Query: 29380 (3 events)':
@@ -253,25 +257,43 @@ def alt_setup(rules_dir):
         shutil.rmtree(rules_dir)
         shutil.copytree('hunts/test/splunk', rules_dir)
         
-        splunk_sections = [_ for _ in get_config().sections() if _.startswith('splunk')]
-        for splunk_section in splunk_sections:
-            del get_config()[splunk_section]
+        get_config().clear_splunk_configs()
 
-        get_config().add_section('splunk')
-        get_config()['splunk']['uri'] = SPLUNK_URI
-        get_config()['splunk']['timezone'] = 'GMT'
+        get_config().add_splunk_config("splunk",
+            SplunkConfig(
+                name="splunk",
+                default=True,
+                enabled=True,
+                host=SPLUNK_HOST,
+                port=SPLUNK_PORT,
+                timezone="GMT",
+                performance_logging_dir="splunk_perf",
+            )
+        )
+        get_config().add_splunk_config("splunk_alt",
+            SplunkConfig(
+                name="splunk_alt",
+                default=False,
+                enabled=True,
+                host=SPLUNK_ALT_HOST,
+                port=SPLUNK_ALT_PORT,
+                timezone="GMT",
+                performance_logging_dir="splunk_perf",
+            ),
+        )
 
-        get_config().add_section('splunk_alt')
-        get_config()['splunk_alt']['uri'] = SPLUNK_ALT_URI
-        get_config()['splunk_alt']['timezone'] = 'GMT'
-
-        get_config().add_section('hunt_type_splunk_alt')
-        s = get_config()['hunt_type_splunk_alt']
-        s['module'] = 'saq.collectors.splunk_hunter'
-        s['class'] = 'SplunkHunter'
-        s['rule_dirs'] = rules_dir
-        s['concurrency_limit'] = '1'
-        s['splunk_config'] = 'splunk_alt'
+        get_config().clear_hunt_type_configs()
+        get_config().add_hunt_type_config("splunk_alt",
+            HuntTypeConfig(
+                name="splunk_alt",
+                python_module="saq.collectors.hunter.splunk_hunter",
+                python_class="SplunkHunt",
+                rule_dirs=[rules_dir],
+                concurrency_limit=1,
+                splunk_config=get_config().get_splunk_config("splunk_alt"),
+                update_frequency=60,
+            ),
+        )
 
 @pytest.mark.integration
 def test_splunk_hunt_host_config(alt_setup, manager_kwargs, manager_kwargs_alt):
@@ -279,12 +301,12 @@ def test_splunk_hunt_host_config(alt_setup, manager_kwargs, manager_kwargs_alt):
     manager.load_hunts_from_config()
     assert len(manager.hunts) == 1
     splunk_alt_hunt = manager.hunts[0]
-    assert splunk_alt_hunt.tool_instance == SPLUNK_ALT_URI
+    assert splunk_alt_hunt.tool_instance == SPLUNK_ALT_HOST
 
     manager = HuntManager(**manager_kwargs)
     manager.load_hunts_from_config(hunt_filter=lambda hunt: hunt.name == 'query_test_1')
     splunk_hunt = manager.hunts[0]
-    assert splunk_hunt.tool_instance == SPLUNK_URI
+    assert splunk_hunt.tool_instance == SPLUNK_HOST
 
 
 @pytest.mark.unit

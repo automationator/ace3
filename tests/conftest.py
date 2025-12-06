@@ -1,4 +1,5 @@
 
+import copy
 import logging
 import os
 import os.path
@@ -11,8 +12,8 @@ import uuid
 from requests import HTTPError
 
 from saq.analysis.root import RootAnalysis
-from saq.configuration.config import get_config, get_config_value_as_str, set_config
-from saq.constants import ANALYSIS_MODE_ANALYSIS, CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR, CONFIG_GLOBAL, CONFIG_GLOBAL_NODE, G_INSTANCE_TYPE, G_SAQ_NODE, G_SAQ_NODE_ID, G_TEMP_DIR, G_UNIT_TESTING, INSTANCE_TYPE_UNITTEST
+from saq.configuration.config import get_config, set_config
+from saq.constants import ANALYSIS_MODE_ANALYSIS, G_INSTANCE_TYPE, G_SAQ_NODE, G_SAQ_NODE_ID, G_TEMP_DIR, G_UNIT_TESTING, INSTANCE_TYPE_UNITTEST, SERVICE_ENGINE
 from saq.crypto import set_encryption_password
 from saq.database import get_db
 from saq.database.pool import get_db_connection
@@ -95,7 +96,7 @@ def execute_global_setup():
     set_g(G_SAQ_NODE_ID, None)
 
     # what node is this?
-    node = get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_NODE)
+    node = get_config().global_settings.node
     if node == "AUTO":
         node = socket.getfqdn()
 
@@ -123,7 +124,7 @@ def execute_global_setup():
     # work dir
     work_dir = os.path.join(get_data_dir(), "work_dir")
     os.mkdir(work_dir)
-    get_config()[CONFIG_ENGINE][CONFIG_ENGINE_WORK_DIR] = work_dir
+    get_config().get_service_config(SERVICE_ENGINE).work_dir = work_dir
 
     initialize_unittest_logging()
 
@@ -132,7 +133,7 @@ def execute_global_setup():
 def global_function_setup(request):
 
     # clear work directory
-    work_dir = get_config_value_as_str(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR)
+    work_dir = get_config().get_service_config(SERVICE_ENGINE).work_dir
     assert os.path.exists(work_dir)
     shutil.rmtree(work_dir)
     os.mkdir(work_dir)
@@ -234,7 +235,7 @@ def global_function_setup(request):
     original_sys_path = sys.path[:]
 
     # make a deep copy of the current configuration
-    config_copy = get_config().copy()
+    config_copy = copy.deepcopy(get_config())
 
     yield
 

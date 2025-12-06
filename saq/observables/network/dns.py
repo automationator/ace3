@@ -1,7 +1,7 @@
 import validators
 from saq.analysis.presenter.observable_presenter import ObservablePresenter, register_observable_presenter
-from saq.configuration.config import get_config_value_as_list
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_DOMAINS, CONFIG_GLOBAL_LOCAL_EMAIL_DOMAINS, F_FQDN
+from saq.configuration.config import get_config
+from saq.constants import F_FQDN
 from saq.observables.base import CaselessObservable, ObservableValueError
 from saq.observables.generator import register_observable_type
 from saq.util import is_subdomain
@@ -37,11 +37,11 @@ class FQDNObservable(CaselessObservable):
 
     def is_managed(self):
         """Returns True if this FQDN is a managed DN."""
-        for fqdn in get_config_value_as_list(CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_DOMAINS):
+        for fqdn in get_config().global_settings.local_domains:
             if is_subdomain(self.value, fqdn):
                 return True
 
-        for fqdn in get_config_value_as_list(CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_EMAIL_DOMAINS):
+        for fqdn in get_config().global_settings.local_email_domains:
             if is_subdomain(self.value, fqdn):
                 return True
 

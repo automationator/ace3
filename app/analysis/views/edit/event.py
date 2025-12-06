@@ -2,15 +2,14 @@ from datetime import datetime
 import os
 from uuid import uuid4
 from flask import flash, redirect, render_template, request, session, url_for
-from flask_login import current_user, login_required
+from flask_login import current_user
 from app.auth.permissions import require_permission
 from app.blueprints import analysis
 from saq.analysis.root import RootAnalysis
-from saq.configuration.config import get_config
-from saq.constants import CLOSED_EVENT_LIMIT, VALID_DISPOSITIONS
+from saq.configuration.config import get_engine_config
+from saq.constants import CLOSED_EVENT_LIMIT
 from saq.database.model import Event, EventPreventionTool, EventRemediation, EventRiskLevel, EventStatus, EventType, EventVector
 from saq.database.pool import get_db, get_db_connection
-from saq.database.util.alert import set_dispositions
 
 @analysis.route('/add_to_event', methods=['POST'])
 @require_permission('event', 'write')
@@ -164,7 +163,7 @@ def get_analysis_event_name_candidate(uuid):
     from saq.util import storage_dir_from_uuid, workload_storage_dir
 
     storage_dir = storage_dir_from_uuid(uuid)
-    if get_config()['service_engine']['work_dir'] and not os.path.isdir(storage_dir):
+    if get_engine_config().work_dir and not os.path.isdir(storage_dir):
         storage_dir = workload_storage_dir(uuid)
 
     if not os.path.exists(storage_dir):

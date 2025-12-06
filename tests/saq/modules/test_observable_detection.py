@@ -1,7 +1,8 @@
 import fakeredis
 import pytest
 
-from saq.constants import F_TEST, REDIS_DB_FOR_DETECTION_A
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_OBSERVABLE_DETECTION, F_TEST, REDIS_DB_FOR_DETECTION_A
 from saq.modules.observable_detection import ObservableDetectionAnalyzer
 from tests.saq.helpers import create_root_analysis
 
@@ -20,7 +21,9 @@ def test_for_detection_observable(test_context):
 
     # Create a new root analysis and initialize the analysis module
     root = create_root_analysis(analysis_mode="test_single")
-    analyzer = ObservableDetectionAnalyzer(context=test_context)
+    analyzer = ObservableDetectionAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_OBSERVABLE_DETECTION))
     analyzer.root = root
 
     # Test an observable that is not enabled for detection

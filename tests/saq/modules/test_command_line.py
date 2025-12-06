@@ -18,7 +18,7 @@ def test_command_line_analyzer(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -52,7 +52,7 @@ def test_command_line_base64_extraction_powershell_encoded_command(root_analysis
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -92,7 +92,7 @@ def test_command_line_base64_extraction_with_short_flag(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -118,7 +118,7 @@ def test_command_line_base64_extraction_with_forward_slash_flag(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -144,7 +144,7 @@ def test_command_line_base64_minimum_length_respected(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -171,7 +171,7 @@ def test_command_line_base64_minimum_length_ignored_with_encoded_flag(root_analy
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -198,7 +198,7 @@ def test_command_line_base64_extraction_with_large_payload(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -230,7 +230,7 @@ def test_command_line_base64_extraction_with_quoted_payload(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -259,7 +259,7 @@ def test_command_line_base64_extraction_multiple_payloads(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -298,7 +298,7 @@ def test_command_line_base64_unique_filenames(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -331,7 +331,7 @@ def test_command_line_base64_observable_tagged(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -359,7 +359,7 @@ def test_command_line_analysis_summary_with_base64(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -385,7 +385,7 @@ def test_command_line_analysis_summary_no_extraction(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -411,7 +411,7 @@ def test_command_line_combined_file_paths_and_base64(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_command_line_analyzer', 'test_groups')
+    engine.configuration_manager.enable_module('command_line_analyzer', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))

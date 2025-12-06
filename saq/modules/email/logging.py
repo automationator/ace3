@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Type
+from pydantic import Field
 import simdjson as json
 import logging
 import os
@@ -7,8 +8,8 @@ import os
 from saq.analysis.analysis import Analysis
 from saq.analysis.observable import Observable
 from saq.analysis.search import recurse_tree
-from saq.configuration.config import get_config_value_as_str
-from saq.constants import CONFIG_SPLUNK_LOGGING, CONFIG_SPLUNK_LOGGING_DIR, DIRECTIVE_ORIGINAL_EMAIL, F_FILE, F_URL, AnalysisExecutionResult
+from saq.configuration.config import get_config
+from saq.constants import DIRECTIVE_ORIGINAL_EMAIL, F_FILE, F_URL, AnalysisExecutionResult
 from saq.database.pool import get_db_connection
 from saq.database.retry import execute_with_retry
 from saq.email import normalize_email_address
@@ -18,15 +19,7 @@ from saq.modules import AnalysisModule
 
 from fluent import sender
 
-CONFIG_SPLUNK_LOGGING_ENABLED = "splunk_log_enabled"
-CONFIG_SPLUNK_LOG_SUBDIR = "splunk_log_subdir"
-CONFIG_JSON_LOGGING_ENABLED = "json_logging_enabled"
-CONFIG_JSON_LOG_PATH_FORMAT = "json_log_path_format"
-CONFIG_BROCESS_LOGGING_ENABLED = "brocess_logging_enabled"
-CONFIG_FLUENT_BIT_LOGGING_ENABLED = "fluent_bit_logging_enabled"
-CONFIG_FLUENT_BIT_HOSTNAME = "fluent_bit_hostname"
-CONFIG_FLUENT_BIT_PORT = "fluent_bit_port"
-CONFIG_FLUENT_BIT_TAG = "fluent_bit_tag"
+from saq.modules.config import AnalysisModuleConfig
 
 class EmailHistoryRecord:
     """Utility class to add extra fields not present in the splunk logs."""
@@ -46,41 +39,49 @@ class EmailHistoryRecord:
         md5, ext = os.path.splitext(file_name)
         return md5
 
+class EmailLoggingConfig(AnalysisModuleConfig):
+    splunk_log_enabled: bool = Field(..., description="whether to enable splunk logging")
+    splunk_log_subdir: str = Field(..., description="the subdirectory inside of splunk_log_dir (see [splunk_logging]) that contains the logs")
+    json_logging_enabled: bool = Field(..., description="whether to enable JSON logging")
+    json_log_path_format: str = Field(..., description="the path to the JSON log file")
+    brocess_logging_enabled: bool = Field(..., description="whether to enable brocess logging")
+    fluent_bit_tag: str = Field(..., description="the tag to use for fluent-bit logging")
+    fluent_bit_logging_enabled: bool = Field(..., description="whether to enable fluent-bit logging")
+    fluent_bit_hostname: str = Field(..., description="the hostname of the fluent-bit server")
+    fluent_bit_port: int = Field(..., description="the port of the fluent-bit server")
+
 class EmailLoggingAnalysis(Analysis):
     pass
 
 class EmailLoggingAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return EmailLoggingConfig
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # splunk log settings
-        self.splunk_log_enabled = self.config.getboolean(CONFIG_SPLUNK_LOGGING_ENABLED)
-        self.splunk_log_dir = os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_SPLUNK_LOGGING, CONFIG_SPLUNK_LOGGING_DIR), 
-                                           self.config.get(CONFIG_SPLUNK_LOG_SUBDIR))
+        self.splunk_log_enabled = self.config.splunk_log_enabled
+        self.splunk_log_dir = os.path.join(get_data_dir(), get_config().splunk_logging.splunk_log_dir, 
+                                           self.config.splunk_log_subdir)
 
         # JSON log settings (for elasticsearch)
-        self.json_logging_enabled = self.config.getboolean(CONFIG_JSON_LOGGING_ENABLED)
-        self.json_log_path_format = self.config.get(CONFIG_JSON_LOG_PATH_FORMAT)
+        self.json_logging_enabled = self.config.json_logging_enabled
+        self.json_log_path_format = self.config.json_log_path_format
 
         # brocess log settings
-        self.brocess_logging_enabled = self.config.getboolean(CONFIG_BROCESS_LOGGING_ENABLED)
-
-        # fluent-bit log settings
-        self.fluent_bit_logging_enabled: bool = self.config.getboolean(CONFIG_FLUENT_BIT_LOGGING_ENABLED)
-        self.fluent_bit_hostname: Optional[str] = self.config.get(CONFIG_FLUENT_BIT_HOSTNAME)
-        self.fluent_bit_port: Optional[int] = self.config.get(CONFIG_FLUENT_BIT_PORT)
-        self.fluent_bit_tag: Optional[str] = self.config.get(CONFIG_FLUENT_BIT_TAG)
+        self.brocess_logging_enabled = self.config.brocess_logging_enabled
         self.fluent_bit_sender: Optional[sender.FluentSender] = None
 
-        if self.fluent_bit_logging_enabled:
-            assert self.fluent_bit_hostname, "configuration setting {} is required".format(CONFIG_FLUENT_BIT_HOSTNAME)
-            assert self.fluent_bit_port, "configuration setting {} is required".format(CONFIG_FLUENT_BIT_PORT)
-            assert self.fluent_bit_tag, "configuration setting {} is required".format(CONFIG_FLUENT_BIT_TAG)
-            self.fluent_bit_sender = sender.FluentSender(self.fluent_bit_tag, host=self.fluent_bit_hostname, port=self.fluent_bit_port)
+        if self.config.fluent_bit_logging_enabled:
+            self.fluent_bit_sender = sender.FluentSender(
+                self.config.fluent_bit_tag,
+                host=self.config.fluent_bit_hostname,
+                port=self.config.fluent_bit_port)
 
     def verify_environment(self):
         if self.splunk_log_enabled:
-            self.verify_config_exists(CONFIG_SPLUNK_LOG_SUBDIR)
             self.create_required_directory(self.splunk_log_dir)
         
     @property
@@ -204,7 +205,7 @@ class EmailLoggingAnalyzer(AnalysisModule):
         # convert the date into a timestamp for splunk
         entry["timestamp"] = str(datetime.strptime(entry["date"], '%Y-%m-%d %H:%M:%S.%f %z').timestamp())
 
-        json_log_path_format = get_config_value_as_str(self.config_section_name, CONFIG_JSON_LOG_PATH_FORMAT)
+        json_log_path_format = self.config.json_log_path_format
         target_path = datetime.now().strftime(os.path.join(get_data_dir(), json_log_path_format)).format(pid=os.getpid())
 
         dir_path = os.path.dirname(target_path)

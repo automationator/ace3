@@ -536,7 +536,7 @@ class RootAnalysis(Analysis):
 
     def get_delayed_analysis_start_time_key(self, observable, analysis_module) -> str:
         """Returns the key for the delayed analysis start time."""
-        return '{}:{}'.format(analysis_module.config_section_name, observable.uuid)
+        return '{}:{}'.format(analysis_module.config.name, observable.uuid)
 
     def initialize_delayed_analysis_start_time(self, observable, analysis_module) -> datetime:
         """Sets the start time for the delayed analysis to the current time if not already set.

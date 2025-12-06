@@ -155,7 +155,7 @@
     <div class="panel-heading">
         <h3 class="panel-title">Matching Open Events: {{ matching_open_events | length }} Event(s) | {{ matching_open_events[-1][1] }}/{{ num_observables_in_alert }} matching observables | {{ matching_open_events[-1][0].name }} <a role="button" data-toggle="collapse" data-target="#collapse_matching_open_events" aria-expanded="true" aria-controls="collapse_matching_open_events">(hide/show)</a></h3>
     </div>
-    {%if ace_config['gui'].getboolean('matching_open_events_collapsed') %}
+    {%if ace_config.gui.matching_open_events_collapsed %}
         <div class="panel-body collapse" id="collapse_matching_open_events">
     {% else %}
         <div class="panel-body" id="collapse_matching_open_events">
@@ -192,7 +192,7 @@
                 <h5>Alert Details <a role="button" data-bs-toggle="collapse" data-bs-target="#collapse_alert_details" aria-expanded="true" aria-controls="collapse_alert_details">(hide/show)</a></h5>
             </div>
             <div class="card-body">
-                <div class="card-text {% if ace_config['gui'].getboolean('alert_details_collapsed') %} collapse{% endif %}" id="collapse_alert_details">
+                <div class="card-text {% if ace_config.gui.alert_details_collapsed %} collapse{% endif %}" id="collapse_alert_details">
                     <!-- by default we just pretty-print the json -->
                     {% block alert_details %} <code><pre>{{ analysis.details | pprint }}</pre></code> {% endblock %}
                 </div>

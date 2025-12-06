@@ -21,10 +21,13 @@ import logging
 import re
 from subprocess import Popen
 import tempfile
+from typing import Type
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import F_ASSET, F_HOSTNAME, F_USER, G_DEFAULT_ENCODING, G_TEMP_DIR, AnalysisExecutionResult
 from saq.environment import g
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 
 ANALYSIS_NETBIOS_OPEN = 'netbios_open'
 ANALYSIS_NETBIOS_NAME = 'netbios_name'
@@ -101,7 +104,14 @@ class NetBIOSAnalysis(Analysis):
 
         return None
 
+class NetBIOSAnalyzerConfig(AnalysisModuleConfig):
+    ssh_host: str = Field(default="", description="If this is set then the command is prefixed with ssh ssh_host so that it executes from another system. Use this if you are in AWS and your target is inside target network.")
+
 class NetBIOSAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return NetBIOSAnalyzerConfig
+
     def verify_environment(self):
         self.verify_program_exists('nmap')
         self.verify_path_exists('/usr/share/nmap/scripts/nbstat.nse')
@@ -127,8 +137,8 @@ class NetBIOSAnalyzer(AnalysisModule):
             '-p137', asset.value]
 
         # are we executing this from a host in a target network?
-        if self.config['ssh_host']:
-            args.insert(0, self.config['ssh_host'])
+        if self.config.ssh_host:
+            args.insert(0, self.config.ssh_host)
             args.insert(0, 'ssh')
 
         with tempfile.TemporaryFile(dir=g(G_TEMP_DIR)) as fp:

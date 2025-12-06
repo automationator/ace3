@@ -1,6 +1,8 @@
 import pytest
 
 from saq.analysis.module_path import IS_MODULE_PATH, MODULE_PATH, SPLIT_MODULE_PATH
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_BASIC_TEST
 from saq.modules.context import AnalysisModuleContext
 from saq.modules.adapter import AnalysisModuleAdapter
 
@@ -26,8 +28,12 @@ def test_MODULE_PATH(test_context: AnalysisModuleContext):
 
     # pass by AnalysisModule instance
     from saq.modules.test import BasicTestAnalyzer
-    assert MODULE_PATH(AnalysisModuleAdapter(BasicTestAnalyzer(context=test_context))) == 'saq.modules.test:BasicTestAnalysis'
-    assert SPLIT_MODULE_PATH(MODULE_PATH(AnalysisModuleAdapter(BasicTestAnalyzer(context=test_context)))) == ( 'saq.modules.test', 'BasicTestAnalysis', None )
+    assert MODULE_PATH(AnalysisModuleAdapter(BasicTestAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_BASIC_TEST)))) == 'saq.modules.test:BasicTestAnalysis'
+    assert SPLIT_MODULE_PATH(MODULE_PATH(AnalysisModuleAdapter(BasicTestAnalyzer(
+        context=test_context,
+        config=get_analysis_module_config(ANALYSIS_MODULE_BASIC_TEST))))) == ( 'saq.modules.test', 'BasicTestAnalysis', None )
 
     # same thing but with an instance value for the module
     from saq.modules.test import TestInstanceAnalysis

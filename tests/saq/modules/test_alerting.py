@@ -3,8 +3,8 @@ import signal
 import pytest
 
 from saq.analysis.root import load_root
-from saq.configuration.config import get_config
-from saq.constants import ANALYSIS_MODE_CORRELATION, ANALYSIS_MODE_DISPOSITIONED, CONFIG_ENGINE, CONFIG_ENGINE_ALERT_DISPOSITION_CHECK_FREQUENCY, DISPOSITION_DELIVERY, DISPOSITION_FALSE_POSITIVE, F_TEST
+from saq.configuration.config import get_engine_config
+from saq.constants import ANALYSIS_MODE_CORRELATION, ANALYSIS_MODE_DISPOSITIONED, DISPOSITION_DELIVERY, DISPOSITION_FALSE_POSITIVE, F_TEST
 from saq.database.model import Alert, load_alert
 from saq.database.pool import get_db
 from saq.database.util.alert import ALERT
@@ -23,7 +23,7 @@ def test_detection(root_analysis):
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['test_groups', ANALYSIS_MODE_CORRELATION]))
     engine.configuration_manager.config.alerting_enabled = True
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     # make sure we detected the change in modes
@@ -43,7 +43,7 @@ def test_no_detection(root_analysis):
 
     engine = Engine()
     engine.configuration_manager.config.alerting_enabled = True
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     assert not load_alert(root_analysis.uuid)
@@ -69,7 +69,7 @@ def test_existing_alert(root_analysis):
     # now analyze the alert that's already in the database
     engine = Engine()
     engine.configuration_manager.config.alerting_enabled = True
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     assert load_alert(root_analysis.uuid)
@@ -86,7 +86,7 @@ def test_whitelisted(root_analysis):
 
     engine = Engine()
     engine.configuration_manager.config.alerting_enabled = True
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     assert not load_alert(root_analysis.uuid)
@@ -106,7 +106,7 @@ def test_alert_dispositioned():
     # 4) ace detects the disposition and stops analyzing the alert
     # 5) ace picks up the alert in ANALYSIS_MODE_DISPOSITIONED mode
 
-    get_config()[CONFIG_ENGINE][CONFIG_ENGINE_ALERT_DISPOSITION_CHECK_FREQUENCY] = 0 # check every time
+    get_engine_config().alert_disposition_check_frequency = 0 # check every time
     
     # create an analysis that turns into an alert
     root = create_root_analysis(analysis_mode='test_single')
@@ -118,9 +118,9 @@ def test_alert_dispositioned():
 
     engine = Engine(config=EngineConfiguration(pool_size_limit=1, local_analysis_modes=['test_single', ANALYSIS_MODE_CORRELATION]))
     engine.configuration_manager.config.alerting_enabled = True
-    engine.configuration_manager.enable_module('analysis_module_basic_test', ['test_single', ANALYSIS_MODE_CORRELATION])
-    engine.configuration_manager.enable_module('analysis_module_low_priority', ANALYSIS_MODE_CORRELATION) # low will run after pause ensuring a check of disposition during analysis
-    engine.configuration_manager.enable_module('analysis_module_pause', ANALYSIS_MODE_CORRELATION) # we'll set the disposition during the pause
+    engine.configuration_manager.enable_module('basic_test', ['test_single', ANALYSIS_MODE_CORRELATION])
+    engine.configuration_manager.enable_module('low_priority', ANALYSIS_MODE_CORRELATION) # low will run after pause ensuring a check of disposition during analysis
+    engine.configuration_manager.enable_module('pause', ANALYSIS_MODE_CORRELATION) # we'll set the disposition during the pause
     engine_process = engine.start_nonblocking()
     engine.wait_for_start()
 
@@ -169,9 +169,9 @@ def test_alert_dispositioned():
 
     engine = Engine(config=EngineConfiguration(pool_size_limit=1, local_analysis_modes=[ANALYSIS_MODE_CORRELATION]))
     engine.configuration_manager.config.alerting_enabled = True
-    engine.configuration_manager.enable_module('analysis_module_basic_test', ['test_single', ANALYSIS_MODE_CORRELATION])
-    engine.configuration_manager.enable_module('analysis_module_low_priority', ANALYSIS_MODE_CORRELATION)
-    engine.configuration_manager.enable_module('analysis_module_pause', ANALYSIS_MODE_CORRELATION)
+    engine.configuration_manager.enable_module('basic_test', ['test_single', ANALYSIS_MODE_CORRELATION])
+    engine.configuration_manager.enable_module('low_priority', ANALYSIS_MODE_CORRELATION)
+    engine.configuration_manager.enable_module('pause', ANALYSIS_MODE_CORRELATION)
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     wait_for_log_count('skipping analysis on dispositioned alert', 1)
@@ -199,9 +199,9 @@ def test_alert_continue_specific_disposition():
     # 4) ace detects the disposition and continues analyzing the alert until finished
     # 5) ace picks up the alert in ANALYSIS_MODE_DISPOSITIONED mode
 
-    get_config()['service_engine']['alert_disposition_check_frequency'] = 0  # check every time
-    get_config()['service_engine']['stop_analysis_on_any_alert_disposition'] = False
-    get_config()['service_engine']['stop_analysis_on_dispositions'] = ['FALSE_POSITIVE', 'IGNORE']
+    get_engine_config().alert_disposition_check_frequency = 0  # check every time
+    get_engine_config().stop_analysis_on_any_alert_disposition = False
+    get_engine_config().stop_analysis_on_dispositions = ['FALSE_POSITIVE', 'IGNORE']
 
     # create an analysis that turns into an alert
     root = create_root_analysis(analysis_mode='test_single')
@@ -213,11 +213,9 @@ def test_alert_continue_specific_disposition():
 
     engine = Engine(config=EngineConfiguration(pool_size_limit=1, local_analysis_modes=['test_single', ANALYSIS_MODE_CORRELATION]))
     engine.configuration_manager.config.alerting_enabled = True
-    engine.configuration_manager.enable_module('analysis_module_basic_test', ['test_single', ANALYSIS_MODE_CORRELATION])
-    engine.configuration_manager.enable_module('analysis_module_low_priority',
-                            ANALYSIS_MODE_CORRELATION)  # low will run after pause ensuring a check of disposition during analysis
-    engine.configuration_manager.enable_module('analysis_module_pause',
-                            ANALYSIS_MODE_CORRELATION)  # we'll set the disposition during the pause
+    engine.configuration_manager.enable_module('basic_test', ['test_single', ANALYSIS_MODE_CORRELATION])
+    engine.configuration_manager.enable_module('low_priority', ANALYSIS_MODE_CORRELATION)  # low will run after pause ensuring a check of disposition during analysis
+    engine.configuration_manager.enable_module('pause', ANALYSIS_MODE_CORRELATION)  # we'll set the disposition during the pause
     engine_process = engine.start_nonblocking()
     engine.wait_for_start()
 

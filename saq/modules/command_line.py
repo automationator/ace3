@@ -3,10 +3,13 @@
 import logging
 import os
 import shlex
+from typing import Type
 
+from pydantic import Field
 from saq.analysis import Analysis
 from saq.constants import F_COMMAND_LINE, F_FILE_LOCATION, F_FILE_PATH, R_EXECUTED_ON, create_file_location, AnalysisExecutionResult
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.util.filesystem import is_nt_path
 from saq.util.strings import decode_base64, is_base64
 
@@ -53,7 +56,14 @@ class CommandLineAnalysis(Analysis):
 
         return f"{result} {', '.join(parts)}"
 
+class CommandLineAnalyzerConfig(AnalysisModuleConfig):
+    base64_minimum_length: int = Field(..., description="The minimum length of a base64 encoded string to be extracted from a command line.")
+
 class CommandLineAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return CommandLineAnalyzerConfig
+
     @property
     def generated_analysis_type(self):
         return CommandLineAnalysis
@@ -64,7 +74,7 @@ class CommandLineAnalyzer(AnalysisModule):
 
     @property
     def base64_minimum_length(self):
-        return self.config.get("base64_minimum_length", fallback=128)
+        return self.config.base64_minimum_length
 
     def execute_analysis(self, command_line) -> AnalysisExecutionResult:
         analysis = self.create_analysis(command_line)

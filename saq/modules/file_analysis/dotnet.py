@@ -1,10 +1,13 @@
 import logging
 import os
 from subprocess import PIPE, Popen, TimeoutExpired
-from typing import Optional, override
+from typing import Optional, Type, override
+
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import F_FILE, R_EXTRACTED_FROM, AnalysisExecutionResult
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.is_file_type import is_dotnet
 from saq.observables.file import FileObservable
 
@@ -149,6 +152,9 @@ class De4dotAnalyzer(AnalysisModule):
 
         return AnalysisExecutionResult.COMPLETED
 
+class IlspyConfig(AnalysisModuleConfig):
+    binary_path: str = Field(..., description="The path to the ilspy binary.")
+
 class IlspyAnalysis(Analysis):
 
     def __init__(self, *args, **kwargs):
@@ -188,6 +194,10 @@ class IlspyAnalysis(Analysis):
 
 class IlspyAnalyzer(AnalysisModule):
 
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return IlspyConfig
+
     @property
     def generated_analysis_type(self):
         return IlspyAnalysis
@@ -201,7 +211,7 @@ class IlspyAnalyzer(AnalysisModule):
 
     @property
     def binary_path(self) -> str:
-        return self.config["binary_path"]
+        return self.config.binary_path
 
     def execute_analysis(self, _file: FileObservable) -> AnalysisExecutionResult:
 

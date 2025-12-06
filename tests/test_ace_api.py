@@ -24,10 +24,10 @@ from tests.saq.helpers import create_root_analysis, log_count, start_api_server,
 
 @pytest.fixture(autouse=True, scope="function")
 def api_server():
-    ace_api.set_default_api_key(get_config()["api"]["api_key"])
+    ace_api.set_default_api_key(get_config().api.api_key)
     api_server_process = start_api_server(
         remote_host=g(G_API_PREFIX),
-        ssl_verification=get_config()['SSL']['ca_chain_path'],
+        ssl_verification=get_config().SSL.ca_chain_path,
 
     )
 
@@ -484,7 +484,7 @@ def test_legacy_submit(mock_api_call):
         fp.write('test')
 
     alert.add_attachment_link(temp_path, 'dest/test.txt')
-    alert.submit(f'https://{g(G_API_PREFIX)}', ssl_verification=get_config()['SSL']['ca_chain_path'])
+    alert.submit(f'https://{g(G_API_PREFIX)}', ssl_verification=get_config().SSL.ca_chain_path)
     assert validate_uuid(alert.uuid)
 
     root = RootAnalysis(storage_dir=get_storage_dir(alert.uuid))
@@ -525,7 +525,7 @@ def test_legacy_failed_submit(api_server, tmpdir):
 
     alert.add_attachment_link(temp_path, 'dest/test.txt')
     with pytest.raises(Exception):
-        alert.submit(f'https://{g(G_API_PREFIX)}', ssl_verification=get_config()['SSL']['ca_chain_path'], fail_dir=fail_dir)
+        alert.submit(f'https://{g(G_API_PREFIX)}', ssl_verification=get_config().SSL.ca_chain_path, fail_dir=fail_dir)
 
     assert log_count('unable to submit ') == 1
 
@@ -560,7 +560,7 @@ def test_failed_submit(api_server, tmpdir):
 
     analysis.add_file(temp_path, relative_storage_path='dest/test.txt')
     with pytest.raises(Exception):
-        analysis.submit(f'https://{g(G_API_PREFIX)}', ssl_verification=get_config()['SSL']['ca_chain_path'], fail_dir=fail_dir)
+        analysis.submit(f'https://{g(G_API_PREFIX)}', ssl_verification=get_config().SSL.ca_chain_path, fail_dir=fail_dir)
 
     assert log_count('unable to submit ') == 1
 
@@ -593,7 +593,7 @@ def test_submit_failed_alerts(api_server, tmpdir):
 
     alert.add_attachment_link(temp_path, 'dest/test.txt')
     with pytest.raises(Exception):
-        uuid = alert.submit(f'https://{g(G_API_PREFIX)}', ssl_verification=get_config()['SSL']['ca_chain_path'], fail_dir=fail_dir)
+        uuid = alert.submit(f'https://{g(G_API_PREFIX)}', ssl_verification=get_config().SSL.ca_chain_path, fail_dir=fail_dir)
 
     assert log_count('unable to submit ') == 1
 
@@ -639,7 +639,7 @@ def test_submit_failed_analysis(api_server, tmpdir):
 
     analysis.add_file(temp_path, relative_storage_path='dest/test.txt')
     with pytest.raises(Exception):
-        uuid = analysis.submit(f'https://{g(G_API_PREFIX)}', ssl_verification=get_config()['SSL']['ca_chain_path'], fail_dir=fail_dir)
+        uuid = analysis.submit(f'https://{g(G_API_PREFIX)}', ssl_verification=get_config().SSL.ca_chain_path, fail_dir=fail_dir)
 
     assert log_count('unable to submit ') == 1
 

@@ -1,5 +1,5 @@
-from saq.configuration import get_config, get_config_value_as_str, get_config_value_as_boolean, get_config_value_as_int
-from saq.constants import CONFIG_DISPOSITION_BENIGN, CONFIG_DISPOSITION_CSS, CONFIG_DISPOSITION_MALICIOUS, CONFIG_DISPOSITION_RANK, CONFIG_DISPOSITION_SHOW_SAVE_TO_EVENT, CONFIG_VALID_DISPOSITIONS, DISPOSITION_OPEN, VALID_DISPOSITIONS
+from saq.configuration import get_config
+from saq.constants import DISPOSITION_OPEN, VALID_DISPOSITIONS
 
 # XXX refactor this
 
@@ -20,23 +20,23 @@ def initialize_dispositions():
         }
     }
     for disposition in VALID_DISPOSITIONS:
-        if get_config_value_as_boolean(CONFIG_VALID_DISPOSITIONS, disposition):
+        if get_config().valid_dispositions.get(disposition, False):
             DISPOSITIONS[disposition.upper()] = {
-                "rank": get_config_value_as_int(CONFIG_DISPOSITION_RANK, disposition, default=0),
-                "css": get_config_value_as_str(CONFIG_DISPOSITION_CSS, disposition, default="special"),
-                "show_save_to_event": get_config_value_as_boolean(CONFIG_DISPOSITION_SHOW_SAVE_TO_EVENT, disposition, default=False),
+                "rank": get_config().disposition_rank.get(disposition, 0),
+                "css": get_config().disposition_css.get(disposition, "special"),
+                "show_save_to_event": get_config().show_save_to_event.get(disposition, False),
             }
 
     global BENIGN_DISPOSITIONS
     BENIGN_DISPOSITIONS = []
-    for disposition in get_config()[CONFIG_DISPOSITION_BENIGN]:
-        if get_config_value_as_boolean(CONFIG_DISPOSITION_BENIGN, disposition):
+    for disposition in get_config().benign_dispositions:
+        if get_config().benign_dispositions.get(disposition, False):
             BENIGN_DISPOSITIONS.append(disposition.upper())
 
     global MALICIOUS_DISPOSITIONS
     MALICIOUS_DISPOSITIONS = []
-    for disposition in get_config()[CONFIG_DISPOSITION_MALICIOUS]:
-        if get_config_value_as_boolean(CONFIG_DISPOSITION_MALICIOUS, disposition):
+    for disposition in get_config().malicious_dispositions:
+        if get_config().malicious_dispositions.get(disposition, False):
             MALICIOUS_DISPOSITIONS.append(disposition.upper())
 
 def get_disposition_rank(disposition: str) -> int:

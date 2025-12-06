@@ -21,8 +21,8 @@ from saq.collectors.hunter.base_hunter import HuntConfig
 from saq.collectors.hunter.decoder import DecoderType, decode_value
 from saq.collectors.hunter.event_processing import FIELD_LOOKUP_TYPE_KEY, extract_event_value, interpolate_event_value
 from saq.collectors.hunter.loader import load_from_yaml
-from saq.configuration import get_config_value_as_str, get_config_value_as_int
-from saq.constants import CONFIG_QUERY_HUNTER, CONFIG_QUERY_HUNTER_MAX_RESULT_COUNT, CONFIG_QUERY_HUNTER_QUERY_TIMEOUT, F_FILE, F_HUNT, F_SIGNATURE_ID, G_TEMP_DIR
+from saq.configuration.config import get_config
+from saq.constants import F_FILE, F_SIGNATURE_ID, G_TEMP_DIR
 from saq.environment import g
 from saq.gui.alert import KEY_ALERT_TEMPLATE, KEY_ICON_CONFIGURATION
 from saq.observables.generator import create_observable
@@ -71,8 +71,8 @@ class QueryHuntConfig(HuntConfig):
     query_file_path: Optional[str] = Field(alias="search", default=None, description="The path to the search query file.")
     query: Optional[str] = Field(default=None, description="The search query to execute.")
     observable_mapping: list[ObservableMapping] = Field(default_factory=list, description="The mapping of fields to observables.")
-    max_result_count: Optional[int] = Field(default_factory=lambda: get_config_value_as_int(CONFIG_QUERY_HUNTER, CONFIG_QUERY_HUNTER_MAX_RESULT_COUNT), description="The maximum number of results to return.")
-    query_timeout: Optional[str] = Field(default_factory=lambda: get_config_value_as_str(CONFIG_QUERY_HUNTER, CONFIG_QUERY_HUNTER_QUERY_TIMEOUT), description="The timeout for the query (in HH:MM:SS format).")
+    max_result_count: Optional[int] = Field(default_factory=lambda: get_config().query_hunter.max_result_count, description="The maximum number of results to return.")
+    query_timeout: Optional[str] = Field(default_factory=lambda: get_config().query_hunter.query_timeout, description="The timeout for the query (in HH:MM:SS format).")
     auto_append: str = Field(default="", description="The string to append to the query after the time spec. By default this is an empty string.")
 
 class FileContent(BaseModel):

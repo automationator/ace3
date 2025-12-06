@@ -1,6 +1,7 @@
 import pytest
 
-from saq.constants import ANALYSIS_MODE_DISPOSITIONED, ANALYSIS_MODE_EVENT, DISPOSITION_DELIVERY, F_EMAIL_ADDRESS
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_ALERT_ADDED_TO_EVENT, ANALYSIS_MODE_DISPOSITIONED, ANALYSIS_MODE_EVENT, DISPOSITION_DELIVERY, F_EMAIL_ADDRESS
 from saq.database import ALERT, Alert, EventMapping, User, Workload, get_db, set_dispositions
 from saq.modules.event import AlertAddedToEventAnalyzer
 from saq.modules.adapter import AnalysisModuleAdapter
@@ -41,7 +42,9 @@ def test_changing_to_event_analysis_mode(caplog, db_event, test_context):
     assert root.analysis_mode != ANALYSIS_MODE_EVENT
 
     # Execute the analysis
-    analyzer = AnalysisModuleAdapter(AlertAddedToEventAnalyzer(context=create_test_context(root=root)))
+    analyzer = AnalysisModuleAdapter(AlertAddedToEventAnalyzer(
+        context=create_test_context(root=root),
+        config=get_analysis_module_config(ANALYSIS_MODULE_ALERT_ADDED_TO_EVENT)))
     analyzer.execute_post_analysis()
 
     # The analysis mode should now be event

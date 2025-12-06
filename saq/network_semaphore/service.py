@@ -1,3 +1,6 @@
+from typing import Type
+from saq.configuration.schema import ServiceConfig
+from saq.network_semaphore.config import NetworkSemaphoreConfig
 from saq.network_semaphore.server import NetworkSemaphoreServer
 from saq.service import ACEServiceInterface
 
@@ -20,3 +23,7 @@ class NetworkSemaphoreService(ACEServiceInterface):
 
     def wait(self):
         self.server.wait()
+
+    @classmethod
+    def get_config_class(cls) -> Type[ServiceConfig]:
+        return NetworkSemaphoreConfig

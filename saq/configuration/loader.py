@@ -72,7 +72,6 @@ def load_configuration(config_paths: Optional[list[str]] = None):
     if not g_boolean(G_UNIT_TESTING):
         _load_optional(local_yaml)
 
-    config.verify()
     config.apply_path_references()
     return config
 

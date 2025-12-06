@@ -12,8 +12,8 @@ import urllib3
 
 from ace_api import upload
 from saq.analysis.root import RootAnalysis, Submission
-from saq.configuration import get_config_value_as_str, get_config_value_as_boolean, get_config_value_as_int
-from saq.constants import ANALYSIS_MODE_CORRELATION, CONFIG_COLLECTION, CONFIG_COLLECTION_FORCE_API, CONFIG_COLLECTION_INCOMING_DIR, CONFIG_ENGINE, CONFIG_ENGINE_NODE_STATUS_UPDATE_FREQUENCY, CONFIG_SSL, CONFIG_SSL_CA_CHAIN_PATH, DB_COLLECTION, G_SAQ_NODE, G_UNIT_TESTING, NO_NODES_AVAILABLE, NO_WORK_AVAILABLE, NO_WORK_SUBMITTED, WORK_SUBMITTED
+from saq.configuration.config import get_config, get_engine_config
+from saq.constants import ANALYSIS_MODE_CORRELATION, DB_COLLECTION, G_SAQ_NODE, G_UNIT_TESTING, NO_NODES_AVAILABLE, NO_WORK_AVAILABLE, NO_WORK_SUBMITTED, WORK_SUBMITTED
 from saq.database import ALERT, execute_with_retry, get_db, get_db_connection
 from saq.database.pool import execute_with_db_cursor
 from saq.engine.node_manager.distributed_node_manager import translate_node
@@ -53,7 +53,7 @@ class RemoteNode:
         self.company_id: Optional[int] = company_id
 
         # the directory that contains any files that to be transfered along with submissions
-        self.incoming_dir = os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_INCOMING_DIR))
+        self.incoming_dir = os.path.join(get_data_dir(), get_config().collection.incoming_dir)
 
     def __str__(self):
         return "RemoteNode(id={},name={},location={})".format(self.id, self.name, self.location)
@@ -67,7 +67,7 @@ class RemoteNode:
         assert isinstance(submission, Submission)
 
         # if we are submitting locally then we can bypass the API layer
-        if self.is_local and not get_config_value_as_boolean(CONFIG_COLLECTION, CONFIG_COLLECTION_FORCE_API):
+        if self.is_local and not get_config().collection.force_api:
             return self.submit_local(submission)
         else:
             return self.submit_remote(submission)
@@ -106,7 +106,7 @@ class RemoteNode:
                 sync=True, # ends up calling root.schedule() on the other side
                 move=False, # not an Alert yet
                 remote_host=self.location, # should be sent to this node
-                ssl_verification=get_config_value_as_str(CONFIG_SSL, CONFIG_SSL_CA_CHAIN_PATH),
+                ssl_verification=get_config().SSL.ca_chain_path,
             )
 
             result = result['result']
@@ -203,10 +203,10 @@ class RemoteNodeGroup:
         # each node (engine) should update it's status every [engine][node_status_update_frequency] seconds
         # so we wait for twice that long until we think a node is offline
         # at which point we no longer consider it for submissions
-        self.node_status_update_frequency = get_config_value_as_int(CONFIG_ENGINE, CONFIG_ENGINE_NODE_STATUS_UPDATE_FREQUENCY)
+        self.node_status_update_frequency = get_engine_config().node_status_update_frequency
 
         # the directory that contains any files that to be transfered along with submissions
-        self.incoming_dir = os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_INCOMING_DIR))
+        self.incoming_dir = os.path.join(get_data_dir(), get_config().collection.incoming_dir)
         
         # sync lock for assigning work to the threads
         self.work_sync_lock = threading.RLock()

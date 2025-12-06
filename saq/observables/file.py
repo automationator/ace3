@@ -7,8 +7,8 @@ from typing import Optional, Union
 from saq.analysis.observable import Observable
 from saq.analysis.presenter.observable_presenter import ObservablePresenter, register_observable_presenter
 from saq.analysis.serialize.observable_serializer import KEY_VALUE
-from saq.configuration.config import get_config, get_config_value_as_int
-from saq.constants import CONFIG_GUI, CONFIG_GUI_FILE_PREVIEW_BYTES, DIRECTIVE_VIEW_IN_BROWSER, EVENT_RELATIONSHIP_ADDED, F_FILE, F_FILE_LOCATION, F_FILE_NAME, F_FILE_PATH, F_MD5, F_SHA1, F_SHA256, FILE_SUBDIR, R_IS_HASH_OF, parse_file_location
+from saq.configuration.config import get_config
+from saq.constants import DIRECTIVE_VIEW_IN_BROWSER, EVENT_RELATIONSHIP_ADDED, F_FILE, F_FILE_LOCATION, F_FILE_NAME, F_FILE_PATH, F_MD5, F_SHA1, F_SHA256, FILE_SUBDIR, R_IS_HASH_OF, parse_file_location
 from saq.gui import ObservableActionCollectFile, ObservableActionDownloadFile, ObservableActionDownloadFileAsZip, ObservableActionFileRender, ObservableActionFileSendTo, ObservableActionSeparator, ObservableActionUploadToVt, ObservableActionViewAsHex, ObservableActionViewAsHtml, ObservableActionViewAsText, ObservableActionViewInBrowser, ObservableActionViewInVt
 from saq.observables.base import CaselessObservable, ObservableValueError
 from saq.observables.generator import register_observable_type
@@ -199,7 +199,7 @@ class FileObservable(Observable):
     def display_preview(self) -> Optional[bytes]:
         try:
             with open(self.full_path, 'rb') as fp:
-                return fp.read(get_config_value_as_int(CONFIG_GUI, CONFIG_GUI_FILE_PREVIEW_BYTES)).decode('utf8', errors='replace')
+                return fp.read(get_config().gui.file_preview_bytes).decode('utf8', errors='replace')
         except FileNotFoundError:
             # This usually happens when someone tries to view a file in an archived alert
             logging.warning(f"file does not exist for display_preview: {self.full_path}")

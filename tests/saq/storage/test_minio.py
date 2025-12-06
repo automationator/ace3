@@ -18,17 +18,15 @@ from saq.storage.error import StorageError
 
 pytestmark = pytest.mark.integration
 
-
 @pytest.fixture
 def minio_config():
     """Get MinIO configuration from the system config."""
-    config = get_config()
-    minio_section = config["minio"]
+    minio_config = get_config().minio
     return {
-        "host": minio_section.get("host", "minio"),
-        "port": int(minio_section.get("port", 9000)),
-        "access_key": minio_section.get("access_key", "ace3apitest"), 
-        "secret_key": minio_section.get("secret_key", "5ad82077-e6bf-471d-8f44-979c4f541082"),  # hard coded for testing
+        "host": minio_config.host,
+        "port": minio_config.port,
+        "access_key": minio_config.access_key,
+        "secret_key": minio_config.secret_key,
         "secure": False
     }
 

@@ -3,7 +3,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from saq.constants import AnalysisExecutionResult, F_FILE
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_CVE_2021_30657_ANALYZER, AnalysisExecutionResult, F_FILE
 from saq.modules.adapter import AnalysisModuleAdapter
 from saq.modules.file_analysis.cve import CVE_2021_30657_Analysis, CVE_2021_30657_Analyzer
 from saq.modules.file_analysis.dmg import DMGAnalysis
@@ -50,12 +51,16 @@ class TestCVE_2021_30657_Analysis:
 class TestCVE_2021_30657_Analyzer:
     @pytest.mark.unit
     def test_generated_analysis_type(self, test_context):
-        analyzer = CVE_2021_30657_Analyzer(context=test_context)
+        analyzer = CVE_2021_30657_Analyzer(
+            context=test_context,
+            config=get_analysis_module_config(ANALYSIS_MODULE_CVE_2021_30657_ANALYZER))
         assert analyzer.generated_analysis_type == CVE_2021_30657_Analysis
 
     @pytest.mark.unit
     def test_valid_observable_types(self, test_context):
-        analyzer = CVE_2021_30657_Analyzer(context=test_context)
+        analyzer = CVE_2021_30657_Analyzer(
+            context=test_context,
+            config=get_analysis_module_config(ANALYSIS_MODULE_CVE_2021_30657_ANALYZER))
         assert analyzer.valid_observable_types == F_FILE
 
     @pytest.mark.unit
@@ -72,7 +77,9 @@ class TestCVE_2021_30657_Analyzer:
         # now remove the file to simulate it being missing
         test_file.remove()
         
-        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(context=create_test_context(root=root)))
+        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(
+            context=create_test_context(root=root),
+            config=get_analysis_module_config(ANALYSIS_MODULE_CVE_2021_30657_ANALYZER)))
         result = analyzer.execute_analysis(observable)
         
         assert result == AnalysisExecutionResult.COMPLETED
@@ -88,7 +95,9 @@ class TestCVE_2021_30657_Analyzer:
         
         observable = root.add_file_observable(str(test_file))
         
-        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(context=create_test_context(root=root)))
+        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(
+            context=create_test_context(root=root),
+            config=get_analysis_module_config(ANALYSIS_MODULE_CVE_2021_30657_ANALYZER)))
         result = analyzer.execute_analysis(observable)
         
         assert result == AnalysisExecutionResult.COMPLETED
@@ -104,7 +113,9 @@ class TestCVE_2021_30657_Analyzer:
         
         observable = root.add_file_observable(str(test_file))
         
-        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(context=create_test_context(root=root)))
+        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(
+            context=create_test_context(root=root),
+            config=get_analysis_module_config(ANALYSIS_MODULE_CVE_2021_30657_ANALYZER)))
         result = analyzer.execute_analysis(observable)
         
         assert result == AnalysisExecutionResult.COMPLETED
@@ -133,7 +144,9 @@ class TestCVE_2021_30657_Analyzer:
         # mock the get_and_load_analysis method to return None (no DMG analysis)
         redirection_observable.get_and_load_analysis = Mock(return_value=None)
         
-        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(context=create_test_context(root=root)))
+        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(
+            context=create_test_context(root=root),
+            config=get_analysis_module_config(ANALYSIS_MODULE_CVE_2021_30657_ANALYZER)))
         result = analyzer.execute_analysis(observable)
         
         assert result == AnalysisExecutionResult.COMPLETED
@@ -207,7 +220,9 @@ class TestCVE_2021_30657_Analyzer:
         
         monkeypatch.setattr("saq.modules.file_analysis.cve.Popen", mock_popen)
         
-        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(context=create_test_context(root=root)))
+        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(
+            context=create_test_context(root=root),
+            config=get_analysis_module_config(ANALYSIS_MODULE_CVE_2021_30657_ANALYZER)))
         result = analyzer.execute_analysis(observable)
         
         assert result == AnalysisExecutionResult.COMPLETED
@@ -267,7 +282,9 @@ class TestCVE_2021_30657_Analyzer:
         
         monkeypatch.setattr("saq.modules.file_analysis.cve.Popen", mock_popen)
         
-        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(context=create_test_context(root=root)))
+        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(
+            context=create_test_context(root=root),
+            config=get_analysis_module_config(ANALYSIS_MODULE_CVE_2021_30657_ANALYZER)))
         result = analyzer.execute_analysis(observable)
         
         assert result == AnalysisExecutionResult.COMPLETED
@@ -343,7 +360,9 @@ class TestCVE_2021_30657_Analyzer:
         
         monkeypatch.setattr("saq.modules.file_analysis.cve.Popen", mock_popen)
         
-        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(context=create_test_context(root=root)))
+        analyzer = AnalysisModuleAdapter(CVE_2021_30657_Analyzer(
+            context=create_test_context(root=root),
+            config=get_analysis_module_config(ANALYSIS_MODULE_CVE_2021_30657_ANALYZER)))
         result = analyzer.execute_analysis(observable)
         
         assert result == AnalysisExecutionResult.COMPLETED

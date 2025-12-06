@@ -30,13 +30,13 @@ from saq.cli.cli_util import display_analysis
 from saq.configuration import get_config
 from sqlalchemy import and_, or_
 
-from saq.configuration.config import get_config_value, get_config_value_as_int
-from saq.constants import CONFIG_GUI, CONFIG_GUI_LISTEN_ADDRESS, CONFIG_GUI_LISTEN_PORT, F_FILE, F_SUSPECT_FILE, G_COMPANY_ID, G_COMPANY_NAME, G_ENCRYPTION_KEY, G_FORCED_ALERTS, G_OTHER_PROXIES, G_SAQ_NODE, REDIS_DB_FOR_DETECTION_A, REDIS_DB_FOR_DETECTION_B, VALID_OBSERVABLE_TYPES
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_SNORT_SIGNATURE_ANALYSIS_V1, ANALYSIS_MODULE_USER_TAGGER, F_FILE, F_SUSPECT_FILE, G_COMPANY_ID, G_COMPANY_NAME, G_ENCRYPTION_KEY, G_FORCED_ALERTS, G_SAQ_NODE, REDIS_DB_FOR_DETECTION_A, REDIS_DB_FOR_DETECTION_B, VALID_OBSERVABLE_TYPES
 from saq.database.model import Persistence, PersistenceSource, Remediation
 from saq.database.pool import get_db
 from saq.engine.engine_configuration import EngineConfiguration
 from saq.engine.enums import EngineExecutionMode, EngineType
-from saq.environment import g, g_boolean, g_int, g_obj, get_base_dir
+from saq.environment import g, g_boolean, g_int, get_base_dir, get_data_dir
 from saq.error.reporting import report_exception
 from saq.observables.file import FileObservable
 from saq.remediation import REMEDIATION_STATUS_IN_PROGRESS, REMEDIATION_STATUS_NEW
@@ -50,7 +50,6 @@ from saq.util.uuid import storage_dir_from_uuid
 def execute_hunt(args):
     import ace_api
     import pytz
-    from saq.constants import EVENT_TIME_FORMAT_TZ
     from saq.collectors.hunter import HunterService
     from saq.collectors.hunter.query_hunter import QueryHunt
     hunter_service = HunterService()
@@ -157,7 +156,7 @@ def execute_hunt(args):
             result = ace_api.submit(
                 submission.root.description,
                 remote_host=args.submit_alerts,
-                ssl_verification=get_config()['SSL']['ca_chain_path'],
+                ssl_verification=get_config().global_settings.ssl_ca_chain_path,
                 analysis_mode=submission.root.analysis_mode,
                 tool=submission.root.tool,
                 tool_instance=submission.root.tool_instance,
@@ -629,12 +628,10 @@ def correlate(args):
         root.tool_instance = socket.gethostname()
         root.alert_type = args.alert_type
         root.analysis_mode = ANALYSIS_MODE_CLI if args.analysis_mode is None else args.analysis_mode
-        if f'analysis_mode_{root.analysis_mode}' not in get_config():
-            logging.error(f"invalid analysis mode {root.analysis_mode}")
-            sys.exit(1)
+        analysis_mode_config = get_config().get_analysis_mode_config(root.analysis_mode)
 
         # disable cleanup in whatever mode we use
-        get_config()[f'analysis_mode_{root.analysis_mode}']['cleanup'] = False
+        analysis_mode_config.cleanup = False
 
         root.description = args.description if args.description else 'Command Line Correlation'
         root.instructions = args.instructions
@@ -725,40 +722,29 @@ def correlate(args):
     # allow the user to control what analysis modules run
     if args.disable_all:
         logging.warning("disabling all analysis modules...")
-        for section in get_config().sections():
-            if not section.startswith('analysis_module_'):
-                continue
-
-            get_config()[section]['enabled'] = 'no'
+        for analysis_module_config in get_config().analysis_modules:
+            analysis_module_config.enabled = False
 
     if args.disabled_modules:
-        for section in get_config().sections():
-            if not section.startswith('analysis_module_'):
-                continue
-
-            for name_pattern in args.disabled_modules:
-                if name_pattern in section[len('analysis_module_'):]:
-                    logging.warning("disabling {}".format(section))
-                    get_config()[section]['enabled'] = 'no'
+        for module_name in args.disabled_modules:
+            analysis_module_config = get_analysis_module_config(module_name)
+            logging.warning("disabling {}".format(module_name))
+            analysis_module_config.enabled = False
 
     # enable by group
     if args.enable_module_group:
         for module_group in args.enable_module_group:
-            group_section = 'module_group_{}'.format(module_group)
-            if group_section not in get_config():
-                logging.error("module group {} does not exist".format(module_group))
-                sys.exit(1)
-
-            for module_name in get_config()[group_section].keys():
+            module_group_config = get_config().get_module_group_config(module_group)
+            for module_name in module_group_config.modules:
+                analysis_module_config = get_analysis_module_config(module_name)
                 logging.info("enabling {} by group {}".format(module_name, module_group))
-                engine.configuration_manager.enable_module(module_name, ANALYSIS_MODE_CLI)
+                analysis_module_config.enabled = True
 
     if args.enabled_modules:
-        for name_pattern in args.enabled_modules:
-            for section in get_config().sections():
-                if fnmatch.fnmatch(section[len('analysis_module_'):], name_pattern):
-                    logging.info("enabling {}".format(section))
-                    engine.configuration_manager.enable_module(section, ANALYSIS_MODE_CLI)
+        for module_name in args.enabled_modules:
+            logging.info("enabling {}".format(module_name))
+            get_analysis_module_config(module_name).enabled = True
+            engine.configuration_manager.enable_module(module_name, ANALYSIS_MODE_CLI)
 
     try:
         engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
@@ -1022,14 +1008,14 @@ def start_gui(args):
     # were finished analyzing.
     #get_db() = get_db().session
 
-    logging.info("ssl_cert = %s exists %s", get_config().get("gui", "ssl_cert"), os.path.exists(get_config().get("gui", "ssl_cert")))
-    logging.info("ssl_key = %s exists %s", get_config().get("gui", "ssl_key"), os.path.exists(get_config().get("gui", "ssl_key")))
+    logging.info("ssl_cert = %s exists %s", get_config().gui.ssl_cert, os.path.exists(get_config().gui.ssl_cert))
+    logging.info("ssl_key = %s exists %s", get_config().gui.ssl_key, os.path.exists(get_config().gui.ssl_key))
 
-    listen_address = args.address or get_config_value(CONFIG_GUI, CONFIG_GUI_LISTEN_ADDRESS)
-    listen_port = args.port or get_config_value_as_int(CONFIG_GUI, CONFIG_GUI_LISTEN_PORT)
-    #run_simple(get_config().get('gui', 'listen_address'), get_config().getint('gui', 'listen_port'), app,
+    listen_address = args.address or get_config().gui.listen_address
+    listen_port = args.port or get_config().gui.listen_port
+    #run_simple(get_config().gui.listen_address, get_config().gui.listen_port, app,
     run_simple(listen_address, listen_port, app,
-               ssl_context=(get_config().get('gui', 'ssl_cert'), get_config().get('gui', 'ssl_key')),
+               ssl_context=(get_config().gui.ssl_cert, get_config().gui.ssl_key),
                #ssl_context="adhoc",
                use_reloader=True)
 
@@ -1065,8 +1051,8 @@ def start_api(args):
             print(rule)
         sys.exit(0)
 
-    run_simple(get_config().get('api', 'listen_address'), get_config().getint('api', 'listen_port'), app,
-               ssl_context=(get_config().get('api', 'ssl_cert'), get_config().get('api', 'ssl_key')),
+    run_simple(get_config().api.listen_address, get_config().api.listen_port, app,
+               ssl_context=(get_config().api.ssl_cert, get_config().api.ssl_key),
                use_reloader=False)
 
 # start-gui
@@ -1320,7 +1306,8 @@ def test_proxy(args):
     try:
         import requests
         from saq import proxy
-        requests.get(args.url, proxies=proxy.proxies(), verify=get_config()['proxy']['verify'] if 'verify' in get_config()['proxy'] else False)
+        default_proxy = get_config().get_proxy_config()
+        requests.get(args.url, proxies=proxy.proxies(), verify=default_proxy.verify if default_proxy.verify else False)
         sys.exit(0)
     except Exception:
         traceback.print_exc()
@@ -1335,27 +1322,19 @@ test_proxy_parser.set_defaults(func=test_proxy)
 def test_database_connections(args):
     from saq.database import get_db_connection
 
-    for key in get_config().keys():
-        if key.startswith('database_'):
-            if 'hostname' not in get_config()[key] or not get_config()[key]['hostname'] \
-            or 'database' not in get_config()[key] or not get_config()[key]['database'] \
-            or 'username' not in get_config()[key] or not get_config()[key]['username'] \
-            or 'password' not in get_config()[key] or not get_config()[key]['password']:
-                print("skipping {}".format(key))
-                continue
-
-            db_name = key[len('database_'):]
-            hostname = get_config()[key]['hostname']
-            print("trying {} @ hostname {} ...".format(db_name, hostname), end='', flush=True)
-            try:
-                with get_db_connection(db_name) as db:
-                    c = db.cursor()
-                    c.execute("SELECT 1")
-                    row = c.fetchone()
-                    print("OK")
-            except Exception as e:
-                print("FAILED: {}".format(e))
-                sys.exit(1)
+    for database_config in get_config().databases:
+        db_name = database_config.name
+        hostname = database_config.hostname
+        print("trying {} @ hostname {} ...".format(db_name, hostname), end='', flush=True)
+        try:
+            with get_db_connection(db_name) as db:
+                c = db.cursor()
+                c.execute("SELECT 1")
+                c.fetchone()
+                print("OK")
+        except Exception as e:
+            print("FAILED: {}".format(e))
+            sys.exit(1)
 
     sys.exit(0)
 
@@ -1547,7 +1526,7 @@ def delete_alerts(args):
             logging.error("unable to delete alert {0}: {1}".format(uuid, str(e)))
 
     for uuid in args.uuids:
-        storage_dir = os.path.join(saq.SAQ_HOME, get_config()['global']['data_dir'], get_config()['global']['node'], uuid[0:3], uuid)
+        storage_dir = os.path.join(saq.SAQ_HOME, get_data_dir(), get_config().global_settings.node, uuid[0:3], uuid)
         if not os.path.exists(storage_dir):
             logging.warning("storage directory {0} does not exist".format(storage_dir))
             continue
@@ -1755,10 +1734,10 @@ def distribute_alerts(args):
     from saq.util.maintenance import distribute_old_alerts
     target = args.target
     if not target:
-        target = get_config()["global"]["distribution_target"]
+        target = get_config().global_settings.distribution_target
     days = args.days
     if not days:
-        days = get_config()["global"].getint("distribute_days_old", 90)
+        days = get_config().global_settings.distribute_days_old
 
     distribute_old_alerts(days, args.dry_run, target, args.max)
 
@@ -1805,7 +1784,7 @@ display_alert_parser.set_defaults(func=display_alert)
 
 def print_file_contents(uuid, submission):
     for file in submission.files:
-        file_path = os.path.join(get_base_dir(), get_config()['global']['data_dir'], get_config()['global']['node'], uuid[0:3],
+        file_path = os.path.join(get_base_dir(), get_data_dir(), get_config().global_settings.node, uuid[0:3],
                                  uuid, file)
         if not os.path.exists(file_path):
             logging.warning("storage directory {0} does not exist".format(file_path))
@@ -1979,21 +1958,21 @@ clear_remediation_request_parser.set_defaults(func=clear_remediation_request)
 def update_organization(args):
 
     # load the organization information
-    config = get_config()['analysis_module_user_tagger']
+    config = get_analysis_module_config(ANALYSIS_MODULE_USER_TAGGER)
 
-    dest_file = os.path.join(get_base_dir(), config['json_path'])
-    temp_file = os.path.join(get_base_dir(), '{0}.tmp'.format(config['json_path']))
+    dest_file = os.path.join(get_base_dir(), config.json_path)
+    temp_file = os.path.join(get_base_dir(), '{0}.tmp'.format(config.json_path))
 
     # key = userID (lowercase), value = set(tags...)
     mapping = {}
 
     # horrible copy-pasta (sorry)
     # load ldap settings from configuration file
-    ldap_server = get_config().get('ldap', 'ldap_server')
-    ldap_port = get_config().getint('ldap', 'ldap_port') or 389
-    ldap_bind_user = get_config().get('ldap', 'ldap_bind_user')
-    ldap_bind_password = get_config().get('ldap', 'ldap_bind_password')
-    ldap_base_dn = get_config().get('ldap', 'ldap_base_dn')
+    ldap_server = get_config().ldap.ldap_server
+    ldap_port = get_config().ldap.ldap_port or 389
+    ldap_bind_user = get_config().ldap.ldap_bind_user
+    ldap_bind_password = get_config().ldap.ldap_bind_password
+    ldap_base_dn = get_config().ldap.ldap_base_dn
 
     def ldap_query(query):
 
@@ -2209,26 +2188,26 @@ def _export_yara_rules(export_dir: str, for_detect_observables: dict) -> None:
     from datetime import date
     from saq.environment import get_analyst_data_dir
     import yara
-    yara.set_config(max_strings_per_rule=int(get_config()['yara_export']['max_strings_per_rule']))
+    yara.set_config(max_strings_per_rule=int(get_config().yara_export.max_strings_per_rule))
 
     #
     # Setup Constants and Load Config
     #
 
     # Load the mapping from observable type to the string modifiers to use
-    string_modifiers = collections.defaultdict(lambda: get_config()['yara_export_string_modifiers']['default'])
-    for observable_type in get_config()['yara_export_string_modifiers']:
+    string_modifiers = collections.defaultdict(lambda: get_config().yara_export_string_modifiers.default)
+    for observable_type in get_config().yara_export_string_modifiers:
         if observable_type == 'default':
             continue
 
-        string_modifiers[observable_type] = get_config()['yara_export_string_modifiers'][observable_type]
+        string_modifiers[observable_type] = get_config().yara_export_string_modifiers[observable_type]
         logging.debug(f"using string modifiers {string_modifiers[observable_type]} for {observable_type}")
 
     # What is the minimum length an observable value can be to be put into a yara rule?
-    export_minimum_length = get_config()['yara_export'].getint('export_minimum_length')
+    export_minimum_length = get_config().yara_export.export_minimum_length
 
     # What observable types should be exported to yara?
-    observable_types = [_.strip() for _ in get_config()['yara_export']['export_list'].split(',')]
+    observable_types = [_.strip() for _ in get_config().yara_export.export_list.split(',')]
 
     #
     # Define helper functions
@@ -2269,9 +2248,9 @@ def _export_yara_rules(export_dir: str, for_detect_observables: dict) -> None:
         logging.info(f"exporting observable type {observable_type}")
 
         # Check if there's a template for current observable type
-        template_path = os.path.join(get_analyst_data_dir(), get_config()['yara_export']['export_template_dir'], f'{observable_type}.template')
+        template_path = os.path.join(get_analyst_data_dir(), get_config().yara_export.export_template_dir, f'{observable_type}.template')
         if not os.path.exists(template_path):
-            template_path = os.path.join(get_analyst_data_dir(), get_config()['yara_export']['export_template_dir'], 'default.template')
+            template_path = os.path.join(get_analyst_data_dir(), get_config().yara_export.export_template_dir, 'default.template')
         logging.debug(f"using template {template_path} for {observable_type}")
 
         # Load and setup the template we're going to be using
@@ -2370,16 +2349,16 @@ def _export_splunk_observables(config: str, collection: str, for_detect_observab
             dry_run: A bool specifying whether the collection should actually be updated; if False, the items to be deleted/uploaded
                         will be logged to the console instead of actually ran.
     """
-    max_export = get_config().getint(config, 'max_export')  # the maximum number of observables to export in each request
+    max_export = get_config().splunk_export.max_export  # the maximum number of observables to export in each request
     from saq.splunk import SplunkClient
     splunk = SplunkClient(
-        get_config()[config]['api'],
-        user_context = get_config()[config]['user_context'],
-        app = get_config()[config]['app'],
+        get_config().splunk_export.api,
+        user_context = get_config().splunk_export.user_context,
+        app = get_config().splunk_export.app,
     )
 
     # What observable types should be exported to Splunk?
-    observable_types = [_.strip() for _ in get_config()[config]['export_list'].split(',')]
+    observable_types = get_config().splunk_export.export_list
 
     # Gather export data
     export_data = []  # List of dicts for each observable to be exported
@@ -2587,13 +2566,11 @@ delete_companies_parser.set_defaults(func=delete_company)
 #
 
 def test_proxies(args):
-    proxy_configs = g_obj(G_OTHER_PROXIES).value.copy()
-    proxy_configs['GLOBAL'] = get_config()['proxy']
-
-    for proxy_name, proxy_config in proxy_configs.items():
-        print("testing proxy {} ({})".format(proxy_name, proxy_config))
+    from saq.proxy import proxies
+    for proxy_config in get_config().proxies:
+        print("testing proxy {} ({})".format(proxy_config.name, proxy_config))
         session = requests.session()
-        session.proxies = proxy_config
+        session.proxies = proxies(proxy_config.name)
         response = session.request('GET', args.url,
                                    timeout=20,
                                    allow_redirects=True,
@@ -2611,42 +2588,19 @@ test_proxies_parser.set_defaults(func=test_proxies)
 # XXX replace this with calls to the engine code
 def verify_modules(args):
     """Executes verify_environment() on all modules that are enabled."""
-    # we run the same code the engines run to load the modules
-    # COPY-PASTA!!
-    import importlib
+    from saq.modules.adapter import load_module_from_config
 
-    analysis_module_sections = [section for section in get_config().sections() if section.startswith('analysis_module_')]
-    for section in sorted(analysis_module_sections):
-
+    for analysis_module_config in get_config().analysis_modules:
         # is this module disabled globally?
         # modules that are disable globally are not used anywhere
-        if not get_config().getboolean(section, 'enabled'):
-            logging.debug("analysis module {} disabled (globally)".format(section))
+        if not analysis_module_config.enabled:
+            logging.debug("analysis module {} disabled (globally)".format(analysis_module_config.name))
             continue
 
-        logging.debug("verifying analysis module from {}".format(section))
-        module_name = get_config().get(section, 'module')
-        try:
-            _module = importlib.import_module(module_name)
-        except Exception:
-            logging.error("unable to import module {}".format(module_name, ))
-            traceback.print_exc()
-            continue
-
-        class_name = get_config().get(section, 'class')
-        try:
-            module_class = getattr(_module, class_name)
-        except AttributeError:
-            logging.error("class {} does not exist in module {} in analysis module {}".format(
-                          class_name, module_name, section))
-            traceback.print_exc()
-            continue
-
-        try:
-            analysis_module = module_class(section)
-        except Exception as e:
-            logging.error("unable to load analysis module {}: {}".format(section, e))
-            traceback.print_exc()
+        logging.debug("verifying analysis module from {}".format(analysis_module_config.name))
+        analysis_module = load_module_from_config(analysis_module_config.name)
+        if analysis_module is None:
+            logging.error("analysis module {} not found".format(analysis_module_config.name))
             continue
 
         # make sure the module has everything it needs
@@ -2657,7 +2611,7 @@ def verify_modules(args):
             traceback.print_exc()
             continue
 
-        logging.info("analysis module {} verification OK".format(section))
+        logging.info("analysis module {} verification OK".format(analysis_module_config.name))
     
 verify_modules_parsers = get_cli_subparsers().add_parser('verify-modules',
     help="Executes verify_environment() on all modules that are enabled.")
@@ -2996,18 +2950,20 @@ def config(args):
         return False
 
     result = {}
-    for section in list(get_config().keys()):
-        if section == 'DEFAULT': # XXX what is this?
-            continue
-
+    for section in list(get_config().raw._data.keys()):
         if not matches_param(section):
             continue
 
         result[section] = {}
 
-        for key in list(get_config()[section].keys()):
-            if matches_param(section, key):
-                result[section][key] = get_config()[section][key]
+        value = get_config().raw._data[section]
+
+        if isinstance(value, dict):
+            for key in list(get_config().raw._data[section].keys()):
+                if matches_param(section, key):
+                    result[section][key] = get_config().raw._data[section][key]
+        else:
+            result[section] = value
 
     # are we only printing the value out?
     if args.value:
@@ -3066,7 +3022,7 @@ display_workload_parser.set_defaults(func=display_workload)
 
 def build_suricata_db(args):
     from saq.modules.snort import build_signature_db
-    signature_path = get_config()['analysis_module_snort_signature_analysis_v1']['signature_path']
+    signature_path = get_analysis_module_config()[ANALYSIS_MODULE_SNORT_SIGNATURE_ANALYSIS_V1].signature_path
     if args.signature_path:
         signature_path = args.signature_path
 
@@ -3110,7 +3066,7 @@ def close_event(args):
         try:
             logging.info(f"closing event {event_id}")
             event = get_db().query(Event).filter(Event.id == event_id).one()
-            config_closed_status = get_config().get('events', 'closed_status', fallback='CLOSED')
+            config_closed_status = get_config().events.closed_status
             closed_status = get_db().query(EventStatus).filter(EventStatus.value == config_closed_status).one()
             event.status = closed_status
             print("event closed")
@@ -3141,9 +3097,9 @@ close_event_parser.add_argument("--dry-run", action="store_true", default=False,
 close_event_parser.set_defaults(func=close_event)
 
 def debug(args):
-    from saq.configuration.config import get_config_v2
+    from saq.configuration.config import get_config
     # use this when you need it
-    logging.info("%s", get_config_v2().global_settings.memory_limit_warning)
+    logging.info("%s", get_config().global_settings.memory_limit_warning)
     return 0
 
 debug_parser = get_cli_subparsers().add_parser('debug')

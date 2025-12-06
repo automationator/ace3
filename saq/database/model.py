@@ -1,8 +1,5 @@
 import base64
-import json
 import logging
-import os
-import re
 from typing import Optional
 import uuid
 import warnings
@@ -25,7 +22,7 @@ from saq.database.pool import get_db, get_db_connection
 from saq.database.retry import execute_with_retry, retry
 from saq.database.util.sync import sync_observable
 from saq.disposition import get_dispositions
-from saq.environment import g_int, get_base_dir
+from saq.environment import g_int
 from saq.error import report_exception
 from saq.performance import track_execution_time
 from saq.util import find_all_url_domains, validate_uuid
@@ -491,7 +488,7 @@ class Alert(Base):
         ##with get_db_connection() as db:
             #c = db.cursor()
             #c.execute("""INSERT INTO delayed_analysis ( alert_id, observable_id, analysis_module ) VALUES ( %s, %s, %s )""",
-                     #(self.id, observable.id, analysis_module.config_section_name))
+                     #(self.id, observable.id, analysis_module.name))
             #db.commit()
 
     #def track_delayed_analysis_stop(self, observable, analysis_module):
@@ -499,7 +496,7 @@ class Alert(Base):
         #with get_db_connection() as db:
             #c = db.cursor()
             #c.execute("""DELETE FROM delayed_analysis where alert_id = %s AND observable_id = %s AND analysis_module = %s""",
-                     #(self.id, observable.id, analysis_module.config_section_name))
+                     #(self.id, observable.id, analysis_module.name))
             #db.commit()
 
     def _handle_tag_added(self, source, event_type, *args, **kwargs):
@@ -1308,7 +1305,7 @@ class Event(Base):
 
     @property
     def showable_tags(self) -> dict[str, list]:
-        special_tag_names = [tag for tag in get_config()['tags'] if get_config()['tags'][tag] in ['special', 'hidden']]
+        special_tag_names = [tag for tag in get_config().tags if get_config().tags[tag] in ['special', 'hidden']]
 
         results = {}
         for alert in self.alert_objects:
@@ -1322,7 +1319,7 @@ class Event(Base):
     @property
     def tags(self) -> list:
         """Returns a list of Tag objects that are currently mapped to this event"""
-        ignore_tags = [tag for tag in get_config()['tags'].keys() if get_config()['tags'][tag] in ['special', 'hidden']]
+        ignore_tags = [tag for tag in get_config().tags.keys() if get_config().tags[tag] in ['special', 'hidden']]
         tags = get_db().query(Tag). \
             join(EventTagMapping, Tag.id == EventTagMapping.tag_id). \
             join(Event, Event.id == EventTagMapping.event_id). \
@@ -1847,15 +1844,15 @@ class Tag(_Tag, Base):
     @property
     def display(self):
         tag_name = self.name.split(':')[0]
-        if tag_name in get_config()['tags'] and get_config()['tags'][tag_name] == "special":
+        if tag_name in get_config().tags and get_config().tags[tag_name] == "special":
             return False
         return True
 
     @property
     def style(self):
         tag_name = self.name.split(':')[0]
-        if tag_name in get_config()['tags']:
-            return get_config()['tag_css_class'][get_config()['tags'][tag_name]]
+        if tag_name in get_config().tags:
+            return get_config().tag_css_class[get_config().tags[tag_name]]
         else:
             return 'label-default'
 

@@ -7,19 +7,21 @@ import re
 import shutil
 import socket
 from subprocess import PIPE, Popen
-from typing import override
+from typing import Type, override
 
 import distorm3
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.analysis.presenter.analysis_presenter import AnalysisPresenter, register_analysis_presenter
-from saq.configuration.config import get_config_value_as_str
-from saq.constants import AnalysisExecutionResult, CONFIG_YARA_SCANNER, CONFIG_YARA_SCANNER_SCAN_FAILURE_DIR, CONFIG_YARA_SCANNER_SIGNATURE_DIR, CONFIG_YARA_SCANNER_SOCKET_DIR, DIRECTIVE_NO_SCAN, DIRECTIVE_SANDBOX, F_FILE, F_INDICATOR, F_YARA_RULE, F_YARA_STRING, create_yara_string
+from saq.configuration.config import get_service_config
+from saq.constants import SERVICE_YARA_SCANNER, AnalysisExecutionResult, DIRECTIVE_NO_SCAN, DIRECTIVE_SANDBOX, F_FILE, F_INDICATOR, F_YARA_RULE, F_YARA_STRING, create_yara_string
 from saq.database import Observable as db_Observable
 from saq.database.pool import get_db
 from saq.environment import get_base_dir, get_data_dir
 from saq.error.reporting import report_exception
 from saq.json_encoding import _JSONEncoder
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.disassembly import disassemble
 from saq.observables.file import FileObservable
 from saq.util.filesystem import abs_path
@@ -67,20 +69,26 @@ class YaraScanResults_v3_4(Analysis):
 # if this is unavailable then local yara scanning will be used until the server is available again
 #
 
-class YaraScanner_v3_4(AnalysisModule):
+class YaraScannerConfig(AnalysisModuleConfig):
+    context_bytes: int = Field(..., description="Number of context bytes to capture around matches.")
+    local_scanner_lifetime: int = Field(..., description="The amount of time (in minutes) a local scanner is used before it expires.")
+    save_scan_failures: bool = Field(default=False, description="If this is True then files that fail scanning are saved for later analysis.")
+    save_qa_scan_results: bool = Field(default=True, description="Returns True if we should save the results of yara rules in QA mode into self.qa_dir.")
+    qa_dir: str = Field(..., description="Location of files and yara scan results for rules set to 'qa mode' (relative to saq.DATA_DIR).")
 
-    def verify_environment(self):
-        self.verify_config_exists('context_bytes')
-        self.verify_config_exists('local_scanner_lifetime')
+class YaraScanner_v3_4(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return YaraScannerConfig
 
     @property
     def context_bytes(self):
-        return self.config.getint('context_bytes')
+        return self.config.context_bytes
 
     @property
     def local_scanner_lifetime(self):
         """The amount of time (in minutes) a local scanner is used before it expires."""
-        return self.config.getint('local_scanner_lifetime')
+        return self.config.local_scanner_lifetime
 
     @property
     def base_dir(self):
@@ -90,27 +98,27 @@ class YaraScanner_v3_4(AnalysisModule):
     @property
     def socket_dir(self):
         """Relative directory of the socket directory of the yara scanner server."""
-        return os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_YARA_SCANNER, CONFIG_YARA_SCANNER_SOCKET_DIR))
+        return os.path.join(get_data_dir(), get_service_config(SERVICE_YARA_SCANNER).socket_dir)
 
     @property
     def signature_dir(self):
         """Relative or absolute path to directory containing sub directories of yara rules."""
-        return abs_path(get_config_value_as_str(CONFIG_YARA_SCANNER, CONFIG_YARA_SCANNER_SIGNATURE_DIR))
+        return abs_path(get_service_config(SERVICE_YARA_SCANNER).signature_dir)
 
     @property
     def save_scan_failures(self):
         """If this is True then files that fail scanning are saved for later analysis."""
-        return self.config.getboolean('save_scan_failures')
+        return self.config.save_scan_failures
 
     @property
     def save_qa_scan_results(self):
         """Returns True if we should save the results of yara rules in QA mode into self.qa_dir."""
-        return self.config.getboolean('save_qa_scan_results')
+        return self.config.save_qa_scan_results
 
     @property
     def qa_dir(self):
         """Relative directory of the directory to store QA mode matches."""
-        return os.path.join(get_data_dir(), self.config['qa_dir'])
+        return os.path.join(get_data_dir(), self.config.qa_dir)
 
     @property
     def generated_analysis_type(self):
@@ -123,11 +131,8 @@ class YaraScanner_v3_4(AnalysisModule):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        #self.blacklist_path = os.path.join(get_base_dir(), get_config()['service_yara']['blacklist_path'])
-        #self.blacklisted_rules = []
-
         # this is where we place files that fail scanning
-        self.scan_failure_dir = os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_YARA_SCANNER, CONFIG_YARA_SCANNER_SCAN_FAILURE_DIR))
+        self.scan_failure_dir = os.path.join(get_data_dir(), get_service_config(SERVICE_YARA_SCANNER).scan_failure_dir)
         if not os.path.exists(self.scan_failure_dir):
             try:
                 os.makedirs(self.scan_failure_dir)

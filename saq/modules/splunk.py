@@ -1,12 +1,13 @@
 # vim: sw=4:ts=4:et:cc=120
 
 from datetime import datetime
-
+from typing import Type, Optional
+from pydantic import Field
 import pytz
 
-from saq.configuration import get_config_value_as_str
-from saq.constants import CONFIG_SPLUNK_TIMEZONE
-from saq.modules.api_analysis import BaseAPIAnalysis, BaseAPIAnalyzer, AnalysisDelay
+from saq.configuration.config import get_splunk_config
+from saq.modules.api_analysis import BaseAPIAnalysis, BaseAPIAnalyzer, AnalysisDelay, BaseAPIAnalyzerConfig
+from saq.modules.config import AnalysisModuleConfig
 from saq.splunk import extract_event_timestamp, SplunkClient
 from saq.util import format_iso8601, parse_event_time
 
@@ -18,6 +19,11 @@ from saq.util import format_iso8601, parse_event_time
 # <O_TYPE> is replaced by the type of the observable
 # <O_TIMESPEC> is replaced by the formatted timerange (done all in one to allow searching by index time)
 #
+
+class SplunkAPIAnalyzerConfig(BaseAPIAnalyzerConfig):
+    use_index_time: bool = Field(default=False, description="Whether to use the index time as the time of the query.")
+    splunk_user_context: Optional[str] = Field(default=None, description="The namespace user to use for the query.")
+    splunk_app_context: Optional[str] = Field(default=None, description="The namespace app to use for the query.")
 
 class SplunkAPIAnalysis(BaseAPIAnalysis):
     @property
@@ -93,17 +99,20 @@ class SplunkAPIAnalyzer(BaseAPIAnalyzer):
               namespace_app: str that contains namespace_app, if necessary
               namespace_user: str that contains namespace_user, if necessary
     """
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return SplunkAPIAnalyzerConfig
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.timezone = get_config_value_as_str(self.api, CONFIG_SPLUNK_TIMEZONE)
-        self.use_index_time = self.config.getboolean('use_index_time')
+        self.timezone = get_splunk_config().timezone
+        self.use_index_time = self.config.use_index_time
 
         self.splunk = SplunkClient(
-            self.api,
-            user_context = self.config.get('splunk_user_context'),
-            app = self.config.get('splunk_app_context'),
+            name = self.config.api_name,
+            user_context = self.config.splunk_user_context,
+            app = self.config.splunk_app_context,
         )
 
     @property

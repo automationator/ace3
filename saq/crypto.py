@@ -17,8 +17,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import hmac
 
-from saq.configuration import get_config_value_as_int
-from saq.constants import CONFIG_ENCRYPTION, CONFIG_ENCRYPTION_ITERATIONS, CONFIG_ENCRYPTION_SALT_SIZE, G_ENCRYPTION_INITIALIZED, G_ENCRYPTION_KEY, G_INSTANCE_TYPE, INSTANCE_TYPE_DEV
+from saq.configuration.config import get_config
+from saq.constants import G_ENCRYPTION_INITIALIZED, G_ENCRYPTION_KEY, G_INSTANCE_TYPE, INSTANCE_TYPE_DEV
 from saq.environment import g, g_boolean, set_g
 
 CHUNK_SIZE = 64 * 1024
@@ -114,8 +114,8 @@ def set_encryption_password(password, old_password=None, key=None):
             set_g(G_ENCRYPTION_KEY, key)
 
     # now we compute the key to use to encrypt the encryption key using the user-supplied password
-    salt = os.urandom(get_config_value_as_int(CONFIG_ENCRYPTION, CONFIG_ENCRYPTION_SALT_SIZE, default=32))
-    iterations =  get_config_value_as_int(CONFIG_ENCRYPTION, CONFIG_ENCRYPTION_ITERATIONS, default=600000)
+    salt = os.urandom(get_config().encryption.salt_size)
+    iterations = get_config().encryption.iterations
 
     if iterations < 600000:
         logging.warning(f"encryption.iterations is less than 600000, this is not recommended for production use. iterations={iterations}")

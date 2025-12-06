@@ -73,8 +73,8 @@ def fully_qualified(hostname: str) -> str:
     if "." in hostname:
         return hostname
 
-    local_domain = get_config()["global"].get("local_domain", "")
-    if not local_domain:
+    local_domains = get_config().global_settings.local_domains
+    if not local_domains:
         return hostname
 
-    return f"{hostname}.{local_domain}"
+    return f"{hostname}.{local_domains[0]}"

@@ -1,6 +1,6 @@
 import pytest
 
-from saq.configuration.config import get_config
+from saq.configuration.config import get_config, resolve_configuration
 from saq.configuration.database import delete_database_config_value, get_database_config_value, set_database_config_value
 from saq.configuration.encryption import decrypt_password, delete_password, encrypt_password
 from saq.crypto import set_encryption_password
@@ -62,10 +62,3 @@ def test_encrypt_decrypt_delete_password():
     assert decrypt_password('password') == 'Hello, World!'
     assert delete_password('password') == 1
     assert decrypt_password('password') is None
-
-@pytest.mark.integration
-def test_encrypted_password_config():
-    encrypt_password('proxy.password', 'unittest')
-    get_config()['proxy']['password'] = 'encrypted:proxy.password'
-    assert get_config()['proxy']['password'] == 'unittest'
-    assert get_config()['proxy'].get('password') == 'unittest'

@@ -2,10 +2,13 @@ import logging
 import os
 import shutil
 from subprocess import PIPE, Popen, TimeoutExpired
+from typing import Type
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import DIRECTIVE_EXTRACT_URLS, DIRECTIVE_SANDBOX, F_FILE, R_EXTRACTED_FROM, AnalysisExecutionResult
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.is_file_type import is_empty_macro, is_macro_ext
 from saq.observables.file import FileObservable
 
@@ -36,23 +39,30 @@ class OfficeParserAnalysis3(Analysis):
 
         return "OfficeParser3 Analysis: extracted {} files".format(len(self.extracted_files))
 
+class OfficeParserAnalyzer3Config(AnalysisModuleConfig):
+    officeparser_path: str = Field(..., description="Path to officeparser3 executable.")
+    timeout: int = Field(..., description="Timeout in seconds for officeparser execution.")
+    merge_macros: bool = Field(default=False, description="Whether to merge all extracted macros into a single file.")
+
 class OfficeParserAnalyzer3(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return OfficeParserAnalyzer3Config
+
     def verify_environment(self):
-        self.verify_config_exists('officeparser_path')
-        self.verify_path_exists(self.config['officeparser_path'])
-        self.verify_config_exists('timeout')
+        self.verify_path_exists(self.config.officeparser_path)
 
     @property
     def officeparser_path(self):
-        return self.config['officeparser_path']
+        return self.config.officeparser_path
 
     @property
     def timeout(self):
-        return self.config.getint('timeout')
+        return self.config.timeout
 
     @property
     def merge_macros(self):
-        return self.config.getboolean('merge_macros')
+        return self.config.merge_macros
 
     @property
     def generated_analysis_type(self):

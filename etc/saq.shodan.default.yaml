@@ -13,9 +13,9 @@ service_network_semaphore:
 
 # [analysis_module_shodan]
 analysis_module_shodan:
-  id: shodan
-  module: saq.modules.shodan
-  class: ShodanAnalyzer
+  name: shodan
+  python_module: saq.modules.shodan
+  python_class: ShodanAnalyzer
   enabled: true
   semaphore: shodan
 

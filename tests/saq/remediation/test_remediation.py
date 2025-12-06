@@ -1,6 +1,5 @@
 import uuid
 import pytest
-from saq.analysis.root import RootAnalysis
 from saq.constants import G_AUTOMATION_USER_ID
 from saq.database import Remediation, Alert, Observable
 from saq.database.pool import get_db

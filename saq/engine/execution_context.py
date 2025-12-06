@@ -12,7 +12,7 @@ class EngineExecutionContext:
         self.work_item: Union[RootAnalysis, DelayedAnalysisRequest] = work_item
 
         # we keep track of the total amount of time (in seconds) that each module takes
-        # key = module.config_section_name, value = total_seconds
+        # key = module.name, value = total_seconds
         self.total_analysis_time: dict = {}
         
         # this is set to True to cancel the analysis going on in the process() function

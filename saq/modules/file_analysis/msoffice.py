@@ -1,7 +1,9 @@
 from datetime import datetime
 import logging
 import os
+from typing import Type
 from lxml import etree
+from pydantic import Field
 from urllib.parse import urlparse
 
 from saq.analysis.analysis import Analysis
@@ -9,6 +11,7 @@ from saq.constants import DIRECTIVE_FORCE_DOWNLOAD, F_FILE, F_URL, AnalysisExecu
 from saq.crypto import encrypt
 from saq.environment import get_data_dir
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.is_file_type import is_office_file
 from saq.observables.file import FileObservable
 from saq.util.strings import format_item_list_for_summary
@@ -128,7 +131,13 @@ class OfficeXMLRelationshipExternalURLAnalyzer(AnalysisModule):
 class OfficeFileArchiveAction(Analysis):
     pass
 
+class OfficeFileArchiverConfig(AnalysisModuleConfig):
+    office_archive_dir: str = Field(..., description="The directory (relative to SAQ_DATA) to store the archived office documents.")
+
 class OfficeFileArchiver(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return OfficeFileArchiverConfig
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -145,10 +154,9 @@ class OfficeFileArchiver(AnalysisModule):
     @property
     def office_archive_dir(self):
         """Relative path to the directory that contains archived office documents."""
-        return os.path.join(get_data_dir(), self.config['office_archive_dir'])
+        return os.path.join(get_data_dir(), self.config.office_archive_dir)
 
     def verify_environment(self):
-        self.verify_config_exists('office_archive_dir')
         self.create_required_directory(self.office_archive_dir)
 
     def execute_analysis(self, _file: FileObservable) -> AnalysisExecutionResult:

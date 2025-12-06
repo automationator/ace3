@@ -2,7 +2,8 @@ import os
 import shutil
 import pytest
 
-from saq.constants import F_FILE, AnalysisExecutionResult
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_AUTOIT, F_FILE, AnalysisExecutionResult
 from saq.modules.file_analysis.autoit import AutoItAnalysis, AutoItAnalyzer, KEY_STDOUT, KEY_STDERR, KEY_ERROR, KEY_SCRIPTS, KEY_OUTPUT_DIR
 from saq.observables.file import FileObservable
 from tests.saq.test_util import create_test_context
@@ -119,15 +120,21 @@ class TestAutoItAnalysis:
 class TestAutoItAnalyzer:
     
     def test_generated_analysis_type(self):
-        analyzer = AutoItAnalyzer(context=create_test_context())
+        analyzer = AutoItAnalyzer(
+            context=create_test_context(),
+            config=get_analysis_module_config(ANALYSIS_MODULE_AUTOIT))
         assert analyzer.generated_analysis_type == AutoItAnalysis
     
     def test_valid_observable_types(self):
-        analyzer = AutoItAnalyzer(context=create_test_context())
+        analyzer = AutoItAnalyzer(
+            context=create_test_context(),
+            config=get_analysis_module_config(ANALYSIS_MODULE_AUTOIT))
         assert analyzer.valid_observable_types == F_FILE
     
     def test_execute_analysis_file_not_exists(self, root_analysis, tmpdir):
-        analyzer = AutoItAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = AutoItAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_AUTOIT))
         
         # create a file observable for non-existent file by first creating it, then adding it, then deleting it
         test_file = tmpdir / "temp.exe"
@@ -140,7 +147,9 @@ class TestAutoItAnalyzer:
         assert result == AnalysisExecutionResult.COMPLETED
     
     def test_execute_analysis_not_autoit_file(self, root_analysis, tmpdir):
-        analyzer = AutoItAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = AutoItAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_AUTOIT))
         
         # create a non-autoit file
         test_file = tmpdir / "test.txt"
@@ -159,7 +168,9 @@ class TestAutoItAnalyzer:
         assert not file_observable.has_tag("autoit")
     
     def test_execute_analysis_autoit_file(self, root_analysis, datadir, tmpdir, monkeypatch):
-        analyzer = AutoItAnalyzer(context=create_test_context(root=root_analysis))
+        analyzer = AutoItAnalyzer(
+            context=create_test_context(root=root_analysis),
+            config=get_analysis_module_config(ANALYSIS_MODULE_AUTOIT))
         
         # copy the sample autoit file to a test location within root analysis storage
         file_observable = root_analysis.add_file_observable(str(datadir / "UGtZgHHT.au3"))

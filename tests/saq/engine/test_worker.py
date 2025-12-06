@@ -6,20 +6,21 @@ from saq.constants import F_IPV4, LockManagerType, WorkloadManagerType
 from saq.engine.configuration_manager import ConfigurationManager
 from saq.engine.node_manager.node_manager_interface import NodeManagerInterface
 from saq.engine.worker import Worker
-from saq.modules.interfaces import AnalysisModuleInterface
+from saq.modules.base_module import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.util.time import local_time
 from tests.saq.helpers import create_root_analysis
 
 
-class MockAnalysisModule(AnalysisModuleInterface):
+class MockAnalysisModule(AnalysisModule):
     """Mock analysis module for testing."""
-    
-    def __init__(self, name="test_module"):
-        self.name = name
-    
-    def __str__(self):
-        return self.name
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(AnalysisModuleConfig(
+            name="test_module",
+            python_module="placeholdder",
+            python_class="placeholder",
+            enabled=True
+        ), *args, **kwargs)
 
 @pytest.mark.unit
 class TestWorkerDelayedAnalysisFunctions:

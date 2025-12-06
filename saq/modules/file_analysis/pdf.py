@@ -1,11 +1,13 @@
 import logging
 import os
 from subprocess import PIPE, Popen, TimeoutExpired
-from typing import override
+from typing import Type, override
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import AnalysisExecutionResult, DIRECTIVE_EXTRACT_URLS, F_FILE, R_EXTRACTED_FROM
 from saq.environment import get_base_dir
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.is_file_type import is_pdf_file
 from saq.observables.file import FileObservable
 
@@ -16,16 +18,22 @@ class PDFAnalysis(Analysis):
     def display_name(self) -> str:
         return "PDF Analysis"
 
+class PDFAnalyzerConfig(AnalysisModuleConfig):
+    pdfparser_path: str = Field(..., description="Path to pdfparser executable.")
+
 class PDFAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return PDFAnalyzerConfig
+
     """What is the raw PDF data after removing stream filters?"""
 
     def verify_environment(self):
-        self.verify_config_exists('pdfparser_path')
-        self.verify_path_exists(self.config['pdfparser_path'])
+        self.verify_path_exists(self.config.pdfparser_path)
 
     @property
     def pdfparser_path(self):
-        path = self.config['pdfparser_path']
+        path = self.config.pdfparser_path
         if os.path.isabs(path):
             return path
         return os.path.join(get_base_dir(), path)
@@ -174,19 +182,25 @@ class PDFTextAnalysis(Analysis):
         
         return self.display_name
     
+class PDFTextAnalyzerConfig(AnalysisModuleConfig):
+    pdftotext_path: str = Field(..., description="Path to pdftotext executable.")
+    timeout: int = Field(..., description="Timeout in seconds for pdftotext execution.")
+
 class PDFTextAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return PDFTextAnalyzerConfig
 
     @property
     def pdftotext_path(self):
-        return self.config['pdftotext_path']
+        return self.config.pdftotext_path
 
     @property
     def timeout(self):
-        return self.config.getint('timeout')
+        return self.config.timeout
 
     def verify_environment(self):
-        self.verify_config_exists('pdftotext_path')
-        self.verify_path_exists(self.config['pdftotext_path'])
+        self.verify_path_exists(self.config.pdftotext_path)
 
     @property
     def generated_analysis_type(self):

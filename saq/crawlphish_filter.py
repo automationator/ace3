@@ -9,6 +9,8 @@ from urllib.parse import urlparse
 
 from saq.brocess import query_brocess_by_fqdn
 from saq.configuration import get_config
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_CRAWLPHISH
 from saq.environment import get_base_dir, get_data_dir
 from saq.error import report_exception
 from saq.util import is_ipv4, is_subdomain, iterate_fqdn_parts, add_netmask
@@ -95,7 +97,7 @@ class CrawlphishURLFilter:
 
     @property
     def whitelist_path(self):
-        path = get_config()[analysis_module]['whitelist_path']
+        path = get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH).whitelist_path
         if os.path.isabs(path):
             return path
 
@@ -103,7 +105,7 @@ class CrawlphishURLFilter:
 
     @property
     def blacklist_path(self):
-        path = get_config()[analysis_module]['blacklist_path']
+        path = get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH).blacklist_path
         if os.path.isabs(path):
             return path
 
@@ -111,7 +113,7 @@ class CrawlphishURLFilter:
 
     @property
     def regex_path(self):
-        path = get_config()[analysis_module]['regex_path']
+        path = get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH).regex_path
         if os.path.isabs(path):
             return path
 
@@ -272,14 +274,14 @@ class CrawlphishURLFilter:
     def is_in_intel_db(self, value):
         """Returns True if the given value is in your intel database, False otherwise."""
         result = False
-        if 'sip' in get_config() and get_config()['sip'].getboolean('enabled'):
+        if get_config().sip.enabled:
             result |= self.is_in_sip(value)
 
         return result
 
     def is_in_sip(self, value):
         try:
-            return self.is_in_cache_db(value, os.path.join(get_data_dir(), get_config()['sip']['cache_db_path']))
+            return self.is_in_cache_db(value, os.path.join(get_data_dir(), get_config().sip.cache_db_path))
         except Exception as e:
             logging.error(f"is_in_sip failed: {e}")
 
@@ -295,7 +297,7 @@ class CrawlphishURLFilter:
             if count is None:
                 continue
 
-            if count < get_config()[analysis_module].getint('uncommon_network_threshold'):
+            if count < get_analysis_module_config(ANALYSIS_MODULE_CRAWLPHISH).uncommon_network_threshold:
                 logging.info("{} is an uncommon network with count {}".format(partial_fqdn, count))
                 return True
             else:

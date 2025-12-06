@@ -3,8 +3,8 @@ import configparser
 import importlib
 import logging
 from saq.collectors.base_collector import Collector
-from saq.configuration.config import get_config
-from saq.constants import CONFIG_REMOTE_EMAIL_COLLECTOR
+from saq.configuration.config import get_config, get_service_config
+from saq.constants import SERVICE_REMOTE_EMAIL_COLLECTOR
 from saq.error.reporting import report_exception
 
 
@@ -18,7 +18,7 @@ class RemoteEmailCollector(Collector):
         # This super call should skip over ABC and initialize Collector
         super().__init__(
             *args,
-            service_config=get_config()[CONFIG_REMOTE_EMAIL_COLLECTOR],
+            service_config=get_service_config(SERVICE_REMOTE_EMAIL_COLLECTOR),
             workload_type='email',
             delete_files=True,
             *args, **kwargs)
@@ -44,7 +44,7 @@ class RemoteEmailCollector(Collector):
                 class_name = _config[section]['class']
                 try:
                     module_class = getattr(_module, class_name)
-                except AttributeError as e:
+                except AttributeError:
                     logging.error(f"class {class_name} does not exist in module {module_name} in email collector"
                                   f"account config {section}")
                     report_exception()

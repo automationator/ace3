@@ -13,34 +13,9 @@ from typing import Optional
 
 from saq.configuration.config import (
     get_config,
-    get_config_value_as_str,
-    get_config_value_as_boolean,
-    get_config_value_as_int,
-    get_config_value_as_list,
-    get_config_value,
+    get_engine_config,
 )
 from saq.constants import (
-    ANALYSIS_MODE_ANALYSIS,
-    CONFIG_ENGINE,
-    CONFIG_ENGINE_ALERT_DISPOSITION_CHECK_FREQUENCY,
-    CONFIG_ENGINE_ALERTING_ENABLED,
-    CONFIG_ENGINE_ANALYSIS_POOLS,
-    CONFIG_ENGINE_AUTO_REFRESH_FREQUENCY,
-    CONFIG_ENGINE_COPY_ANALYSIS_ON_ERROR,
-    CONFIG_ENGINE_COPY_TERMINATED_ANALYSIS_CAUSES,
-    CONFIG_ENGINE_DEFAULT_ANALYSIS_MODE,
-    CONFIG_ENGINE_EXCLUDED_ANALYSIS_MODES,
-    CONFIG_ENGINE_LOCAL_ANALYSIS_MODES,
-    CONFIG_ENGINE_NON_DETECTABLE_MODES,
-    CONFIG_ENGINE_POOL_SIZE_LIMT,
-    CONFIG_ENGINE_TARGET_NODES,
-    CONFIG_ENGINE_WORK_DIR,
-    CONFIG_GLOBAL,
-    CONFIG_GLOBAL_MAXIMUM_ANALYSIS_TIME,
-    CONFIG_GLOBAL_MAXIMUM_CUMULATIVE_ANALYSIS_FAIL_TIME,
-    CONFIG_GLOBAL_MAXIMUM_CUMULATIVE_ANALYSIS_WARNING_TIME,
-    CONFIG_GLOBAL_MEMORY_LIMIT_KILL,
-    CONFIG_GLOBAL_MEMORY_LIMIT_WARNING,
     G_MODULE_STATS_DIR,
     G_SAQ_NODE,
     LockManagerType,
@@ -98,13 +73,6 @@ class EngineConfiguration:
             workload_manager_type: Type of workload manager to use
             service_config: Service configuration dict
         """
-        # Validate input parameters
-        self._validate_parameters(
-            local_analysis_modes, analysis_pools, pool_size_limit, copy_analysis_on_error,
-            single_threaded_mode, excluded_analysis_modes, target_nodes, default_analysis_mode,
-            analysis_mode_priority, engine_type
-        )
-        
         # Basic engine settings
         self.single_threaded_mode = single_threaded_mode
         self.engine_type = engine_type
@@ -126,46 +94,27 @@ class EngineConfiguration:
         self.pool_size_limit = self._get_pool_size_limit(pool_size_limit)
         
         # Time-related configuration
-        self.maximum_cumulative_analysis_warning_time = get_config_value_as_int(
-            CONFIG_GLOBAL, CONFIG_GLOBAL_MAXIMUM_CUMULATIVE_ANALYSIS_WARNING_TIME
-        )
-        self.maximum_cumulative_analysis_fail_time = get_config_value_as_int(
-            CONFIG_GLOBAL, CONFIG_GLOBAL_MAXIMUM_CUMULATIVE_ANALYSIS_FAIL_TIME
-        )
-        self.maximum_analysis_time = get_config_value_as_int(
-            CONFIG_GLOBAL, CONFIG_GLOBAL_MAXIMUM_ANALYSIS_TIME
-        )
-        self.alert_disposition_check_frequency = get_config_value_as_int(
-            CONFIG_ENGINE, CONFIG_ENGINE_ALERT_DISPOSITION_CHECK_FREQUENCY, default=5
-        )
-        self.auto_refresh_frequency = get_config_value_as_int(
-            CONFIG_ENGINE, CONFIG_ENGINE_AUTO_REFRESH_FREQUENCY
-        )
+        #self.maximum_cumulative_analysis_warning_time = get_engine_config().maximum_cumulative_analysis_warning_time
+        #self.maximum_cumulative_analysis_fail_time = get_engine_config().maximum_cumulative_analysis_fail_time
+        #self.maximum_analysis_time = get_engine_config().maximum_analysis_time
+        self.alert_disposition_check_frequency = get_engine_config().alert_disposition_check_frequency
+        self.auto_refresh_frequency = get_engine_config().auto_refresh_frequency
         
         # Directory configuration
-        self.work_dir = get_config_value_as_str(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR)
+        self.work_dir = get_engine_config().work_dir
         self.stats_dir = os.path.join(g(G_MODULE_STATS_DIR), "ace")
         self.runtime_dir = os.path.join(get_data_dir(), "var", "engine", "ace")
         
         # Feature flags
         self.copy_analysis_on_error = self._get_copy_analysis_on_error(copy_analysis_on_error)
-        self.copy_terminated_analysis_causes = get_config_value_as_boolean(
-            CONFIG_ENGINE, CONFIG_ENGINE_COPY_TERMINATED_ANALYSIS_CAUSES
-        )
-        self.alerting_enabled = get_config_value_as_boolean(
-            CONFIG_ENGINE, CONFIG_ENGINE_ALERTING_ENABLED, default=True
-        )
+        self.copy_terminated_analysis_causes = get_engine_config().copy_terminated_analysis_causes
+        self.alerting_enabled = get_engine_config().alerting_enabled
         
         # Node configuration
         if target_nodes is not None:
             self.target_nodes = target_nodes
         else:
-            self.target_nodes = get_config_value_as_list(
-                CONFIG_ENGINE,
-                CONFIG_ENGINE_TARGET_NODES,
-                default=[],
-                include_empty=False,
-            )
+            self.target_nodes = get_engine_config().target_nodes
 
         # translate the special value of LOCAL to whatever the local node is
         self.target_nodes = [
@@ -181,52 +130,15 @@ class EngineConfiguration:
         self.observable_exclusions = {}  # key = o_type, value = [] of values
 
         # engine limits
-        self.memory_limit_kill = get_config_value_as_int(CONFIG_GLOBAL, CONFIG_GLOBAL_MEMORY_LIMIT_KILL) * 1024 * 1024
-        self.memory_limit_warning = get_config_value_as_int(CONFIG_GLOBAL, CONFIG_GLOBAL_MEMORY_LIMIT_WARNING) * 1024 * 1024
-    
-    def _validate_parameters(
-        self, local_analysis_modes, analysis_pools, pool_size_limit, copy_analysis_on_error,
-        single_threaded_mode, excluded_analysis_modes, target_nodes, default_analysis_mode,
-        analysis_mode_priority, engine_type
-    ):
-        """Validate input parameters."""
-        assert local_analysis_modes is None or isinstance(local_analysis_modes, list), \
-            "local_analysis_modes must be a list"
-        assert analysis_pools is None or isinstance(analysis_pools, dict), \
-            "analysis_pools must be a dict"
-        assert pool_size_limit is None or (isinstance(pool_size_limit, int) and pool_size_limit > 0), \
-            "pool_size_limit must be an integer greater than 0"
-        assert copy_analysis_on_error is None or isinstance(copy_analysis_on_error, bool), \
-            "copy_analysis_on_error must be a boolean"
-        assert isinstance(single_threaded_mode, bool), \
-            "single_threaded_mode must be a boolean"
-        assert excluded_analysis_modes is None or isinstance(excluded_analysis_modes, list), \
-            "excluded_analysis_modes must be a list"
-        assert target_nodes is None or isinstance(target_nodes, list), \
-            "target_nodes must be a list"
-        assert default_analysis_mode is None or isinstance(default_analysis_mode, str), \
-            "default_analysis_mode must be a string"
-        assert analysis_mode_priority is None or isinstance(analysis_mode_priority, str), \
-            "analysis_mode_priority must be a string"
-        assert engine_type in EngineType, \
-            "engine_type must be a valid EngineType"
+        self.memory_limit_kill = get_config().global_settings.memory_limit_kill * 1024 * 1024
+        self.memory_limit_warning = get_config().global_settings.memory_limit_warning * 1024 * 1024
     
     def _get_default_analysis_mode(self, default_analysis_mode: Optional[str]) -> str:
         """Get the default analysis mode."""
         if default_analysis_mode:
             result = default_analysis_mode
         else:
-            result = get_config_value_as_str(
-                CONFIG_ENGINE,
-                CONFIG_ENGINE_DEFAULT_ANALYSIS_MODE,
-                default=ANALYSIS_MODE_ANALYSIS,
-            )
-        
-        # Validate the default analysis mode exists in config
-        if "analysis_mode_{}".format(result) not in get_config():
-            logging.error(
-                "engine.default_analysis_mode value {} invalid (no such analysis mode defined)".format(result)
-            )
+            result = get_engine_config().default_analysis_mode
         
         return result
     
@@ -235,12 +147,7 @@ class EngineConfiguration:
         if local_analysis_modes is not None:
             result = local_analysis_modes
         else:
-            result = get_config_value_as_list(
-                CONFIG_ENGINE,
-                CONFIG_ENGINE_LOCAL_ANALYSIS_MODES,
-                default=[],
-                include_empty=False,
-            )
+            result = get_engine_config().local_analysis_modes
         
         if result:
             logging.debug(f"analysis modes {','.join(result)} supported by this engine")
@@ -259,12 +166,7 @@ class EngineConfiguration:
         if excluded_analysis_modes is not None:
             result = excluded_analysis_modes
         else:
-            result = get_config_value_as_list(
-                CONFIG_ENGINE,
-                CONFIG_ENGINE_EXCLUDED_ANALYSIS_MODES,
-                default=[],
-                include_empty=False,
-            )
+            result = get_engine_config().excluded_analysis_modes
         
         if result:
             for mode in result:
@@ -274,12 +176,7 @@ class EngineConfiguration:
     
     def _get_non_detectable_modes(self) -> list[str]:
         """Get the list of non-detectable analysis modes."""
-        return get_config_value_as_list(
-            CONFIG_ENGINE,
-            CONFIG_ENGINE_NON_DETECTABLE_MODES,
-            default=[],
-            include_empty=False,
-        )
+        return get_engine_config().non_detectable_modes
     
     def _validate_analysis_mode_configuration(self):
         """Validate analysis mode configuration."""
@@ -309,11 +206,11 @@ class EngineConfiguration:
     def _get_analysis_pools(self, analysis_pools: Optional[dict[str, str|int]]) -> dict[str, int]:
         """Get the analysis pools configuration."""
         if analysis_pools is None:
-            analysis_pools = get_config_value(CONFIG_ENGINE, CONFIG_ENGINE_ANALYSIS_POOLS, {})
+            analysis_pools = get_engine_config().analysis_pools
 
         result = {}
-        for analysis_mode, value in analysis_pools.items():
-            result[analysis_mode] = compute_pool_size(value)
+        for analysis_mode, pool_size in analysis_pools.items():
+            result[analysis_mode] = compute_pool_size(pool_size)
 
         return self._filter_valid_analysis_pools(result)
     
@@ -322,14 +219,14 @@ class EngineConfiguration:
         if pool_size_limit is not None:
             return pool_size_limit
         
-        return get_config_value_as_int(CONFIG_ENGINE, CONFIG_ENGINE_POOL_SIZE_LIMT)
+        return get_engine_config().pool_size_limit
     
     def _get_copy_analysis_on_error(self, copy_analysis_on_error: Optional[bool]) -> bool:
         """Get the copy analysis on error setting."""
         if copy_analysis_on_error is not None:
             return copy_analysis_on_error
         
-        return get_config_value_as_boolean(CONFIG_ENGINE, CONFIG_ENGINE_COPY_ANALYSIS_ON_ERROR)
+        return get_engine_config().copy_analysis_on_error
     
     def add_analysis_pool(self, analysis_mode: str, count: int):
         """Add an analysis pool for the given mode and count."""

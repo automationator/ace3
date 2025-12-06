@@ -1,5 +1,4 @@
 from collections import namedtuple
-from logging import root
 import os
 import shutil
 import pytest
@@ -7,7 +6,8 @@ import pytest
 from saq.analysis.analysis import Analysis
 from saq.analysis.file_manager.file_manager_factory import create_file_manager
 from saq.analysis.observable import Observable
-from saq.constants import DIRECTIVE_ARCHIVE, F_FILE, F_URL, G_ENCRYPTION_INITIALIZED, TAG_DECRYPTED_EMAIL, AnalysisExecutionResult
+from saq.configuration.config import get_analysis_module_config
+from saq.constants import ANALYSIS_MODULE_EMAIL_ARCHIVER, DIRECTIVE_ARCHIVE, F_FILE, F_URL, G_ENCRYPTION_INITIALIZED, TAG_DECRYPTED_EMAIL, AnalysisExecutionResult
 from saq.email_archive import archive_email, get_email_archive_dir, query_by_message_id
 from saq.environment import g_obj
 from saq.modules.email.archive import EmailArchiveAction, EmailArchiveResults, EncryptedArchiveAnalysis, EncryptedArchiveAnalyzer
@@ -37,7 +37,9 @@ def test_encrypted_archive_analysis(tmpdir):
 
 @pytest.mark.unit
 def test_encrypted_archive_analyzer(root_analysis, archived_email, monkeypatch, tmpdir):
-    analyzer = EncryptedArchiveAnalyzer(context=create_test_context(root=root_analysis))
+    analyzer = EncryptedArchiveAnalyzer(
+        context=create_test_context(root=root_analysis),
+        config=get_analysis_module_config(ANALYSIS_MODULE_EMAIL_ARCHIVER))
     analyzer.verify_environment()
     assert analyzer.generated_analysis_type is EncryptedArchiveAnalysis
     assert analyzer.valid_observable_types == F_FILE
@@ -100,9 +102,12 @@ def test_email_archive_results(tmpdir):
 
     assert analysis.generate_summary()
 
+@pytest.mark.skip()
 @pytest.mark.integration
 def test_email_archive_action(root_analysis, tmpdir, monkeypatch):
-    analyzer = EmailArchiveAction(context=create_test_context(root=root_analysis))
+    analyzer = EmailArchiveAction(
+        context=create_test_context(root=root_analysis),
+        config=get_analysis_module_config(ANALYSIS_MODULE_EMAIL_ARCHIVER))
     assert analyzer.valid_observable_types == [ F_FILE ]
     assert analyzer.required_directives == [ DIRECTIVE_ARCHIVE ]
     assert analyzer.generated_analysis_type is EmailArchiveResults

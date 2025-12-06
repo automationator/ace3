@@ -4,6 +4,7 @@ from uuid import uuid4
 import pytest
 from flask import url_for
 
+from saq.configuration import get_config
 from saq.constants import F_TEST, G_AUTOMATION_USER_ID
 from saq.database.model import Alert, Comment
 from saq.database.pool import get_db
@@ -122,14 +123,10 @@ def test_send_alert_to_missing_config(web_client, root_analysis):
 
 
 @pytest.mark.integration
-@patch('app.analysis.views.export.get_config')
 @patch('saq.background_exec.add_background_task')
-def test_send_alert_to_success(mock_add_task, mock_config, web_client, root_analysis):
+def test_send_alert_to_success(mock_add_task, web_client, root_analysis, monkeypatch):
     """Test successful send_alert_to operation."""
-    # Mock configuration
-    mock_config.return_value = {
-        'send_to_test_host': {'remote_path': '/test/path'}
-    }
+    monkeypatch.setitem(get_config().raw._data, "send_to_test_host", {"remote_path": "/test/path"})
     
     root_analysis.save()
     alert = ALERT(root_analysis)

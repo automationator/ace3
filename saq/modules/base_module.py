@@ -17,11 +17,10 @@ from saq.engine.interface import EngineInterface
 from saq.environment import get_base_dir, get_data_dir
 from saq.filesystem.notification import FileWatcherMixin
 from saq.modules.config import AnalysisModuleConfig
-from saq.modules.config_backend import ConfigBackend, ConfigSection
 from saq.modules.context import AnalysisModuleContext
 
 if TYPE_CHECKING:
-    from saq.analysis.presenter import AnalysisPresenter
+    pass
 
 
 class AnalysisModule(FileWatcherMixin):
@@ -29,13 +28,16 @@ class AnalysisModule(FileWatcherMixin):
 
     def __init__(
         self,
+        config: AnalysisModuleConfig,
         *args,
         context: Optional[AnalysisModuleContext] = None,
-        instance: Optional[str] = None,
-        config_backend: Optional[ConfigBackend] = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
+        assert isinstance(config, AnalysisModuleConfig), f"config must be an instance of AnalysisModuleConfig, got {type(config)}"
+
+        # analysis module configuration (required)
+        self.config = config
 
         # the instance defines the specific instance of the given analysis module
         # some analysis modules can have multiple instances
@@ -43,11 +45,7 @@ class AnalysisModule(FileWatcherMixin):
         # for example, a SplunkQueryAnalysisModule might have different instances for the different splunk searches
         # you might want to run
         # if this value is missing then it defaults to None, which is the "default" instance
-        self._instance = instance
-
-        # initialize the configuration manager
-        # config can be a ConfigBackend instance or None (defaults to current behavior)
-        self._config = AnalysisModuleConfig(self, config_backend=config_backend)
+        self._instance = config.instance
 
         # defaults to an empty context
         # this parameter is provided for ease of use in tests
@@ -56,14 +54,6 @@ class AnalysisModule(FileWatcherMixin):
     def verify_environment(self):
         """Called after module is loaded to verify that everything it needs exists.."""
         pass
-
-    def verify_config_exists(self, config_name):
-        """Verifies the given configuration exists for this module.  Use this from verify_environment."""
-        self._config.verify_config_exists(config_name)
-
-    def verify_config_item_has_value(self, config_key):
-        """Verifies the given configuration exists and has a value. Use this from verify_environment."""
-        self._config.verify_config_item_has_value(config_key)
 
     def verify_path_exists(self, path):
         """Verifies the given path exists.  If the path is relative then it is relative to SAQ_HOME."""
@@ -113,77 +103,75 @@ class AnalysisModule(FileWatcherMixin):
     # Configuration Properties
     # ========================================
 
-    @property
-    def module_id(self) -> str:
-        """Returns the id of the module."""
-        return self._config.module_id
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return AnalysisModuleConfig
 
     @property
-    def config(self) -> ConfigSection:
-        """Backward compatibility property for accessing the configuration section."""
-        return self._config.config_section
-
-    @property
-    def config_section_name(self) -> str:
-        """Get the name of the configuration section."""
-        return self._config.config_section_name
+    def name(self) -> str:
+        """Returns the name of the module."""
+        return self.config.name
 
     @property
     def instance(self) -> Optional[str]:
         """Get the instance name from configuration."""
         # Return the instance passed to constructor, or fall back to config
-        return self._instance if self._instance is not None else self._config.instance
+        return self._instance if self._instance is not None else self.config.instance
 
     @property
     def priority(self) -> int:
         """Get the module priority (lower numbers = higher priority)."""
-        return self._config.priority
+        return self.config.priority
 
     @property
     def observation_grouping_time_range(self) -> Optional[timedelta]:
         """Get the time range for grouping observations."""
-        return self._config.observation_grouping_time_range
+        return self.config.observation_grouping_time_range
 
     @property
     def automation_limit(self) -> Optional[int]:
         """Get the automation limit for this module."""
-        return self._config.automation_limit
+        return self.config.automation_limit
 
     @property
     def maximum_analysis_time(self) -> int:
         """Get the maximum analysis time in seconds."""
-        return self._config.maximum_analysis_time
+        return self.config.maximum_analysis_time
 
     @property
     def observable_exclusions(self) -> dict:
         """Get the observable exclusions for this module."""
-        return self._config.observable_exclusions
+        return self.config.observable_exclusions
 
     @property
     def expected_observables(self) -> dict[str, set]:
         """Get the expected observables for this module."""
-        return self._config.expected_observables
+        return self.config.expected_observables
 
     @property
     def is_grouped_by_time(self):
         """Returns True if the observation_grouping_time_range configuration option is being used."""
-        return self._config.is_grouped_by_time
+        # if explicitly set, use that value
+        if self.config.is_grouped_by_time:
+            return True
+        # otherwise, infer from observation_grouping_time_range being set
+        return self.config.observation_grouping_time_range is not None
 
     @property
     def cooldown_period(self):
         """Number of seconds this module stays in cooldown state.  Defaults to 60."""
-        return self._config.cooldown_period
+        return self.config.cooldown_period
 
     @property
     def semaphore_name(self):
         """The semaphore this module uses.  Defaults to None (no semaphore is used.)"""
-        return self._config.semaphore_name
+        return self.config.semaphore_name
 
     @property
     def file_size_limit(self):
         """Returns the maximum size of a F_FILE type observable that this analysis module will accept.
         A value of 0 indicates no limit."""
-        return self._config.file_size_limit
+        return self.config.file_size_limit
 
     @property
     def valid_analysis_target_type(self):
@@ -196,70 +184,62 @@ class AnalysisModule(FileWatcherMixin):
         """Returns a single (or list of) Observable type that are valid for this module.
         If the configuration setting valid_observable_types is present then those values are used.
         Defaults to None (all types are valid.)  Return None to disable the check."""
-        return self._config.valid_observable_types
+        return self.config.valid_observable_types
 
     @property
     def valid_queues(self):
         """Returns a list of strings that are valid queues for this module.
         If the configuration setting valid_queues is present then those values are used.
         Defaults to None (all queues are valid.)  Return None to disable the check."""
-        return self._config.valid_queues
+        return self.config.valid_queues
 
     @property
     def invalid_queues(self):
         """Returns a list of strings that are invalid queues for this module.
         If the configuration setting invalid_queues is present then those values are used.
         Defaults to None (no queues are invalid)  Return None to disable the check."""
-        return self._config.invalid_queues
+        return self.config.invalid_queues
 
     @property
     def invalid_alert_types(self):
         """Returns a list of strings that are invalid alert types for this module.
         If the configuration setting invalid_alert_types is present then those values are used.
         Defaults to None (no queues are invalid)  Return None to disable the check."""
-        return self._config.invalid_alert_types
+        return self.config.invalid_alert_types
 
     @property
     def required_directives(self):
         """Returns a list of required directives for the analysis to occur.
         If the configuration setting required_directives is present, then those values are used.
         Defaults to an empty list."""
-        return self._config.required_directives
+        return self.config.required_directives
 
     @property
     def required_tags(self):
         """Returns a list of required tags for the analysis to occur.
         If the configuration setting required_tags is present, then those values are used.
         Defaults to an empty list."""
-        return self._config.required_tags
+        return self.config.required_tags
 
     @property
     def requires_detection_path(self) -> bool:
         """Returns True if this analysis module requires that the observable be on a detection path."""
-        return self._config.requires_detection_path
+        return self.config.requires_detection_path
 
     @property
     def cache(self):
         """Returns whether caching is enabled for this module."""
-        return self._config.cache
+        return self.config.cache
 
     @property
     def version(self):
         """Returns the module version for cache validation."""
-        return self._config.version
+        return self.config.version
 
     @property
     def cache_expiration(self):
         """Returns the cache expiration time."""
-        return self._config.cache_expiration
-
-    @property
-    def name(self):
-        result = self._config.config_section_name
-        if self.instance is not None:
-            result += f":{self.instance}"
-
-        return result
+        return self.config.cache_expiration
 
     @property
     def shutdown(self):
@@ -412,7 +392,7 @@ class AnalysisModule(FileWatcherMixin):
                 if obj.type not in valid_types:
                     # logging.debug("{} is not a valid type for {}".format(obj.type, self))
                     return False
-            except Exception as e:
+            except Exception:
                 logging.error(
                     "valid_observable_types returned invalid data type {} for {}".format(
                         type(valid_types), self
@@ -714,11 +694,11 @@ class AnalysisModule(FileWatcherMixin):
         Return COMPLETED if analysis has completed. The engine will not call this function again for this target.
         Return INCOMPLETE if analysis has NOT completed. The engine will call this function again for this target.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def continue_analysis(self, observable: Observable, analysis: Analysis) -> AnalysisExecutionResult:
         """Called to continue analysis of an Observable object after delay_analysis has been called."""
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def execute_final_analysis(self, analysis) -> AnalysisExecutionResult:
         """Called to analyze Analysis or Observable objects after all other analysis has completed.

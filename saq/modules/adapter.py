@@ -9,11 +9,12 @@ from typing import Optional, Type
 from saq.analysis.analysis import Analysis
 from saq.analysis.interfaces import RootAnalysisInterface
 from saq.analysis.observable import Observable
-from saq.configuration.config import get_config, get_config_value_as_str
-from saq.constants import CONFIG_ANALYSIS_MODULE_CLASS, CONFIG_ANALYSIS_MODULE_ID, CONFIG_ANALYSIS_MODULE_INSTANCE, CONFIG_ANALYSIS_MODULE_MODULE, AnalysisExecutionResult
+from saq.configuration.config import get_config
+from saq.constants import AnalysisExecutionResult
 from saq.engine.interface import EngineInterface
 from saq.error.reporting import report_exception
 from saq.modules.base_module import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.context import AnalysisModuleContext
 from saq.modules.interfaces import AnalysisModuleInterface
 
@@ -50,16 +51,15 @@ class AnalysisModuleAdapter(AnalysisModuleInterface):
         """Returns the module path of this module."""
         return self._module.get_module_path()
     
-    # Configuration properties
     @property
-    def module_id(self) -> str:
-        """Returns the id of the module."""
-        return self._module.module_id
+    def config(self) -> AnalysisModuleConfig:
+        """Get the configuration for this module."""
+        return self._module.config
 
     @property
-    def config_section_name(self) -> str:
-        """Get the name of the configuration section."""
-        return self._module.config_section_name
+    def name(self) -> str:
+        """Get the name of the module."""
+        return self._module.name
     
     @property
     def instance(self) -> Optional[str]:
@@ -193,52 +193,48 @@ def create_analysis_module_adapter(module: AnalysisModule) -> AnalysisModuleAdap
     return AnalysisModuleAdapter(module)
 
 
-def load_module_from_config(config_section_name):
+def load_module_from_config(analysis_module_name: str) -> Optional[AnalysisModuleInterface]:
     """Loads an AnalysisModule by config section name with the provided context.
     Returns None on failure."""
 
-    if config_section_name not in get_config():
-        logging.error(
-            "%s is not a valid ACE module configuration name", config_section_name
-        )
-        return None
-
-    module_id = get_config_value_as_str(config_section_name, CONFIG_ANALYSIS_MODULE_ID)
-    if not module_id:
-        logging.error("module id is required for analysis module {}".format(config_section_name))
-        return None
-
-    module_name = get_config_value_as_str(config_section_name, CONFIG_ANALYSIS_MODULE_MODULE)
     try:
-        _module = importlib.import_module(module_name)
+        module_config = get_config().get_analysis_module_config(analysis_module_name)
+    except ValueError as e:
+        logging.error(f"analysis module config for {analysis_module_name} not found: {e}")
+        return None
+
+    python_module_name = module_config.python_module
+    try:
+        _module = importlib.import_module(python_module_name)
     except Exception as e:
-        logging.error("unable to import module {}: {}".format(module_name, e))
+        logging.error("unable to import module {}: {}".format(python_module_name, e))
         report_exception()
         return None
 
-    class_name = get_config_value_as_str(config_section_name, CONFIG_ANALYSIS_MODULE_CLASS)
+    python_class_name = module_config.python_class
     try:
-        module_class = getattr(_module, class_name)
-    except AttributeError as e:
+        python_module_class = getattr(_module, python_class_name)
+    except AttributeError:
         logging.error(
             "class {} does not exist in module {} in analysis module {}".format(
-                class_name, module_name, config_section_name
+                python_class_name, python_module_name, analysis_module_name
             )
         )
         report_exception()
         return None
 
-    instance = get_config_value_as_str(config_section_name, CONFIG_ANALYSIS_MODULE_INSTANCE)
+    #instance = module_config.instance
 
     try:
         logging.debug(
-            "loading module {} instance {}".format(config_section_name, instance)
+            "loading module {}".format(module_config)
         )
-        return create_analysis_module_adapter(module_class(instance=instance))
+        # NOTE instance now comes from the config, it's no longer passed to the constructor
+        return create_analysis_module_adapter(python_module_class(module_config))
     except Exception as e:
         logging.error(
-            "unable to load analysis module {} instance {}".format(
-                config_section_name, instance
+            "unable to load analysis module {}: {}".format(
+                module_config, e
             )
         )
         report_exception()

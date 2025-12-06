@@ -1,10 +1,12 @@
 import base64
 import logging
 import os
-from typing import override
+from typing import Type, override
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import F_FILE, R_EXTRACTED_FROM, AnalysisExecutionResult
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.observables.file import FileObservable
 from saq.util.filesystem import safe_filename
 
@@ -55,7 +57,14 @@ class XMLPlainTextAnalysis(Analysis):
     def generate_summary(self):
         return None
 
+class XMLPlainTextAnalyzerConfig(AnalysisModuleConfig):
+    maximum_size: int = Field(..., description="The maximum size (in bytes) of a file that this module will analyze.")
+
 class XMLPlainTextAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return XMLPlainTextAnalyzerConfig
+
     @property
     def generated_analysis_type(self):
         return XMLPlainTextAnalysis
@@ -75,7 +84,7 @@ class XMLPlainTextAnalyzer(AnalysisModule):
             return AnalysisExecutionResult.COMPLETED
 
         # is the file too big?
-        if os.path.getsize(local_file_path) > self.config.getint('maximum_size'):
+        if os.path.getsize(local_file_path) > self.config.maximum_size:
             logging.debug(f"{local_file_path} is too large for xml plain text analysis")
             return AnalysisExecutionResult.COMPLETED
 

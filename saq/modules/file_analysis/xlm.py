@@ -2,12 +2,15 @@ import logging
 import os
 import re
 from subprocess import PIPE, Popen, TimeoutExpired
+from typing import Type
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.analysis.observable import Observable
 from saq.analysis.search import recurse_tree
 from saq.constants import DIRECTIVE_CRAWL, DIRECTIVE_CRAWL_EXTRACTED_URLS, DIRECTIVE_EXTRACT_URLS, F_FILE, F_URL, AnalysisExecutionResult
 from saq.environment import get_base_dir
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 
 import yara
 
@@ -42,7 +45,15 @@ RE_XLM_PARAMS = re.compile(r'^CELL:.*\(([^\)]*)\)$')
 
 # https://blog.reversinglabs.com/blog/excel-4.0-macros
 
+class XLMMacroDeobfuscatorConfig(AnalysisModuleConfig):
+    timeout: int = Field(..., description="Timeout in seconds for xlmdeobfuscator execution.")
+    maximum_size_mb: int = Field(default=10, description="Maximum file size in MB to process.")
+    yara_rule_names: list[str] = Field(..., description="List of yara rule names that can trigger xlm4 analysis.")
+
 class XLMMacroDeobfuscatorAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return XLMMacroDeobfuscatorConfig
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -62,17 +73,17 @@ class XLMMacroDeobfuscatorAnalyzer(AnalysisModule):
 
     @property
     def timeout(self) -> int:
-        return self.config.getint('timeout')
+        return self.config.timeout
 
     @property
     def maximum_size_mb(self):
         """Returns the max size in MB of a file this module will process."""
-        return self.config.getint('maximum_size_mb', fallback=10)
+        return self.config.maximum_size_mb
 
     @property
     def yara_rule_names(self):
         """The list of optional yara rule names that can trigger xlm4 analysis."""
-        return [_.strip() for _ in self.config['yara_rule_names'].split(',')]
+        return self.config.yara_rule_names
 
     def execute_analysis(self, _file) -> AnalysisExecutionResult:
         return AnalysisExecutionResult.INCOMPLETE

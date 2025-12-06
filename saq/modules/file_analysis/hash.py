@@ -1,10 +1,12 @@
 from fnmatch import fnmatch
 import logging
 import os
-from typing import override
+from typing import Type, override
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import AnalysisExecutionResult, F_FILE, F_MD5, F_SHA256, R_IS_HASH_OF
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.observables.file import FileObservable
 from saq.util.filesystem import get_local_file_path
 
@@ -60,7 +62,15 @@ class FileHashAnalysis(Analysis):
     def generate_summary(self):
         return None
 
+class FileHashAnalyzerConfig(AnalysisModuleConfig):
+    # Dynamic ignore_pattern_* and ignore_mime_type_* fields are allowed
+    class Config:
+        extra = "allow"  # Allow extra fields for dynamic ignore_pattern_* and ignore_mime_type_* options
+
 class FileHashAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return FileHashAnalyzerConfig
     """Perform hash analysis on F_FILE indicator types for files attached to the alert."""
 
     @property
@@ -91,16 +101,16 @@ class FileHashAnalyzer(AnalysisModule):
             return AnalysisExecutionResult.COMPLETED
 
         # some files we skip hashing, specifically the files that we generate
-        for section in self.config.keys():
+        # Access dynamic ignore_pattern_* and ignore_mime_type_* fields from config
+        config_dict = self.config.model_dump()
+        for section, ignore_pattern in config_dict.items():
             if section.startswith('ignore_pattern_'):
-                ignore_pattern = self.config[section]
                 if fnmatch(local_file_path, ignore_pattern):
                     logging.debug("skipping file hash analysis on {} for ignore pattern {}".format(
                         local_file_path, ignore_pattern))
                     return AnalysisExecutionResult.COMPLETED
 
             if section.startswith('ignore_mime_type_'):
-                ignore_pattern = self.config[section]
                 if fnmatch(file_type_analysis.mime_type, ignore_pattern):
                     logging.debug("skipping file hash analysis on {} for ignore mime type {}".format(
                                   local_file_path, ignore_pattern))

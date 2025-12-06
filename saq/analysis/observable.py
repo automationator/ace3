@@ -6,19 +6,18 @@ import inspect
 import logging
 from typing import TYPE_CHECKING, Optional, Union
 from saq.analysis.base_node import BaseNode
-from saq.analysis.file_manager.file_manager_interface import FileManagerInterface
 from saq.analysis.module_path import CLASS_STRING_REGEX, IS_MODULE_PATH, MODULE_PATH, SPLIT_MODULE_PATH
 from saq.analysis.relationship import Relationship
 from saq.analysis.search import search_down
 from saq.analysis.serialize.observable_serializer import ObservableSerializer
-from saq.configuration import get_config_value_as_str
-from saq.constants import CONFIG_OBSERVABLE_EXPIRATION_MAPPINGS, EVENT_ANALYSIS_ADDED, EVENT_DIRECTIVE_ADDED, EVENT_RELATIONSHIP_ADDED, EVENT_TIME_FORMAT_TZ, F_TEST, VALID_RELATIONSHIP_TYPES
+from saq.configuration.config import get_config
+from saq.constants import EVENT_ANALYSIS_ADDED, EVENT_DIRECTIVE_ADDED, EVENT_RELATIONSHIP_ADDED, EVENT_TIME_FORMAT_TZ, F_TEST, VALID_RELATIONSHIP_TYPES
 from saq.environment import get_local_timezone
 from saq.util import create_timedelta, parse_event_time
 
 if TYPE_CHECKING:
     from saq.analysis.analysis import Analysis
-    from saq.analysis.analysis_tree.analysis_tree_manager import AnalysisTreeManager
+    from saq.modules.base_module import AnalysisModule
     from saq.remediation import RemediationTarget
 
 class Observable(BaseNode):
@@ -289,7 +288,7 @@ class Observable(BaseNode):
         assert all([isinstance(x, str) for x in value])
         self._limited_analysis = value
 
-    def limit_analysis(self, analysis_module):
+    def limit_analysis(self, analysis_module: Union[str, "AnalysisModule"]):
         """Limit the analysis of this observable to the analysis module specified by configuration section name.
            For example, if you have a section for a module called [analysis_module_something] then you would pass
            the value "something" as the analysis_module."""
@@ -297,7 +296,7 @@ class Observable(BaseNode):
         assert isinstance(analysis_module, str) or isinstance(analysis_module, AnalysisModule)
 
         if isinstance(analysis_module, AnalysisModule):
-            self._limited_analysis.append(analysis_module.config_section_name)
+            self._limited_analysis.append(analysis_module.name)
         else:
             self._limited_analysis.append(analysis_module)
 
@@ -747,12 +746,9 @@ class Observable(BaseNode):
 
 def get_observable_type_expiration_time(observable_type: str) -> Union[datetime, None]:
     """Calculates the observable expiration datetime based on now + the configured time delta for this observable type."""
-    delta = get_config_value_as_str(CONFIG_OBSERVABLE_EXPIRATION_MAPPINGS, observable_type)
+    delta = get_config().observable_expiration_mappings.get(observable_type)
 
     if delta:
-        try:
-            return datetime.now(UTC) + create_timedelta(delta)
-        except:
-            logging.error(f'Observable type {observable_type} has an invalid expiration mapping: {delta}')
+        return datetime.now(UTC) + create_timedelta(delta)
 
     return None

@@ -1,6 +1,5 @@
 from typing import Optional
 from saq.analysis.interfaces import RootAnalysisInterface
-from saq.configuration.interfaces import ConfigInterface
 from saq.filesystem.interfaces import FileSystemInterface
 
 from typing import TYPE_CHECKING
@@ -22,7 +21,6 @@ class AnalysisModuleContext:
                  delayed_analysis_interface: Optional["DelayedAnalysisInterface"] = None,
                  root: Optional[RootAnalysisInterface] = None,
                  configuration_manager: Optional["ConfigurationManager"] = None,
-                 config: Optional[ConfigInterface] = None,
                  filesystem: Optional[FileSystemInterface] = None,
                  state_repository: Optional["StateRepositoryInterface"] = None,
                  cache_strategy: Optional["AnalysisCacheStrategyInterface"] = None):
@@ -30,7 +28,6 @@ class AnalysisModuleContext:
         self._delayed_analysis_interface: Optional["DelayedAnalysisInterface"] = delayed_analysis_interface
         self._root: Optional[RootAnalysisInterface] = root
         self._configuration_manager: Optional["ConfigurationManager"] = configuration_manager
-        self._config: Optional[ConfigInterface] = config
         self._filesystem: Optional[FileSystemInterface] = filesystem
         self.state_repository: Optional["StateRepositoryInterface"] = state_repository
         self.cache_strategy: Optional["AnalysisCacheStrategyInterface"] = cache_strategy
@@ -79,14 +76,6 @@ class AnalysisModuleContext:
             raise RuntimeError("engine configuration is not set")
 
         return self._configuration_manager.config
-
-    @property
-    def config(self) -> ConfigInterface:
-        """Returns the config instance."""
-        if not self._config:
-            raise RuntimeError("config is not set")
-
-        return self._config
 
     @property
     def filesystem(self) -> FileSystemInterface:

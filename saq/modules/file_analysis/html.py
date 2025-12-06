@@ -4,10 +4,12 @@ import logging
 from mmap import PROT_READ, mmap
 import os
 import re
-from typing import override
+from typing import Type, override
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import DIRECTIVE_CRAWL, F_FILE, F_URL, R_DOWNLOADED_FROM, R_EXTRACTED_FROM, AnalysisExecutionResult
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.observables.file import FileObservable
 from saq.util.filesystem import map_mimetype_to_file_ext
 from saq.util.strings import format_item_list_for_summary
@@ -257,7 +259,13 @@ class HTMLDataURLAnalysis(Analysis):
 
 RE_HTML_EMBED = re.compile(b"data:([^/]+/[^;]+);base64,([-A-Za-z0-9+/=]+)")
 
+class HTMLDataURLAnalyzerConfig(AnalysisModuleConfig):
+    max_bytes: int = Field(..., description="The maximum number of bytes to read from the file.")
+
 class HTMLDataURLAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return HTMLDataURLAnalyzerConfig
 
     @property
     def generated_analysis_type(self):
@@ -269,7 +277,7 @@ class HTMLDataURLAnalyzer(AnalysisModule):
 
     @property
     def max_bytes(self):
-        return int(self.config.get("max_bytes", 104857600))
+        return self.config.max_bytes
 
     def execute_analysis(self, _file: FileObservable) -> AnalysisExecutionResult:
         local_file_path = _file.full_path

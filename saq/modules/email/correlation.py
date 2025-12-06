@@ -1,10 +1,12 @@
 import logging
-from typing import override
+from typing import Type, override
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import F_URL, AnalysisExecutionResult
 from saq.database.pool import get_db_connection
 from saq.email import get_email_archive_sections
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.email.constants import KEY_COUNT, KEY_EMAILS
 
 
@@ -44,7 +46,14 @@ class URLEmailPivotAnalysis_v2(Analysis):
 
         return f"{self.display_name} ({self.count} emails matched)"
 
+class URLEmailPivotAnalyzerConfig(AnalysisModuleConfig):
+    result_limit: int = Field(..., description="The maximum amount of results to download. If there are more emails, only the count is recorded.")
+
 class URLEmailPivotAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return URLEmailPivotAnalyzerConfig
+
     @property
     def generated_analysis_type(self):
         return URLEmailPivotAnalysis_v2
@@ -55,7 +64,7 @@ class URLEmailPivotAnalyzer(AnalysisModule):
 
     @property
     def result_limit(self):
-        return self.config.getint('result_limit')
+        return self.config.result_limit
 
     def execute_analysis(self, url) -> AnalysisExecutionResult:
 

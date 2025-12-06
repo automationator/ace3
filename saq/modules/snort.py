@@ -5,13 +5,14 @@ import logging
 import os.path
 import re
 import uuid
+from typing import Optional, Type
 
-from typing import Optional
-
+from pydantic import Field
 from saq.analysis import Analysis
-from saq.configuration import get_config_value_as_str, get_config_value_as_int
-from saq.constants import CONFIG_REDIS, CONFIG_REDIS_HOST, CONFIG_REDIS_PASSWORD, CONFIG_REDIS_PORT, CONFIG_REDIS_USERNAME, F_SNORT_SIGNATURE, REDIS_DB_SNORT, SUMMARY_DETAIL_FORMAT_TXT, AnalysisExecutionResult
+from saq.configuration.config import get_config
+from saq.constants import F_SNORT_SIGNATURE, REDIS_DB_SNORT, SUMMARY_DETAIL_FORMAT_TXT, AnalysisExecutionResult
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.util import abs_path
 
 import redis
@@ -55,13 +56,20 @@ class SnortSignatureAnalysis_v1(Analysis):
     def jinja_is_drillable(self):
         return False
 
+class SnortSignatureAnalyzerConfig(AnalysisModuleConfig):
+    signature_path: str = Field(..., description="Relative path to snort rules.")
+
 class SnortSignatureAnalyzer_v1(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return SnortSignatureAnalyzerConfig
+
     def verify_environment(self):
-        self.verify_config_exists('signature_path')
+        pass
 
     @property
     def signature_path(self):
-        return abs_path(self.config['signature_path'])
+        return abs_path(self.config.signature_path)
 
     @property
     def generated_analysis_type(self):
@@ -102,10 +110,10 @@ def _create_signature_key(signature, rev):
 def _get_redis_connection():
     """Returns the Redis object to use to store/retrieve signature info."""
     return redis.Redis(
-        host=get_config_value_as_str(CONFIG_REDIS, CONFIG_REDIS_HOST), 
-        port=get_config_value_as_int(CONFIG_REDIS, CONFIG_REDIS_PORT),
-        username=get_config_value_as_str(CONFIG_REDIS, CONFIG_REDIS_USERNAME),
-        password=get_config_value_as_str(CONFIG_REDIS, CONFIG_REDIS_PASSWORD),
+        host=get_config().redis.host, 
+        port=get_config().redis.port,
+        username=get_config().redis.username,
+        password=get_config().redis.password,
         db=REDIS_DB_SNORT, 
         decode_responses=True, 
         encoding='utf-8'

@@ -8,13 +8,17 @@ import logging
 import os
 import os.path
 import time
+from typing import Type
+
+from pydantic import Field
 
 from saq.analysis import Analysis
 from saq.analysis.observable import Observable
-from saq.configuration import get_config_value_as_int
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_MEMORY_LIMIT_KILL, CONFIG_GLOBAL_MEMORY_LIMIT_WARNING, F_FILE, F_TEST, F_URL, F_USER, G_TEMP_DIR, R_DOWNLOADED_FROM, VALID_OBSERVABLE_TYPES, AnalysisExecutionResult
-from saq.environment import g, get_data_dir
+from saq.configuration.config import get_config
+from saq.constants import F_FILE, F_TEST, F_URL, F_USER, G_TEMP_DIR, R_DOWNLOADED_FROM, VALID_OBSERVABLE_TYPES, AnalysisExecutionResult
+from saq.environment import g
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from tests.saq.helpers import recv_test_message, send_test_message
 
 KEY_TEST_RESULT = 'test_result'
@@ -191,12 +195,12 @@ class BasicTestAnalyzer(AnalysisModule):
         return AnalysisExecutionResult.COMPLETED
 
     def execute_test_memory_limit_warning(self, test) -> AnalysisExecutionResult:
-        chunk = bytearray((get_config_value_as_int(CONFIG_GLOBAL, CONFIG_GLOBAL_MEMORY_LIMIT_WARNING) * 1024 * 1024) + 1)
+        chunk = bytearray((get_config().global_settings.memory_limit_warning * 1024 * 1024) + 1)
         time.sleep(3)
         return AnalysisExecutionResult.COMPLETED
 
     def execute_test_memory_limit_kill(self, test) -> AnalysisExecutionResult:
-        chunk = bytearray((get_config_value_as_int(CONFIG_GLOBAL, CONFIG_GLOBAL_MEMORY_LIMIT_KILL) * 1024 * 1024) + 1024)
+        chunk = bytearray((get_config().global_settings.memory_limit_kill * 1024 * 1024) + 1024)
         time.sleep(3)
         return AnalysisExecutionResult.COMPLETED
 
@@ -952,13 +956,20 @@ class GroupingTargetAnalyzer(AnalysisModule):
         analysis = self.create_analysis(test)
         return AnalysisExecutionResult.COMPLETED
 
+class TestInstanceConfig(AnalysisModuleConfig):
+    sql: str = Field(..., description="the SQL to use for the analysis")
+
 class TestInstanceAnalysis(Analysis):
     __test__ = False
 
 class TestInstanceAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return TestInstanceConfig
+
     @property
     def sql(self):
-        return self.config['sql']
+        return self.config.sql
 
     @property
     def valid_observable_types(self):

@@ -6,7 +6,6 @@ import logging
 import uuid
 
 from saq.configuration import get_config
-from saq.constants import CONFIG_APIKEYS
 from saq.crypto import encrypt_chunk, decrypt_chunk
 from saq.database import get_db_connection
 from saq.permissions.logic import user_has_permission
@@ -28,7 +27,7 @@ API_HEADER_NAME = "x-ice-auth"
 
 def _get_config_api_key_match(auth_sha256: str) -> ApiAuthResult:
     """Returns an ApiAuthResult object if the given auth token is stored as a configuration value under [apikeys], None otherwise."""
-    for valid_key_name, valid_key_value in get_config()[CONFIG_APIKEYS].items():
+    for valid_key_name, valid_key_value in get_config().apikeys.items():
         if valid_key_value is not None and auth_sha256.lower() == valid_key_value.strip().lower():
             return ApiAuthResult(auth_type=API_AUTH_TYPE_CONFIG, auth_name=valid_key_name)
 

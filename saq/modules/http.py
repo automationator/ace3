@@ -5,13 +5,15 @@ from functools import cached_property
 import logging
 import os.path
 import re
-
+from typing import Type
 from subprocess import Popen, PIPE
+from pydantic import Field
 
 from saq.analysis import Analysis
 from saq.constants import ANALYSIS_TYPE_BRO_HTTP, F_FILE, F_FQDN, F_IPV4, F_IPV4_CONVERSATION, F_URL, create_ipv4_conversation, AnalysisExecutionResult
 from saq.environment import get_base_dir
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.whitelist import BrotexWhitelist, \
     WHITELIST_TYPE_HTTP_SRC_IP, WHITELIST_TYPE_HTTP_HOST, WHITELIST_TYPE_HTTP_DEST_IP
 
@@ -39,7 +41,18 @@ HTTP_DETAILS_REQUEST = 'request'
 HTTP_DETAILS_REPLY = 'reply'
 HTTP_DETAILS_READY = 'ready'
 
+class BroHTTPStreamAnalyzerConfig(AnalysisModuleConfig):
+    whitelist_path: str = Field(..., description="Path to the brotex custom whitelist file.")
+
+class BrotexHTTPPackageAnalyzerConfig(AnalysisModuleConfig):
+    whitelist_path: str = Field(..., description="Path to the brotex custom whitelist file.")
+    maximum_http_requests: int = Field(..., description="The maximum number of HTTP requests to process from a single package.")
+
 class BroHTTPStreamAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return BroHTTPStreamAnalyzerConfig
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -47,7 +60,7 @@ class BroHTTPStreamAnalyzer(AnalysisModule):
         self.whitelist = None
 
         # path to the whitelist file
-        self.whitelist_path = os.path.join(get_base_dir(), self.config['whitelist_path'])
+        self.whitelist_path = os.path.join(get_base_dir(), self.config.whitelist_path)
 
     def execute_pre_analysis(self):
         if self.get_root().alert_type != ANALYSIS_TYPE_BRO_HTTP:
@@ -182,7 +195,7 @@ class BroHTTPStreamAnalyzer(AnalysisModule):
                         key, value = [_.strip() for _ in line.split('\t')]
                         reply_headers.append((key, value))
                         reply_headers_lookup[key.lower()] = value
-            except UnicodeDecodeError as e:
+            except UnicodeDecodeError:
                 logging.info(f"{stream_prefix} contains binary content in headers - skipping")
                 return False
 
@@ -257,14 +270,16 @@ class BrotexHTTPPackageAnalysis(Analysis):
         return "Brotex HTTP Package Analysis - {} requests".format(len(self.requests))
 
 class BrotexHTTPPackageAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return BrotexHTTPPackageAnalyzerConfig
+
     def verify_environment(self):
-        self.verify_config_exists('whitelist_path')
-        self.verify_config_exists('maximum_http_requests')
-        self.verify_path_exists(self.config['whitelist_path'])
+        self.verify_path_exists(self.config.whitelist_path)
 
     @cached_property
     def whitelist(self) -> BrotexWhitelist:
-        result = BrotexWhitelist(os.path.join(get_base_dir(), self.config['whitelist_path']))
+        result = BrotexWhitelist(os.path.join(get_base_dir(), self.config.whitelist_path))
         result.check_whitelist()
         return result
 
@@ -331,7 +346,7 @@ class BrotexHTTPPackageAnalyzer(AnalysisModule):
                         continue
 
         count = 0
-        maximum_http_requests = self.config.getint('maximum_http_requests')
+        maximum_http_requests = self.config.maximum_http_requests
 
         for message_number in message_dirs.keys():
             if maximum_http_requests:

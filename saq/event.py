@@ -4,8 +4,8 @@ import os.path
 
 from typing import Optional
 
-from saq.configuration import get_config_value_as_str
-from saq.constants import CONFIG_EVENTS, CONFIG_EVENTS_AUTO_CLOSE_PATH, G_ANALYST_DATA_DIR
+from saq.configuration.config import get_config
+from saq.constants import G_ANALYST_DATA_DIR
 from saq.database import Event, EventStatus, get_db
 from saq.environment import g
 from saq.error import report_exception
@@ -33,7 +33,7 @@ class AutoCloseCriteria:
     def matches(self, threat_names: list[str]) -> bool:
         """Returns True if the given event data matches the auto close criteria."""
         if not threat_names:
-            logging.debug(f"threat name not set or empty")
+            logging.debug("threat name not set or empty")
             return False
 
         if self.threat_name not in threat_names:
@@ -46,7 +46,7 @@ def load_auto_close_criteria(file_path: Optional[str]=None) -> list[AutoCloseCri
     """Returns the list of configured auto close criteria.
     Returns an empty list if none can be loaded."""
     if file_path is None:
-        file_path = os.path.join(g(G_ANALYST_DATA_DIR), get_config_value_as_str(CONFIG_EVENTS, CONFIG_EVENTS_AUTO_CLOSE_PATH))
+        file_path = os.path.join(g(G_ANALYST_DATA_DIR), get_config().events.autoclose_path)
 
     with open(file_path, "r") as fp:
         content = yaml_load(fp, Loader=Loader)

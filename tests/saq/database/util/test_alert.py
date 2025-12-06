@@ -4,7 +4,7 @@ import pytest
 import uuid
 
 from saq.configuration.config import get_config
-from saq.constants import ANALYSIS_MODE_DISPOSITIONED, CONFIG_OBSERVABLE_EXPIRATION_MAPPINGS, DISPOSITION_FALSE_POSITIVE, DISPOSITION_IGNORE
+from saq.constants import ANALYSIS_MODE_DISPOSITIONED, DISPOSITION_FALSE_POSITIVE, DISPOSITION_IGNORE
 from saq.database.model import Alert, Comment, Observable, ObservableMapping, Workload
 from saq.database.pool import get_db
 from saq.database.util.alert import ALERT, get_alert_by_uuid, refresh_observable_expires_on, set_dispositions
@@ -183,8 +183,8 @@ def hash_bytes(data: bytes) -> bytes:
 @pytest.mark.integration
 def test_refresh_observable_expires_on_multiple_alerts():
     """Test refresh_observable_expires_on with multiple alerts."""
-    get_config()[CONFIG_OBSERVABLE_EXPIRATION_MAPPINGS]["ipv4"] = "30:00:00:00"  # 1 day expiration for ipv4
-    get_config()[CONFIG_OBSERVABLE_EXPIRATION_MAPPINGS]["fqdn"] = "01:00:00:00"  # 1 day expiration for ipv4
+    get_config().observable_expiration_mappings["ipv4"] = "30:00:00:00"  # 1 day expiration for ipv4
+    get_config().observable_expiration_mappings["fqdn"] = "01:00:00:00"  # 1 day expiration for ipv4
     alert1 = insert_alert()
     alert2 = insert_alert()
     
@@ -328,7 +328,7 @@ def test_set_dispositions_multiple_alerts():
 @pytest.mark.integration
 def test_set_dispositions_malicious_updates_observables():
     """Test that malicious dispositions trigger observable expires_on updates."""
-    get_config()[CONFIG_OBSERVABLE_EXPIRATION_MAPPINGS]["fqdn"] = "01:00:00:00"  # 1 day expiration for ipv4
+    get_config().observable_expiration_mappings["fqdn"] = "01:00:00:00"  # 1 day expiration for ipv4
 
     user = add_user("testuser_mal", "testuser_mal@test.com", "Test User", "password123")
     add_user_permission(user.id, "*", "*")

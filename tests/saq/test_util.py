@@ -1,4 +1,3 @@
-import configparser
 from datetime import timedelta
 import json
 import os
@@ -7,10 +6,8 @@ import pytest
 
 from saq.analysis.adapter import RootAnalysisAdapter
 from saq.analysis.root import RootAnalysis
-from saq.configuration.config import get_config
+from saq.configuration import get_config
 from saq.engine.configuration_manager import ConfigurationManager
-from saq.engine.core import Engine
-from saq.engine.adapter import EngineAdapter
 from saq.engine.engine_configuration import EngineConfiguration
 from saq.filesystem.adapter import FileSystemAdapter
 from saq.modules.context import AnalysisModuleContext
@@ -37,17 +34,12 @@ def test_map_mimetype_to_file_ext(mime_type, file_ext):
 
 @pytest.mark.unit
 def test_fully_qualified(monkeypatch):
-    mock_config = configparser.ConfigParser()
-    mock_config.read_string("""
-[global]
-local_domain = test""")
+    monkeypatch.setattr(get_config().global_settings, "local_domains", ["test"])
 
-    import saq.util.networking
-    monkeypatch.setattr(saq.util.networking, "get_config", lambda: mock_config)
     assert fully_qualified(None) is None
     assert fully_qualified("host") == "host.test"
     assert fully_qualified("host.domain") == "host.domain"
-    monkeypatch.setattr(saq.util.networking, "get_config", lambda: {"global": {}})
+    monkeypatch.setattr(get_config().global_settings, "local_domains", [])
     assert fully_qualified("host") == "host"
 
 @pytest.mark.unit
@@ -193,7 +185,6 @@ def create_test_context(root: Optional[RootAnalysis] = None, configuration_manag
         delayed_analysis_interface=None,
         configuration_manager=configuration_manager or ConfigurationManager(config=EngineConfiguration()),
         root=RootAnalysisAdapter(root_analysis),
-        config=get_config(),
         filesystem=FileSystemAdapter(),
         state_repository=StateRepositoryFactory.create_root_analysis_repository(
             RootAnalysisAdapter(root_analysis)

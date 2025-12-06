@@ -1,30 +1,30 @@
-# [config]
-config:
-  remediation_local: etc/saq.remediation.yaml
-
-# [service_remediation]
 service_remediation:
-  module: saq.remediation
-  class: RemediationService
+  name: remediation
+  python_module: saq.remediation
+  python_class: RemediationService
   description: Handles requests for removing and/or restoring emails, files, accounts, etc...
   enabled: true
-  instance_type: ANY
+  instance_types: [ANY]
   max_threads: 10
   batch_size: 20
   delay_minutes: 5
   lock_timeout_seconds: 60
   request_wait_time: 20
-  unchecked_types: ""
+  unchecked_types: []
 
-# [analysis_module_automated_remediation]
 analysis_module_automated_remediation:
-  id: automated_remediation
-  module: saq.modules.remediation
-  class: AutomatedRemediationAnalyzer
+  name: automated_remediation
+  python_module: saq.modules.remediation
+  python_class: AutomatedRemediationAnalyzer
   enabled: false
-  valid_observable_types: email_delivery
-  required_directives: remediate
+  valid_observable_types:
+    - email_delivery
+  required_directives:
+    - remediate
 
-# [module_group_correlation]
 module_group_correlation:
-  analysis_module_automated_remediation: true
+  modules:
+    - automated_remediation
+
+config:
+  remediation_local: etc/saq.remediation.yaml

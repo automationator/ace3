@@ -1,15 +1,21 @@
 import importlib
 import logging
+import os
 from queue import Empty, Queue
-from typing import Generator, override
+from typing import Generator, Type, override
+
+from pydantic import Field
 
 
 from saq.analysis.root import Submission
 from saq.collectors.base_collector import Collector, CollectorExecutionMode, CollectorService
 from saq.collectors.collector_configuration import CollectorServiceConfiguration
 from saq.collectors.hunter.manager import HuntManager
-from saq.configuration import get_config, get_config_value_as_str
-from saq.constants import CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR, ExecutionMode
+from saq.configuration import get_config
+from saq.configuration.config import get_service_config
+from saq.configuration.schema import ServiceConfig
+from saq.constants import SERVICE_HUNTER, ExecutionMode
+from saq.environment import get_data_dir
 from saq.service import ACEServiceInterface
 
 class HunterCollector(Collector):
@@ -26,12 +32,15 @@ class HunterCollector(Collector):
         except Empty:
             pass
 
+class HunterServiceConfig(CollectorServiceConfiguration):
+    update_frequency: int = Field(..., description="The frequency in seconds between updates of the hunt managers.")
+
 class HunterService(ACEServiceInterface):
     """Service that hosts and manages detection hunts for ACE."""
     def __init__(self):
         self.submission_queue = Queue()
         self.collector = HunterCollector(self.submission_queue)
-        self.collector_service = CollectorService(self.collector, config=CollectorServiceConfiguration.from_config(get_config()['service_hunter']))
+        self.collector_service = CollectorService(self.collector, config=get_service_config(SERVICE_HUNTER))
         self.hunt_managers = {} # key = hunt_type, value = HuntManager
 
     @override
@@ -71,6 +80,10 @@ class HunterService(ACEServiceInterface):
 
         self.collector_service.wait()
 
+    @classmethod
+    def get_config_class(cls) -> Type[ServiceConfig]:
+        return HunterServiceConfig
+
     def hunt_managers_loaded(self) -> bool:
         """Returns True if the hunt managers have been loaded, False otherwise."""
         return len(self.hunt_managers) > 0
@@ -86,44 +99,40 @@ class HunterService(ACEServiceInterface):
         """Loads all configured hunt managers."""
         logging.info("loading hunt managers")
 
-        for section_name in get_config().sections():
-            if not section_name.startswith('hunt_type_'):
+        for hunt_type_config in get_config().hunt_types:
+
+            if not hunt_type_config.rule_dirs:
+                logging.error(f"config section {hunt_type_config.name} does not define rule_dirs")
                 continue
 
-            section = get_config()[section_name]
-
-            if 'rule_dirs' not in section:
-                logging.error(f"config section {section} does not define rule_dirs")
-                continue
-
-            hunt_type = section_name[len('hunt_type_'):]
+            hunt_type = hunt_type_config.name
 
             # make sure the class definition for this hunt is valid
-            module_name = section['module']
+            module_name = hunt_type_config.python_module
             try:
                 _module = importlib.import_module(module_name)
             except Exception as e:
                 logging.error(f"unable to import hunt module {module_name}: {e}")
                 continue
 
-            class_name = section['class']
+            class_name = hunt_type_config.python_class
             try:
                 class_definition = getattr(_module, class_name)
             except AttributeError:
                 logging.error("class {} does not exist in module {} in hunt {} config".format(
-                              class_name, module_name, section))
+                              class_name, module_name, hunt_type))
                 continue
 
             logging.debug(f"loading hunt manager for {hunt_type} class {class_definition}")
             self.add_hunt_manager(
                 HuntManager(submission_queue=self.submission_queue,
                             hunt_type=hunt_type, 
-                            rule_dirs=[_.strip() for _ in section['rule_dirs'].split(',')],
+                            rule_dirs=hunt_type_config.rule_dirs,
                             hunt_cls=class_definition,
-                            concurrency_limit=section.get('concurrency_limit', fallback=None),
-                            persistence_dir=get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR),
-                            update_frequency=section.getint('update_frequency', fallback=60),
-                            config = section,
+                            concurrency_limit=hunt_type_config.concurrency_limit,
+                            persistence_dir=os.path.join(get_data_dir(), get_config().collection.persistence_dir),
+                            update_frequency=hunt_type_config.update_frequency,
+                            config = hunt_type_config,
                             execution_mode=execution_mode))
 
         if not self.hunt_managers_loaded():

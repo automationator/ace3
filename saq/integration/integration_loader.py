@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 
-from saq.configuration.config import get_config, get_config_value_as_str
+from saq.configuration.config import get_config
 from saq.constants import G_INTEGRATION_CONFIG_PATHS
 from saq.environment import g_list
 from saq.error import report_exception
@@ -134,18 +134,16 @@ def load_integration_component_etc(dir_path: str) -> bool:
 def initialize_integrations():
     """Initializes all integrations. 
     This simply imports the module as defined by each integration, giving the module a chance to initialize itself."""
-    for section in get_config().sections():
-        if not section.startswith("integration_"):
-            continue
+    for integration_config in get_config().integrations:
 
         #
         # this is what allows any hooks defined in the integration to execute
         #
 
         try:
-            importlib.import_module(get_config_value_as_str(section, "module"))
+            importlib.import_module(integration_config.module)
         except Exception as e:
-            logging.error(f"failed to import integration module {section}: {e}")
+            logging.error(f"failed to import integration module {integration_config.name}: {e}")
             report_exception()
 
 def load_integration_from_directory(dir_path: str) -> bool:

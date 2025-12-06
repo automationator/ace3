@@ -1,12 +1,16 @@
 import logging
 import os
 from subprocess import PIPE, Popen
+from typing import Type
+
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.analysis.observable import Observable
 from saq.constants import AnalysisExecutionResult, F_IPV4, F_IPV4_CONVERSATION, F_IPV4_FULL_CONVERSATION, parse_ipv4_conversation, parse_ipv4_full_conversation
 from saq.environment import get_base_dir
 from saq.error.reporting import report_exception
 from saq.modules import ExternalProcessAnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 
 def _compute_target_sensor(observable: Observable) -> str:
     """Computes the target sensor for a given Observable.
@@ -43,15 +47,22 @@ class PcapExtractionAnalysis(Analysis):
 
         return f"Sensor PCAP Extraction: {self.details['error'] if self.details['error'] else self.details['output_file']}"
 
+class PcapConversationExtractionConfig(AnalysisModuleConfig):
+    relative_duration: str = Field(..., description="The relative time capture (see -d option of the extract script).")
+    executable_path: str = Field(..., description="The pcap executable path.")
+    config_path: str = Field(..., description="The custom pcap extraction configuration path for ACE.")
+    exclude_internal_network: str = Field(..., description="The exclude internal network.")
+    max_pcap_count: int = Field(..., description="The maximum total number of pcap files we should get for a single alert.")
+    max_size: int = Field(..., description="The maximum size (in MB) of pcap we collect from each sensor.")
+
 class PcapConversationExtraction(ExternalProcessAnalysisModule):
     """Automatically pulls pcap for any FIPV4_CONVERSATION that comes in with an Alert."""
 
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return PcapConversationExtractionConfig
+
     def verify_environment(self):
-        self.verify_config_exists('relative_duration')
-        self.verify_config_exists('executable_path')
-        self.verify_config_exists('config_path')
-        self.verify_config_exists('max_pcap_count')
-        self.verify_config_exists('max_size')
         self.verify_path_exists(self.config['executable_path'])
         self.verify_path_exists(self.config['config_path'])
     

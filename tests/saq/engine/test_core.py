@@ -1,9 +1,9 @@
 import pytest
 
-from saq.configuration.config import get_config
+from saq.configuration.config import get_analysis_module_config, get_config
 from saq.constants import CONFIG_ANALYSIS_MODE_CLEANUP, CONFIG_ANALYSIS_MODE_PREFIX, CONFIG_ANALYSIS_MODULE_ENABLED, CONFIG_ANALYSIS_MODULE_MODULE_GROUPS, CONFIG_DISABLED_MODULES, F_TEST
 from saq.engine.core import Engine, EngineState
-from saq.engine.configuration_manager import ConfigurationManager, get_analysis_module_config
+from saq.engine.configuration_manager import ConfigurationManager
 from saq.engine.engine_configuration import EngineConfiguration
 from saq.engine.node_manager.node_manager_interface import NodeManagerInterface
 from saq.engine.worker_manager import WorkerManager
@@ -37,11 +37,11 @@ def test_default_engine():
 def test_add_analysis_module(monkeypatch, test_context):
     engine = Engine()
 
-    analysis_module = AnalysisModuleAdapter(BasicTestAnalyzer())
+    analysis_module = AnalysisModuleAdapter(BasicTestAnalyzer(get_analysis_module_config("basic_test")))
     engine.configuration_manager.add_analysis_module(analysis_module)
 
     assert engine.configuration_manager.analysis_modules == [analysis_module]
-    assert engine.configuration_manager.analysis_module_name_mapping == { get_analysis_module_config(analysis_module).name: analysis_module }
+    assert engine.configuration_manager.analysis_module_name_mapping == { analysis_module.name: analysis_module }
     assert engine.configuration_manager.analysis_mode_mapping == { engine.config.default_analysis_mode: [analysis_module] }
 
     # verification failure
@@ -65,52 +65,48 @@ def test_initialize_modules(test_context):
     assert engine.configuration_manager.analysis_mode_mapping == { engine.config.default_analysis_mode: [] }
 
     # enable one of them to be loaded
-    engine.configuration_manager._get_analysis_module_config(AnalysisModuleAdapter(BasicTestAnalyzer()))[CONFIG_ANALYSIS_MODULE_ENABLED] = "yes"
+    get_analysis_module_config("basic_test").enabled = True
+    #engine.configuration_manager._get_analysis_module_config(AnalysisModuleAdapter(BasicTestAnalyzer(get_analysis_module_config("basic_test")))).enabled = True
 
     engine.configuration_manager.load_modules()
 
     assert len(engine.configuration_manager.analysis_modules) == 1
     assert len(engine.configuration_manager.analysis_module_name_mapping) == 1
     # this one is mapped to three different groups
-    assert len(engine.configuration_manager.analysis_mode_mapping) == 3
-    for analysis_modules in engine.configuration_manager.analysis_mode_mapping.values():
-        assert len(analysis_modules) == 1
-        assert analysis_modules[0].generated_analysis_type == BasicTestAnalysis
+    map_count = 0
+    for mode, module_adapters in engine.configuration_manager.analysis_mode_mapping.items():
+        for module_adapter in module_adapters:
+            if module_adapter.name == "basic_test":
+                map_count += 1
+                break
 
-@pytest.mark.integration
-def test_initialize_modules_missing_cleanup(test_context):
-    config = get_analysis_module_config(AnalysisModuleAdapter(BasicTestAnalyzer()))
-    config[CONFIG_ANALYSIS_MODULE_ENABLED] = "yes"
-
-    # missing cleanup section logs as error, should still load
-    engine = Engine()
-    del get_config()[f"{CONFIG_ANALYSIS_MODE_PREFIX}{engine.config.default_analysis_mode}"][CONFIG_ANALYSIS_MODE_CLEANUP]
-    engine.configuration_manager.load_modules()
-    assert len(engine.configuration_manager.analysis_modules) == 1
+    assert map_count == 3
 
 @pytest.mark.integration
 def test_initialize_modules_invalid_references(test_context):
-    config = get_analysis_module_config(AnalysisModuleAdapter(BasicTestAnalyzer()))
-    config[CONFIG_ANALYSIS_MODULE_ENABLED] = "yes"
+    config = get_analysis_module_config("basic_test")
+    config.enabled = True
 
     engine = Engine()
-    mode_config = get_config()[f"{CONFIG_ANALYSIS_MODE_PREFIX}{engine.config.default_analysis_mode}"]
-    # logs the error and skips the reference
-    mode_config[CONFIG_ANALYSIS_MODULE_MODULE_GROUPS] = "invalid_group_name"
-    # logs the error and continues
-    mode_config["analysis_module_invalid_reference"] = {}
+    mode_config = get_config().get_analysis_mode_config(engine.config.default_analysis_mode)
+    mode_config.module_groups = ["invalid_group_name"]
+    mode_config.enabled_modules = ["invalid_module_name"]
     
-    # logs the error and continues
-    get_config()["module_group_unittest"]["analysis_module_invalid_reference"] = {}
-    engine.configuration_manager.load_modules()
-    assert len(engine.configuration_manager.analysis_modules) == 1
+    get_config().get_module_group_config("unittest").modules = ["invalid_module_name"]
+
+    # should raise an error because the module group is invalid
+    with pytest.raises(ValueError):
+        engine.configuration_manager.load_modules()
+
+    #assert len(engine.configuration_manager.analysis_modules) == 1
 
 @pytest.mark.integration
 def test_initialize_modules_disabled_module(test_context):
-    config = get_analysis_module_config(AnalysisModuleAdapter(BasicTestAnalyzer()))
-    config[CONFIG_ANALYSIS_MODULE_ENABLED] = "yes"
-    # disable this module specifically
-    get_config()[CONFIG_DISABLED_MODULES][config.name] = "yes"
+    config = get_analysis_module_config("basic_test")
+    config.enabled = True
+
+    # disable this module globally
+    get_config().disabled_modules = [config.name]
 
     engine = Engine()
     engine.configuration_manager.load_modules()
@@ -118,9 +114,9 @@ def test_initialize_modules_disabled_module(test_context):
 
 @pytest.mark.integration
 def test_initialize_modules_module_load_failure(monkeypatch, test_context):
-    config = get_analysis_module_config(AnalysisModuleAdapter(BasicTestAnalyzer()))
+    config = get_analysis_module_config("basic_test")
     assert config is not None
-    config[CONFIG_ANALYSIS_MODULE_ENABLED] = "yes"
+    config.enabled = True
 
     def mock_load_module_from_config(*args, **kwargs):
         return None

@@ -4,6 +4,7 @@ import pytest
 from requests.exceptions import HTTPError, Timeout, ProxyError, ConnectionError
 
 from saq.configuration import get_config
+from saq.configuration.schema import SplunkConfig
 from saq.splunk import SplunkClient, SplunkQueryObject, extract_event_timestamp
 from tests.saq.mock_datetime import MOCK_NOW
 
@@ -438,13 +439,22 @@ def test_query_async_error(exception, expected_result):
 
 @pytest.mark.unit
 def test_splunk_client_init():
-    get_config()['splunk_test'] = {
-        'host': 'test.com',
-        'port': '443',
-        'username': 'hello',
-        'password': 'world',
-    }
-
+    get_config().clear_splunk_configs()
+    get_config().add_splunk_config("splunk_test",
+        SplunkConfig(
+            name="splunk_test",
+            enabled=True,
+            host="test.com",
+            port=443,
+            username="hello",
+            password="world",
+            token=None,
+            timezone="UTC",
+            performance_logging_dir=".",
+            user_context="foo",
+            app_context="bar",
+        )
+    )
     # create mock client
     mock_client = Mock()
 
@@ -456,7 +466,7 @@ def test_splunk_client_init():
         mock_connect.assert_called_once()
         call_kwargs = mock_connect.call_args[1]
         assert call_kwargs['host'] == 'test.com'
-        assert call_kwargs['port'] == '443'
+        assert call_kwargs['port'] == 443
         assert call_kwargs['username'] == 'hello'
         assert call_kwargs['password'] == 'world'
         assert call_kwargs['owner'] == 'foo'
@@ -468,12 +478,19 @@ def test_splunk_client_init():
 
 @pytest.mark.unit
 def test_splunk_client_init_defaults():
-    get_config()['splunk_test'] = {
-        'host': 'test.com',
-        'port': '443',
-        'username': 'hello',
-        'password': 'world',
-    }
+    get_config().clear_splunk_configs()
+    get_config().add_splunk_config("splunk_test",
+        SplunkConfig(
+            name="splunk_test",
+            enabled=True,
+            host="test.com",
+            port=443,
+            username="hello",
+            password="world",
+            timezone="UTC",
+            performance_logging_dir=".",
+        )
+    )
 
     # create mock client
     mock_client = Mock()
@@ -486,7 +503,7 @@ def test_splunk_client_init_defaults():
         mock_connect.assert_called_once()
         call_kwargs = mock_connect.call_args[1]
         assert call_kwargs['host'] == 'test.com'
-        assert call_kwargs['port'] == '443'
+        assert call_kwargs['port'] == 443
         assert call_kwargs['username'] == 'hello'
         assert call_kwargs['password'] == 'world'
 
@@ -495,11 +512,20 @@ def test_splunk_client_init_defaults():
 
 @pytest.mark.unit
 def test_splunk_client_init_with_token():
-    get_config()['splunk_test'] = {
-        'host': 'test.com',
-        'port': '443',
-        'token': 'mytoken123',
-    }
+    get_config().clear_splunk_configs()
+    get_config().add_splunk_config("splunk_test",
+        SplunkConfig(
+            name="splunk_test",
+            enabled=True,
+            host="test.com",
+            port=443,
+            token="mytoken123",
+            timezone="UTC",
+            performance_logging_dir=".",
+            user_context="foo",
+            app_context="bar",
+        )
+    )
 
     # create mock client
     mock_client = Mock()
@@ -512,7 +538,7 @@ def test_splunk_client_init_with_token():
         mock_connect.assert_called_once()
         call_kwargs = mock_connect.call_args[1]
         assert call_kwargs['host'] == 'test.com'
-        assert call_kwargs['port'] == '443'
+        assert call_kwargs['port'] == 443
         assert call_kwargs['token'] == 'mytoken123'
         assert 'username' not in call_kwargs
         assert 'password' not in call_kwargs

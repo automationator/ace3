@@ -9,8 +9,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Callable, Dict, Optional
 
-from saq.configuration.config import get_config_value_as_int
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_CHECK_WATCHED_FILES_FREQUENCY
+from saq.configuration.config import get_config
 from saq.error.reporting import report_exception
 
 
@@ -77,7 +76,7 @@ class FileWatcher:
             return
         
         # Check every N seconds (as configured)
-        check_frequency = get_config_value_as_int(CONFIG_GLOBAL, CONFIG_GLOBAL_CHECK_WATCHED_FILES_FREQUENCY)
+        check_frequency = get_config().global_settings.check_watched_files_frequency
         self.next_check_watched_files = datetime.now() + timedelta(seconds=check_frequency)
         
         for watched_file in self.watched_files.values():

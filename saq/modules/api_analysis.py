@@ -17,13 +17,16 @@ import json
 import logging
 import re
 import time
-from typing import Union
+from typing import Optional, Type, Union
+
+from pydantic import Field
 
 from saq.analysis import Analysis, Observable
 from saq.analysis.presenter.analysis_presenter import AnalysisPresenter, register_analysis_presenter
 from saq.configuration import get_config
 from saq.constants import AnalysisExecutionResult
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.util import abs_path, create_timedelta
 
 KEY_QUERY = 'query'
@@ -33,6 +36,23 @@ KEY_QUERY_SUMMARY = 'query_summary'
 KEY_QUERY_START = 'query_start'
 KEY_QUESTION = 'question'
 KEY_GUI_LINK = 'gui_link'
+
+
+class BaseAPIAnalyzerConfig(AnalysisModuleConfig):
+    question: str = Field(..., description="The question to use for the analysis.")
+    summary: str = Field(..., description="The summary to use for the analysis.")
+    api_name: str = Field(..., description="The name of the API config to use for the analysis.")
+    query: Optional[str] = Field(default=None, description="The query to use for the analysis.")
+    query_path: Optional[str] = Field(default=None, description="The path to the query file to use for the analysis.")
+    wide_duration_before: Optional[str] = Field(default=None, description="The wide duration before the analysis.")
+    wide_duration_after: Optional[str] = Field(default=None, description="The wide duration after the analysis.")
+    narrow_duration_before: Optional[str] = Field(default=None, description="The narrow duration before the analysis.")
+    narrow_duration_after: Optional[str] = Field(default=None, description="The narrow duration after the analysis.")
+    observable_mapping: Optional[list[dict[str, str]]] = Field(default=None, description="The observable mapping for the analysis.")
+    correlation_delay: Optional[str] = Field(default=None, description="The correlation delay for the analysis.")
+    max_result_count: Optional[int] = Field(default=None, description="The max result count for the analysis.")
+    query_timeout: Optional[int] = Field(default=None, description="The query timeout for the analysis.")
+    async_delay: Optional[int] = Field(default=None, description="The async delay for the analysis.")
 
 class AnalysisDelay(Exception):
     pass
@@ -151,6 +171,7 @@ class BaseAPIAnalysis(Analysis):
         return result
 
 
+
 class BaseAPIAnalyzer(AnalysisModule):
     """Base APIAnalyzer class with built-in methods for building target query and result processing.
 
@@ -188,21 +209,9 @@ class BaseAPIAnalyzer(AnalysisModule):
 
        """
 
-    def verify_environment(self):
-        self.verify_config_exists('question')
-        self.verify_config_exists('summary')
-        self.verify_config_exists('api')
-        if 'query' not in self.config and 'query_path' not in self.config:
-            raise RuntimeError(f"module {self} missing query or query_path settings in configuration")
-        if 'query_path' in self.config:
-            self.verify_path_exists(abs_path(self.config['query_path']))
-
-    def generated_analysis_type(self):
-        return BaseAPIAnalysis
-
-    def _escape_value(self, value: str) -> str:
-        """Escapes common problem characters."""
-        return value
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return BaseAPIAnalyzerConfig
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -211,18 +220,13 @@ class BaseAPIAnalyzer(AnalysisModule):
         # will be used for setting timeframes/credentials/etc.
         # ex. QRadarAPIAnalyzer = 'qradar'
         # SplunkAPIAnalyzer = 'splunk' or 'splunkx'
-        self.api = self.config['api']
-
-        # the API client class we use to communicate with our tool
-        # ex. QRadarAPIAnalysis __init__ will set this as QRadarAPIClient
-        # to test this module, we will use a unittest class
-        self.api_class = kwargs.get('api_class') or None
+        self.api_defaults = get_config().get_api_query_defaults_config(self.config.api_name)
 
         # load the query query for this instance
-        if 'query' in self.config:
-            self.target_query_base = self.config['query']
-        elif 'query_path' in self.config:
-            with open(abs_path(self.config['query_path']), 'r') as fp:
+        if self.config.query is not None:
+            self.target_query_base = self.config.query
+        elif self.config.query_path is not None:
+            with open(abs_path(self.config.query_path), 'r') as fp:
                 self.target_query_base = fp.read()
         else:
             raise RuntimeError(f"module {self} missing query or query_path settings in configuration")
@@ -242,63 +246,68 @@ class BaseAPIAnalyzer(AnalysisModule):
 
         # each query can specify it's own range
         # the wide range is used if the observable does not have a time
-        if 'wide_duration_before' in self.config:
-            self.wide_duration_before = create_timedelta(self.config['wide_duration_before'])
-        elif 'wide_duration_before' in get_config()[self.api]:
-            self.wide_duration_before = create_timedelta(get_config()[self.api]['wide_duration_before'])
+        if self.config.wide_duration_before is not None:
+            self.wide_duration_before = create_timedelta(self.config.wide_duration_before)
         else:
-            self.wide_duration_before = create_timedelta('03:00:00:00')
+            self.wide_duration_before = create_timedelta(self.api_defaults.wide_duration_before)
 
-        if 'wide_duration_after' in self.config:
-            self.wide_duration_after = create_timedelta(self.config['wide_duration_after'])
-        elif 'wide_duration_after' in get_config()[self.api]:
-            self.wide_duration_after = create_timedelta(get_config()[self.api]['wide_duration_after'])
+        if self.config.wide_duration_after is not None:
+            self.wide_duration_after = create_timedelta(self.config.wide_duration_after)
         else:
-            self.wide_duration_after = create_timedelta('30:00')
+            self.wide_duration_after = create_timedelta(self.api_defaults.wide_duration_after)
 
         # the narrow range is used if the observable has a time
-        if 'narrow_duration_before' in self.config:
-            self.narrow_duration_before = create_timedelta(self.config['narrow_duration_before'])
-        elif 'narrow_duration_before' in get_config()[self.api]:
-            self.narrow_duration_before = create_timedelta(get_config()[self.api]['narrow_duration_before'])
+        if self.config.narrow_duration_before is not None:
+            self.narrow_duration_before = create_timedelta(self.config.narrow_duration_before)
         else:
-            self.narrow_duration_before = create_timedelta('15:00')
+            self.narrow_duration_before = create_timedelta(self.api_defaults.narrow_duration_before)
 
-        if 'narrow_duration_after' in self.config:
-            self.narrow_duration_after = create_timedelta(self.config['narrow_duration_after'])
-        elif 'narrow_duration_after' in get_config()[self.api]:
-            self.narrow_duration_after = create_timedelta(get_config()[self.api]['narrow_duration_after'])
+        if self.config.narrow_duration_after is not None:
+            self.narrow_duration_after = create_timedelta(self.config.narrow_duration_after)
         else:
-            self.narrow_duration_after = create_timedelta('15:00')
+            self.narrow_duration_after = create_timedelta(self.api_defaults.narrow_duration_after)
 
         # load the observable mapping for this query
         # NOTE that the keys (result field names) are case sensitive
         # example: map_literally_anything = result_field_name = observable_type
         self.observable_mapping = {}  # key = result field name, value = observable_type
-        for key in self.config.keys():
-            if key.startswith('map_'):
-                result_field, observable_type = [_.strip() for _ in self.config[key].split('=', 2)]
-                self.observable_mapping[result_field] = observable_type
+        if self.config.observable_mapping is not None:
+            for key in self.config.observable_mapping.keys():
+                if key.startswith('map_'):
+                    result_field, observable_type = [_.strip() for _ in self.config.observable_mapping[key].split('=', 2)]
+                    self.observable_mapping[result_field] = observable_type
 
         # are we delaying correlational queries?
         self.correlation_delay = None
-        if 'correlation_delay' in get_config()[self.api]:
-            self.correlation_delay = create_timedelta(get_config()[self.api]['correlation_delay'])
+        if self.config.correlation_delay is not None:
+            self.correlation_delay = create_timedelta(self.config.correlation_delay)
 
-        self.max_result_count = self.config.getint('max_result_count',
-                                                   fallback=get_config()['query_hunter']['max_result_count'])
+        self.max_result_count = self.config.max_result_count
+        if self.max_result_count is None:
+            self.max_result_count = self.api_defaults.max_result_count
 
-        if 'query_timeout' in self.config:
-            self.query_timeout = self.config.getint('query_timeout')
-        elif 'query_timeout' in get_config()[self.api]:
-            self.query_timeout = get_config()[self.api].getint('query_timeout')
+        if self.config.query_timeout is not None:
+            self.query_timeout = self.config.query_timeout
         else:
-            self.query_timeout = get_config()['query_hunter'].getint('query_timeout')
+            self.query_timeout = self.api_defaults.query_timeout
 
-        if 'async_delay' in self.config:
-            self.async_delay_seconds = self.config.getint('async_delay')
+        if self.config.async_delay is not None:
+            self.async_delay_seconds = self.config.async_delay
         else:
-            self.async_delay_seconds = get_config()[self.api].getint('async_delay', fallback=1)
+            self.async_delay_seconds = self.api_defaults.async_delay
+
+    def verify_environment(self):
+        if self.config.query is None and self.config.query_path is None:
+            raise RuntimeError(f"module {self} missing query or query_path settings in configuration")
+        if self.config.query_path is not None:
+            self.verify_path_exists(abs_path(self.config.query_path))
+
+    def generated_analysis_type(self):
+        return BaseAPIAnalysis
+
+    def _escape_value(self, value: str) -> str:
+        """Escapes common problem characters."""
+        return value
 
     def build_target_query(self, observable: Observable, **kwargs) -> None:
         """Fills in the target_query attribute with observable value and time specification for correlation, using the target_query_base
@@ -331,7 +340,7 @@ class BaseAPIAnalyzer(AnalysisModule):
         source_time = kwargs.get('source_event_time') or observable.time or observable.root.event_time or self.get_root().event_time
         if source_time is None:
             source_time = datetime.datetime.now()
-            logging.error(f"Analysis event_time is None! Using current time for analysis instead")
+            logging.error("Analysis event_time is None! Using current time for analysis instead")
 
         # if we are going off of the event time, then we use the wide duration
         start_time = source_time - self.wide_duration_before
@@ -481,8 +490,8 @@ class BaseAPIAnalyzer(AnalysisModule):
         """
         analysis = self.create_analysis(observable)
         analysis.query_start = time.time()
-        analysis.question = self.config['question']
-        analysis.query_summary = self.config['summary']
+        analysis.question = self.config.question
+        analysis.query_summary = self.config.summary
 
         if self.correlation_delay is not None:
             return self.delay_analysis(observable, analysis, seconds=self.correlation_delay.total_seconds())

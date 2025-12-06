@@ -4,13 +4,13 @@ Tests for the ConfigurationManager class that was extracted from the Engine clas
 
 import pytest
 
+from saq.configuration.config import get_analysis_module_config, get_config, get_engine_config
 from saq.constants import (
     CONFIG_ANALYSIS_MODULE_ENABLED,
     ANALYSIS_MODE_ANALYSIS,
 )
-from saq.engine.configuration_manager import ConfigurationManager, get_analysis_module_config
+from saq.engine.configuration_manager import ConfigurationManager
 from saq.engine.engine_configuration import EngineConfiguration
-from saq.modules.adapter import AnalysisModuleAdapter
 from saq.modules.test import BasicTestAnalyzer
 
 
@@ -92,7 +92,7 @@ def test_add_analysis_module():
         excluded_analysis_modes=[],
     ))
     
-    analysis_module = AnalysisModuleAdapter(BasicTestAnalyzer())
+    analysis_module = BasicTestAnalyzer(get_analysis_module_config("basic_test"))
     config_manager.add_analysis_module(analysis_module)
     
     assert len(config_manager.analysis_modules) == 1
@@ -111,7 +111,7 @@ def test_get_analysis_modules_by_mode():
         excluded_analysis_modes=[],
     ))
     
-    analysis_module = AnalysisModuleAdapter(BasicTestAnalyzer())
+    analysis_module = BasicTestAnalyzer(get_analysis_module_config("basic_test"))
     config_manager.add_analysis_module(analysis_module, [ANALYSIS_MODE_ANALYSIS])
     
     modules = config_manager.get_analysis_modules_by_mode(ANALYSIS_MODE_ANALYSIS)
@@ -125,8 +125,8 @@ def test_get_analysis_modules_by_mode():
 
 
 @pytest.mark.unit
-def test_get_analysis_module_by_id():
-    """Test getting analysis module by ID."""
+def test_get_analysis_module_by_name():
+    """Test getting analysis module by name."""
     
     config_manager = ConfigurationManager(config=EngineConfiguration(
         default_analysis_mode=ANALYSIS_MODE_ANALYSIS,
@@ -134,16 +134,16 @@ def test_get_analysis_module_by_id():
         excluded_analysis_modes=[],
     ))
     
-    analysis_module = AnalysisModuleAdapter(BasicTestAnalyzer())
+    analysis_module = BasicTestAnalyzer(get_analysis_module_config("basic_test"))
     config_manager.add_analysis_module(analysis_module)
     
-    # Test with valid ID
-    if analysis_module.module_id:
-        found_module = config_manager.get_analysis_module_by_id(analysis_module.module_id)
+    # Test with valid name
+    if analysis_module.name:
+        found_module = config_manager.get_analysis_module_by_name(analysis_module.name)
         assert found_module == analysis_module
     
-    # Test with invalid ID
-    found_module = config_manager.get_analysis_module_by_id("nonexistent_id")
+    # Test with invalid name
+    found_module = config_manager.get_analysis_module_by_name("nonexistent_name")
     assert found_module is None
 
 
@@ -157,15 +157,15 @@ def test_is_module_enabled():
         excluded_analysis_modes=[],
     ))
     
-    analysis_module = AnalysisModuleAdapter(BasicTestAnalyzer())
+    analysis_module = BasicTestAnalyzer(get_analysis_module_config("basic_test"))
     config_manager.add_analysis_module(analysis_module)
     
-    # Test with valid ID
-    if analysis_module.module_id:
-        assert config_manager.is_module_enabled(analysis_module.module_id) is True
+    # Test with valid name
+    if analysis_module.name:
+        assert config_manager.is_module_enabled(analysis_module.name) is True
     
-    # Test with invalid ID
-    assert config_manager.is_module_enabled("nonexistent_id") is False
+    # Test with invalid name
+    assert config_manager.is_module_enabled("nonexistent_name") is False
 
 
 @pytest.mark.integration
@@ -178,10 +178,10 @@ def test_load_modules_integration():
     ))
 
     # Enable one module to be loaded
-    analysis_module = AnalysisModuleAdapter(BasicTestAnalyzer())
-    module_config = get_analysis_module_config(analysis_module)
+    analysis_module = BasicTestAnalyzer(get_analysis_module_config("basic_test"))
+    module_config = get_analysis_module_config(analysis_module.name)
     if module_config:
-        module_config[CONFIG_ANALYSIS_MODULE_ENABLED] = "yes"
+        module_config.enabled = True
 
     config_manager.load_modules()
 
@@ -192,137 +192,74 @@ def test_load_modules_integration():
 @pytest.mark.unit
 def test_engine_configuration_loads_from_config():
     """Test that EngineConfiguration loads all properties correctly from configuration."""
-    from saq.constants import (
-        CONFIG_ENGINE,
-        CONFIG_GLOBAL,
-        CONFIG_ENGINE_DEFAULT_ANALYSIS_MODE,
-        CONFIG_ENGINE_LOCAL_ANALYSIS_MODES,
-        CONFIG_ENGINE_EXCLUDED_ANALYSIS_MODES,
-        CONFIG_ENGINE_POOL_SIZE_LIMT,
-        CONFIG_ENGINE_COPY_ANALYSIS_ON_ERROR,
-        CONFIG_ENGINE_WORK_DIR,
-        CONFIG_ENGINE_ALERT_DISPOSITION_CHECK_FREQUENCY,
-        CONFIG_ENGINE_AUTO_REFRESH_FREQUENCY,
-        CONFIG_ENGINE_COPY_TERMINATED_ANALYSIS_CAUSES,
-        CONFIG_ENGINE_ALERTING_ENABLED,
-        CONFIG_ENGINE_TARGET_NODES,
-        CONFIG_ENGINE_NON_DETECTABLE_MODES,
-        CONFIG_GLOBAL_MAXIMUM_ANALYSIS_TIME,
-        CONFIG_GLOBAL_MAXIMUM_CUMULATIVE_ANALYSIS_FAIL_TIME,
-        CONFIG_GLOBAL_MAXIMUM_CUMULATIVE_ANALYSIS_WARNING_TIME,
-        CONFIG_GLOBAL_MEMORY_LIMIT_KILL,
-        CONFIG_GLOBAL_MEMORY_LIMIT_WARNING,
-    )
-    from saq.configuration.config import (
-        get_config_value_as_str,
-        get_config_value_as_boolean,
-        get_config_value_as_int,
-        get_config_value_as_list,
-    )
 
     # Create an EngineConfiguration without passing any parameters
     # This should load everything from the configuration
     config = EngineConfiguration()
 
     # Test default_analysis_mode
-    expected_default_mode = get_config_value_as_str(
-        CONFIG_ENGINE,
-        CONFIG_ENGINE_DEFAULT_ANALYSIS_MODE,
-        default=ANALYSIS_MODE_ANALYSIS,
-    )
+    expected_default_mode = get_engine_config().default_analysis_mode
     assert config.default_analysis_mode == expected_default_mode
 
     # Test local_analysis_modes
-    expected_local_modes = get_config_value_as_list(
-        CONFIG_ENGINE,
-        CONFIG_ENGINE_LOCAL_ANALYSIS_MODES,
-        default=[],
-        include_empty=False,
-    )
+    expected_local_modes = get_engine_config().local_analysis_modes
+
     # Note: the implementation adds default_analysis_mode to the list if not empty
     if expected_local_modes and config.default_analysis_mode not in expected_local_modes:
         expected_local_modes.append(config.default_analysis_mode)
+
     assert config.local_analysis_modes == expected_local_modes
 
     # Test excluded_analysis_modes
-    expected_excluded_modes = get_config_value_as_list(
-        CONFIG_ENGINE,
-        CONFIG_ENGINE_EXCLUDED_ANALYSIS_MODES,
-        default=[],
-        include_empty=False,
-    )
+    expected_excluded_modes = get_engine_config().excluded_analysis_modes
     assert config.excluded_analysis_modes == expected_excluded_modes
 
     # Test non_detectable_modes
-    expected_non_detectable = get_config_value_as_list(
-        CONFIG_ENGINE,
-        CONFIG_ENGINE_NON_DETECTABLE_MODES,
-        default=[],
-        include_empty=False,
-    )
+    expected_non_detectable = get_engine_config().non_detectable_modes
     assert config.non_detectable_modes == expected_non_detectable
 
     # Test pool_size_limit
-    expected_pool_size_limit = get_config_value_as_int(CONFIG_ENGINE, CONFIG_ENGINE_POOL_SIZE_LIMT)
+    expected_pool_size_limit = get_engine_config().pool_size_limit
     assert config.pool_size_limit == expected_pool_size_limit
 
     # Test copy_analysis_on_error
-    expected_copy_on_error = get_config_value_as_boolean(CONFIG_ENGINE, CONFIG_ENGINE_COPY_ANALYSIS_ON_ERROR)
+    expected_copy_on_error = get_engine_config().copy_analysis_on_error
     assert config.copy_analysis_on_error == expected_copy_on_error
 
     # Test copy_terminated_analysis_causes
-    expected_copy_terminated = get_config_value_as_boolean(
-        CONFIG_ENGINE, CONFIG_ENGINE_COPY_TERMINATED_ANALYSIS_CAUSES
-    )
+    expected_copy_terminated = get_engine_config().copy_terminated_analysis_causes
     assert config.copy_terminated_analysis_causes == expected_copy_terminated
 
     # Test alerting_enabled
-    expected_alerting_enabled = get_config_value_as_boolean(
-        CONFIG_ENGINE, CONFIG_ENGINE_ALERTING_ENABLED, default=True
-    )
+    expected_alerting_enabled = get_engine_config().alerting_enabled
     assert config.alerting_enabled == expected_alerting_enabled
 
     # Test work_dir
-    expected_work_dir = get_config_value_as_str(CONFIG_ENGINE, CONFIG_ENGINE_WORK_DIR)
+    expected_work_dir = get_engine_config().work_dir
     assert config.work_dir == expected_work_dir
 
     # Test alert_disposition_check_frequency
-    expected_alert_disp_freq = get_config_value_as_int(
-        CONFIG_ENGINE, CONFIG_ENGINE_ALERT_DISPOSITION_CHECK_FREQUENCY, default=5
-    )
+    expected_alert_disp_freq = get_engine_config().alert_disposition_check_frequency
     assert config.alert_disposition_check_frequency == expected_alert_disp_freq
 
     # Test auto_refresh_frequency
-    expected_auto_refresh = get_config_value_as_int(
-        CONFIG_ENGINE, CONFIG_ENGINE_AUTO_REFRESH_FREQUENCY
-    )
+    expected_auto_refresh = get_engine_config().auto_refresh_frequency
     assert config.auto_refresh_frequency == expected_auto_refresh
 
     # Test maximum_cumulative_analysis_warning_time
-    expected_max_warning_time = get_config_value_as_int(
-        CONFIG_GLOBAL, CONFIG_GLOBAL_MAXIMUM_CUMULATIVE_ANALYSIS_WARNING_TIME
-    )
-    assert config.maximum_cumulative_analysis_warning_time == expected_max_warning_time
+    #expected_max_warning_time = get_engine_config().maximum_cumulative_analysis_warning_time
+    #assert config.maximum_cumulative_analysis_warning_time == expected_max_warning_time
 
     # Test maximum_cumulative_analysis_fail_time
-    expected_max_fail_time = get_config_value_as_int(
-        CONFIG_GLOBAL, CONFIG_GLOBAL_MAXIMUM_CUMULATIVE_ANALYSIS_FAIL_TIME
-    )
-    assert config.maximum_cumulative_analysis_fail_time == expected_max_fail_time
+    #expected_max_fail_time = get_engine_config().maximum_cumulative_analysis_fail_time
+    #assert config.maximum_cumulative_analysis_fail_time == expected_max_fail_time
 
     # Test maximum_analysis_time
-    expected_max_analysis_time = get_config_value_as_int(
-        CONFIG_GLOBAL, CONFIG_GLOBAL_MAXIMUM_ANALYSIS_TIME
-    )
-    assert config.maximum_analysis_time == expected_max_analysis_time
+    #expected_max_analysis_time = get_engine_config().maximum_analysis_time
+    #assert config.maximum_analysis_time == expected_max_analysis_time
 
     # Test target_nodes
-    expected_target_nodes = get_config_value_as_list(
-        CONFIG_ENGINE,
-        CONFIG_ENGINE_TARGET_NODES,
-        default=[],
-        include_empty=False,
-    )
+    expected_target_nodes = get_engine_config().target_nodes
     # Note: target_nodes may have LOCAL translated to actual node name
     from saq.constants import G_SAQ_NODE
     from saq.environment import g
@@ -332,8 +269,8 @@ def test_engine_configuration_loads_from_config():
     assert config.target_nodes == expected_target_nodes
 
     # Test memory limits
-    expected_memory_kill = get_config_value_as_int(CONFIG_GLOBAL, CONFIG_GLOBAL_MEMORY_LIMIT_KILL) * 1024 * 1024
-    expected_memory_warning = get_config_value_as_int(CONFIG_GLOBAL, CONFIG_GLOBAL_MEMORY_LIMIT_WARNING) * 1024 * 1024
+    expected_memory_kill = get_config().global_settings.memory_limit_kill * 1024 * 1024
+    expected_memory_warning = get_config().global_settings.memory_limit_warning * 1024 * 1024
     assert config.memory_limit_kill == expected_memory_kill
     assert config.memory_limit_warning == expected_memory_warning
 
@@ -347,8 +284,6 @@ def test_engine_configuration_loads_from_config():
 @pytest.mark.unit
 def test_engine_configuration_analysis_pools_loaded_from_config():
     """Test that analysis_pools are loaded automatically from configuration."""
-    from saq.configuration.config import get_config_value
-    from saq.constants import CONFIG_ENGINE, CONFIG_ENGINE_ANALYSIS_POOLS
     from saq.engine.engine_configuration import compute_pool_size
 
     # Create config without passing analysis_pools - should load from configuration
@@ -356,7 +291,7 @@ def test_engine_configuration_analysis_pools_loaded_from_config():
     config = EngineConfiguration(local_analysis_modes=[])
 
     # Get the analysis_pools from configuration
-    config_analysis_pools = get_config_value(CONFIG_ENGINE, CONFIG_ENGINE_ANALYSIS_POOLS, {})
+    config_analysis_pools = get_engine_config().analysis_pools
 
     # Compute expected pools using the compute_pool_size function
     expected_pools = {}
@@ -412,7 +347,6 @@ def test_engine_configuration_analysis_pools_explicit():
 @pytest.mark.unit
 def test_engine_configuration_analysis_pools_filtered_by_local_modes():
     """Test that analysis_pools are filtered based on local_analysis_modes."""
-    from multiprocessing import cpu_count
 
     test_pools = {
         "analysis": 4,

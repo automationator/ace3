@@ -15,6 +15,7 @@ import uuid
 from aceapi.json import json_result
 from saq.analysis.root import Submission
 from saq.configuration import get_config
+from saq.configuration.config import get_engine_config
 from saq.constants import ANALYSIS_MODE_CORRELATION, EVENT_TIME_FORMAT_JSON_TZ, F_FILE, QUEUE_DEFAULT
 from saq.environment import get_local_timezone
 
@@ -76,14 +77,14 @@ def submit():
 
     if KEY_COMPANY_NAME in request_dict:
         logging.info("Received post with company name field supplied: {}".format(request_dict[KEY_COMPANY_NAME]))
-        if request_dict[KEY_COMPANY_NAME] != get_config()['global']['company_name']:
+        if request_dict[KEY_COMPANY_NAME] != get_config().global_settings.company_name:
             abort(Response("wrong company {} (are you sending to the correct system?)".format(request_dict[KEY_COMPANY_NAME]), 400))
 
     if KEY_DESCRIPTION not in request_dict:
         abort(Response("missing {} field in submission".format(KEY_DESCRIPTION), 400))
 
     # does the engine use a different drive for the workload?
-    analysis_mode = request_dict[KEY_ANALYSIS_MODE] if KEY_ANALYSIS_MODE in request_dict else get_config()['service_engine']['default_analysis_mode']
+    analysis_mode = request_dict[KEY_ANALYSIS_MODE] if KEY_ANALYSIS_MODE in request_dict else get_engine_config().default_analysis_mode
     root_uuid = str(uuid.uuid4())
     if analysis_mode != ANALYSIS_MODE_CORRELATION:
         _storage_dir = storage_dir_from_uuid(root_uuid)
@@ -95,13 +96,13 @@ def submit():
 
     try:
 
-        root.analysis_mode = request_dict[KEY_ANALYSIS_MODE] if KEY_ANALYSIS_MODE in request_dict else get_config()['service_engine']['default_analysis_mode']
-        root.company_id = get_config()['global'].getint('company_id')
+        root.analysis_mode = request_dict[KEY_ANALYSIS_MODE] if KEY_ANALYSIS_MODE in request_dict else get_engine_config().default_analysis_mode
+        root.company_id = get_config().global_settings.company_id
         if KEY_COMPANY_ID in request_dict and request_dict[KEY_COMPANY_ID]:
             root.company_id =  request_dict[KEY_COMPANY_ID]
         root.tool = request_dict[KEY_TOOL] if KEY_TOOL in request_dict else 'api'
         root.tool_instance = request_dict[KEY_TOOL_INSTANCE] if KEY_TOOL_INSTANCE in request_dict else 'api({})'.format(request.remote_addr)
-        root.alert_type = request_dict[KEY_TYPE] if KEY_TYPE in request_dict else get_config()['api']['default_alert_type']
+        root.alert_type = request_dict[KEY_TYPE] if KEY_TYPE in request_dict else get_config().api.default_alert_type
         root.description = request_dict[KEY_DESCRIPTION]
         root.event_time = get_local_timezone().localize(datetime.now())
         root.queue = request_dict[KEY_QUEUE] if KEY_QUEUE in request_dict else QUEUE_DEFAULT
@@ -267,7 +268,7 @@ def resubmit(uuid):
 def get_analysis(uuid):
 
     storage_dir = get_storage_dir(uuid)
-    if get_config()['service_engine']['work_dir'] and not os.path.isdir(storage_dir):
+    if get_engine_config().work_dir and not os.path.isdir(storage_dir):
         storage_dir = workload_storage_dir(uuid)
 
     if not os.path.exists(storage_dir):
@@ -282,7 +283,7 @@ def get_analysis(uuid):
 def get_submission(uuid):
 
     storage_dir = get_storage_dir(uuid)
-    if get_config()['service_engine']['work_dir'] and not os.path.isdir(storage_dir):
+    if get_engine_config().work_dir and not os.path.isdir(storage_dir):
         storage_dir = workload_storage_dir(uuid)
 
     if not os.path.exists(storage_dir):
@@ -304,7 +305,7 @@ def get_status(uuid):
         abort(Response(str(e), 400))
 
     storage_dir = get_storage_dir(uuid)
-    if get_config()['service_engine']['work_dir'] and not os.path.isdir(storage_dir):
+    if get_engine_config().work_dir and not os.path.isdir(storage_dir):
         storage_dir = workload_storage_dir(uuid)
 
     if not os.path.exists(storage_dir):
@@ -427,7 +428,7 @@ WHERE
 @api_auth_check("alert", "read")
 def get_details(uuid, name):
     storage_dir = get_storage_dir(uuid)
-    if get_config()['service_engine']['work_dir'] and not os.path.isdir(storage_dir):
+    if get_engine_config().work_dir and not os.path.isdir(storage_dir):
         storage_dir = workload_storage_dir(uuid)
 
     root = RootAnalysis(storage_dir=storage_dir)
@@ -445,7 +446,7 @@ def get_details(uuid, name):
 @api_auth_check("alert", "read")
 def get_file(uuid, file_uuid_or_name):
     storage_dir = get_storage_dir(uuid)
-    #if get_config()['service_engine']['work_dir'] and not os.path.isdir(storage_dir):
+    #if get_engine_config().work_dir and not os.path.isdir(storage_dir):
         #storage_dir = workload_storage_dir(uuid)
 
     root = RootAnalysis(storage_dir=storage_dir)

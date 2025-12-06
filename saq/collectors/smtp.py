@@ -2,28 +2,33 @@
 
 import datetime
 import logging
-import os, os.path
+import os
+import os.path
 import shutil
 import socket
 import tempfile
+from typing import Type, override
 
+from saq.analysis.root import RootAnalysis, Submission
 from saq.bro import parse_bro_smtp
-from saq.collectors import Collector, Submission
-from saq.configuration import get_config, get_config_value_as_str
-from saq.constants import ANALYSIS_MODE_EMAIL, ANALYSIS_TYPE_BRO_SMTP, DIRECTIVE_ARCHIVE, DIRECTIVE_EXCLUDE_ALL, DIRECTIVE_NO_SCAN, DIRECTIVE_ORIGINAL_EMAIL, DIRECTIVE_ORIGINAL_SMTP, DIRECTIVE_RENAME_ANALYSIS, F_EMAIL_ADDRESS, F_FILE, F_IPV4, G_TEMP_DIR
+from saq.collectors.base_collector import Collector, CollectorExecutionMode, CollectorService
+from saq.configuration.config import get_service_config
+from saq.configuration.schema import ServiceConfig
+from saq.constants import ANALYSIS_MODE_EMAIL, ANALYSIS_TYPE_BRO_SMTP, DIRECTIVE_ARCHIVE, DIRECTIVE_EXCLUDE_ALL, DIRECTIVE_NO_SCAN, DIRECTIVE_ORIGINAL_EMAIL, DIRECTIVE_ORIGINAL_SMTP, DIRECTIVE_RENAME_ANALYSIS, F_EMAIL_ADDRESS, F_FILE, F_IPV4, G_TEMP_DIR, SERVICE_BRO_SMTP_COLLECTOR
 from saq.email import normalize_email_address
 from saq.environment import g, get_data_dir
 from saq.error import report_exception
+from saq.service import ACEServiceInterface
 
 class BroSMTPStreamCollector(Collector):
     def __init__(self, *args, **kwargs):
-        super().__init__(service_config=get_config()['service_bro_smtp_collector'],
+        super().__init__(service_config=get_service_config(SERVICE_BRO_SMTP_COLLECTOR),
                          workload_type='smtp', 
                          delete_files=False, # we will delete the files as we go
                          *args, **kwargs)
 
         # the location of the incoming smtp streams
-        self.bro_smtp_dir = os.path.join(get_data_dir(), get_config_value_as_str('bro', 'smtp_dir'))
+        self.bro_smtp_dir = os.path.join(get_data_dir(), get_service_config(SERVICE_BRO_SMTP_COLLECTOR).smtp_dir)
 
         # for tool_instance
         self.hostname = socket.getfqdn()
@@ -108,7 +113,7 @@ class BroSMTPStreamCollector(Collector):
                                         DIRECTIVE_RENAME_ANALYSIS,  # add details to the alert description
                                         DIRECTIVE_ARCHIVE, ]})      # make sure we archive the email
 
-                    self.queue_submission(Submission(
+                    self.queue_submission(Submission(RootAnalysis(
                         description = 'BRO SMTP Scanner Detection - {}'.format(stream_file_name),
                         analysis_mode = ANALYSIS_MODE_EMAIL,
                         tool = 'ACE - Bro SMTP Scanner',
@@ -120,7 +125,7 @@ class BroSMTPStreamCollector(Collector):
                         # it for additional context if needed
                         observables = observables,
                         tags = [],
-                        files=[stream_file_path, email.file_path]))
+                        files=[stream_file_path, email.file_path])))
             except Exception as e:
                 logging.error(f"unable to parse {stream_file_path}: {e}")
                 try:
@@ -144,3 +149,35 @@ class BroSMTPStreamCollector(Collector):
                     logging.error(f"unable to remove {stream_file_path}: {e}")
 
         return 1
+
+class BroSMTPStreamCollectorService(ACEServiceInterface):
+    @classmethod
+    def get_config_class(cls) -> Type[ServiceConfig]:
+        return ServiceConfig
+
+    def __init__(self):
+        self.collector = BroSMTPStreamCollector()
+        self.collector_service = CollectorService(self.collector, config=get_service_config(SERVICE_BRO_SMTP_COLLECTOR))
+
+    @override
+    def start(self):
+        self.collector_service.start()
+
+    @override
+    def wait_for_start(self, timeout: float = 5) -> bool:
+        if not self.collector_service.wait_for_start(timeout):
+            return False
+
+        return True
+
+    @override
+    def start_single_threaded(self):
+        self.collector_service.start_single_threaded(execution_mode=CollectorExecutionMode.SINGLE_SHOT)
+
+    @override
+    def stop(self):
+        self.collector_service.stop()
+
+    @override
+    def wait(self):
+        self.collector_service.wait()

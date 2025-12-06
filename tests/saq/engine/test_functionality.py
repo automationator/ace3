@@ -13,7 +13,7 @@ from saq.analysis.analysis import Analysis, UnknownAnalysis
 from saq.analysis.io_tracking import _get_io_read_count, _get_io_write_count
 from saq.analysis.observable import Observable
 from saq.analysis.root import RootAnalysis, load_root
-from saq.configuration.config import get_config
+from saq.configuration.config import get_analysis_module_config, get_config, get_engine_config
 from saq.constants import ANALYSIS_MODE_CORRELATION, ANALYSIS_MODE_DISPOSITIONED, CONFIG_ENGINE, CONFIG_ENGINE_AUTO_REFRESH_FREQUENCY, CONFIG_ENGINE_COPY_FILE_ON_ERROR, CONFIG_GLOBAL, CONFIG_GLOBAL_MAXIMUM_CUMULATIVE_ANALYSIS_WARNING_TIME, DIRECTIVE_ARCHIVE, DIRECTIVE_IGNORE_AUTOMATION_LIMITS, DISPOSITION_FALSE_POSITIVE, DISPOSITION_IGNORE, F_FILE, F_TEST, F_USER, G_API_PREFIX, G_COMPANY_ID, G_LOCK_TIMEOUT_SECONDS, G_MODULE_STATS_DIR, G_SAQ_NODE, G_SAQ_NODE_ID, G_TEMP_DIR
 from saq.database.model import Alert, DelayedAnalysis, User, Workload, load_alert
 from saq.database.pool import get_db, get_db_connection
@@ -71,7 +71,7 @@ def test_signal_HUP():
 @pytest.mark.system
 def test_engine_default_pools():
 
-    del get_config()["service_engine"]["pool_size_limit"]
+    get_engine_config().pool_size_limit = None
 
     # test starting with no analysis pools defined
     engine = Engine()
@@ -115,23 +115,23 @@ def test_analysis_modes():
     assert "test_empty" not in engine.configuration_manager.analysis_mode_mapping
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_empty')
-    engine.configuration_manager.enable_module('analysis_module_test_delayed_analysis', 'test_empty')
-    engine.configuration_manager.enable_module('analysis_module_test_engine_locking', 'test_empty')
-    engine.configuration_manager.enable_module('analysis_module_test_final_analysis', 'test_empty')
-    engine.configuration_manager.enable_module('analysis_module_test_post_analysis', 'test_empty')
+    engine.configuration_manager.enable_module('basic_test', 'test_empty')
+    engine.configuration_manager.enable_module('test_delayed_analysis', 'test_empty')
+    engine.configuration_manager.enable_module('test_engine_locking', 'test_empty')
+    engine.configuration_manager.enable_module('test_final_analysis', 'test_empty')
+    engine.configuration_manager.enable_module('test_post_analysis', 'test_empty')
     engine.configuration_manager.load_modules()
 
     # analysis mode test_single should have 1 module
     assert len(engine.configuration_manager.analysis_mode_mapping['test_single']) == 1
-    assert engine.configuration_manager.analysis_mode_mapping['test_single'][0].config_section_name == 'analysis_module_basic_test'
+    assert engine.configuration_manager.analysis_mode_mapping['test_single'][0].name == 'basic_test'
 
     # analysis mode test_groups should have 5 modules
     assert len(engine.configuration_manager.analysis_mode_mapping['test_groups']) == 5
 
     # analysis mode test_disabled should have 4 modules (minus basic_test)
     assert len(engine.configuration_manager.analysis_mode_mapping['test_disabled']) == 4
-    assert 'analysis_module_basic_test' not in [m.config_section_name for m in engine.configuration_manager.analysis_mode_mapping['test_disabled']]
+    assert 'basic_test' not in [m.name for m in engine.configuration_manager.analysis_mode_mapping['test_disabled']]
 
 @pytest.mark.integration
 def test_single_process_analysis(root_analysis: RootAnalysis):
@@ -142,7 +142,7 @@ def test_single_process_analysis(root_analysis: RootAnalysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(analysis_priority_mode='test_single', execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -160,7 +160,7 @@ def test_multi_process_analysis(root_analysis: RootAnalysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_shot()
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -178,7 +178,7 @@ def test_missing_analysis_mode(root_analysis: RootAnalysis):
     root_analysis.schedule()
 
     engine = Engine(config=EngineConfiguration(default_analysis_mode="test_single"))
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # the analysis mode should default to test_single
@@ -197,9 +197,9 @@ def test_analysis_queues(root_analysis: RootAnalysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
-    engine.configuration_manager.enable_module('analysis_module_valid_queues_test')
-    engine.configuration_manager.enable_module('analysis_module_invalid_queues_test')
+    engine.configuration_manager.enable_module('basic_test')
+    engine.configuration_manager.enable_module('valid_queues_test')
+    engine.configuration_manager.enable_module('invalid_queues_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -234,7 +234,7 @@ def test_invalid_analysis_mode(root_analysis: RootAnalysis):
     root_analysis.schedule()
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=[], default_analysis_mode="test_single"))
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # the analysis mode should default to test_empty but we should also get a warning
@@ -242,7 +242,7 @@ def test_invalid_analysis_mode(root_analysis: RootAnalysis):
     observable = root_analysis.get_observable(observable.uuid)
     assert observable
     analysis = observable.get_and_load_analysis(BasicTestAnalysis)
-    assert analysis
+    assert analysis is None # analysis now fails if the analysis mode is invalid
     assert log_count('invalid analysis mode') > 0
 
 @pytest.mark.system
@@ -261,7 +261,7 @@ def test_multi_process_multi_analysis():
         uuids.append((root.uuid, observable.uuid))
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     for root_uuid, observable_uuid in uuids:
@@ -288,19 +288,16 @@ def test_locally_enabled_modules():
     
     # if we enable modules locally then ONLY those should get loaded
     # first we change the config to globally enable all modules
-    for section in get_config().keys():
-        if not section.startswith('analysis_module_'):
-            continue
-
-        get_config()[section]['enabled'] = 'yes'
+    for analysis_module_config in get_config().analysis_modules:
+        analysis_module_config.enabled = True
 
     engine = Engine(config=EngineConfiguration(analysis_pools={'test_groups': 1}))
     # this is the only module that should get loaded
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
     # even though 5 are specified and globally enabled, only 1 is loaded
     assert len(engine.configuration_manager.analysis_modules) == 1
-    assert engine.configuration_manager.analysis_modules[0].module_id == "basic_test"
+    assert engine.configuration_manager.analysis_modules[0].name == "basic_test"
 
 @pytest.mark.integration
 def test_no_analysis(root_analysis: RootAnalysis):
@@ -312,7 +309,7 @@ def test_no_analysis(root_analysis: RootAnalysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -328,7 +325,7 @@ def test_configurable_module(root_analysis: RootAnalysis):
     # some settings of an AnalysisModule can be specified in the configuration file
     # we should have the following configuration settings for this module
     #
-    # [analysis_module_configurable_module_test]
+    # [configurable_module_test]
     # module = saq.modules.test
     # class = ConfigurableModuleTestAnalyzer
     # enabled = no
@@ -362,7 +359,7 @@ def test_configurable_module(root_analysis: RootAnalysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_configurable_module_test', "test_single")
+    engine.configuration_manager.enable_module('configurable_module_test', "test_single")
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -406,7 +403,7 @@ def test_time_range_grouped_analysis(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_grouped_time_range')
+    engine.configuration_manager.enable_module('grouped_time_range')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -430,7 +427,7 @@ def test_time_range_grouped_analysis(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_grouping_target')
+    engine.configuration_manager.enable_module('grouping_target')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -452,7 +449,7 @@ def test_no_analysis_no_return(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -474,7 +471,7 @@ def test_delayed_analysis_single(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_delayed_analysis')
+    engine.configuration_manager.enable_module('test_delayed_analysis')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -497,7 +494,7 @@ def test_delayed_analysis_single_instance(root_analysis):
     root_analysis.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_delayed_analysis_instance')
+    engine.configuration_manager.enable_module('test_delayed_analysis_instance')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_analysis = load_root(get_storage_dir(root_analysis.uuid))
@@ -525,7 +522,7 @@ def test_delayed_analysis_multiple():
         uuids.append((root.uuid, observable.uuid))
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_delayed_analysis', "test_groups")
+    engine.configuration_manager.enable_module('test_delayed_analysis', "test_groups")
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     for root_uuid, observable_uuid in uuids:
@@ -553,7 +550,7 @@ def test_delayed_analysis_timing():
     root_2.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_delayed_analysis', "test_groups")
+    engine.configuration_manager.enable_module('test_delayed_analysis', "test_groups")
     # o_2 will delay (1 execution)
     # o_1 will delay, pick back up, and then change mode (3 executions)
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
@@ -601,7 +598,7 @@ def test_io_count():
     assert _get_io_read_count() == 0
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # at this point it should have loaded the root analysis
@@ -637,7 +634,7 @@ def test_delayed_analysis_io_count():
     assert _get_io_read_count() == 0
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_delayed_analysis')
+    engine.configuration_manager.enable_module('test_delayed_analysis')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # expect 5 writes at this point
@@ -667,7 +664,7 @@ def test_delayed_analysis_io_count():
 
 @pytest.mark.system
 def test_autorefresh():
-    get_config()[CONFIG_ENGINE][CONFIG_ENGINE_AUTO_REFRESH_FREQUENCY] = '1'
+    get_engine_config().auto_refresh_frequency = 1
     engine = Engine(config=EngineConfiguration(pool_size_limit=1))
     engine_process = engine.start_nonblocking()
     engine.wait_for_start()
@@ -688,7 +685,7 @@ def test_final_analysis():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_final_analysis')
+    engine.configuration_manager.enable_module('test_final_analysis')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should have a single observable now
@@ -718,7 +715,7 @@ def test_final_analysis_io_count():
     assert _get_io_read_count() == 0
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_final_analysis')
+    engine.configuration_manager.enable_module('test_final_analysis')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # 8/10/2021 -- this used to be 3 but was changed to 6 when we started flushing the root during analysis
@@ -746,7 +743,7 @@ def test_final_analysis_io_count_2():
     assert _get_io_read_count() == 0
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_final_analysis')
+    engine.configuration_manager.enable_module('test_final_analysis')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # 8/10/2021 - this used to be 4 but now it's 11 due to flushing the root during analysis
@@ -764,8 +761,8 @@ def test_delayed_analysis_timeout():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_delayed_analysis_timeout', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_post_analysis', 'test_groups')
+    engine.configuration_manager.enable_module('test_delayed_analysis_timeout', 'test_groups')
+    engine.configuration_manager.enable_module('test_post_analysis', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # wait for delayed analysis to time out
@@ -788,7 +785,7 @@ def test_delayed_analysis_recovery():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_delayed_analysis', "test_groups")
+    engine.configuration_manager.enable_module('test_delayed_analysis', "test_groups")
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     # wait until we see the delay in the queue
@@ -801,7 +798,7 @@ def test_delayed_analysis_recovery():
 
     # start another engine back up
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_delayed_analysis', "test_groups")
+    engine.configuration_manager.enable_module('test_delayed_analysis', "test_groups")
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -828,8 +825,8 @@ def test_wait_for_analysis():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_b', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_b', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -851,8 +848,8 @@ def test_wait_for_analysis_instance():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a_instance', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_b_instance', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a_instance', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_b_instance', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -875,8 +872,8 @@ def test_wait_for_analysis_instance_multi():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a_instance', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a_instance_2', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a_instance', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a_instance_2', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -896,7 +893,7 @@ def test_wait_for_disabled_analysis():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a_instance', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a_instance', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -915,8 +912,8 @@ def test_wait_for_analysis_circ_dep():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_b', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_b', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -936,8 +933,8 @@ def test_wait_for_analysis_missing_analysis():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_b', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_b', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -958,9 +955,9 @@ def test_wait_for_analysis_circ_dep_chained():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_b', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_c', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_b', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_c', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -981,9 +978,9 @@ def test_wait_for_analysis_chained():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_b', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_c', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_b', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_c', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1004,8 +1001,8 @@ def test_wait_for_analysis_target_delayed():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_b', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_b', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1026,8 +1023,8 @@ def test_wait_for_analysis_source_delayed():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_b', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_b', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1045,8 +1042,8 @@ def test_wait_for_analysis_source_and_target_delayed():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_b', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_b', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1069,9 +1066,9 @@ def test_wait_for_analysis_rejected():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_wait_a', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_b', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_test_wait_c', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_a', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_b', 'test_groups')
+    engine.configuration_manager.enable_module('test_wait_c', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1091,7 +1088,7 @@ def test_post_analysis_after_false_return():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_post_analysis', 'test_groups')
+    engine.configuration_manager.enable_module('test_post_analysis', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1104,7 +1101,7 @@ def test_post_analysis_after_false_return():
 @pytest.mark.integration
 def test_maximum_cumulative_analysis_warning_time():
     # setting this to zero should cause it to happen right away
-    get_config()[CONFIG_GLOBAL][CONFIG_GLOBAL_MAXIMUM_CUMULATIVE_ANALYSIS_WARNING_TIME] = '0'
+    get_config().global_settings.maximum_cumulative_analysis_warning_time = 0
 
     root = create_root_analysis(uuid=str(uuid.uuid4()), analysis_mode='test_groups')
     root.initialize_storage()
@@ -1113,7 +1110,7 @@ def test_maximum_cumulative_analysis_warning_time():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_groups')
+    engine.configuration_manager.enable_module('basic_test', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
     
     assert log_count('ACE has been analyzing') == 1
@@ -1122,7 +1119,7 @@ def test_maximum_cumulative_analysis_warning_time():
 def test_maximum_cumulative_analysis_warning_time_analysis_mode():
     # same thing as before except we set the timeout for just the analysis mode
     # setting this to zero should cause it to happen right away
-    get_config()['analysis_mode_test_groups']['maximum_cumulative_analysis_warning_time'] = '0'
+    get_config().get_analysis_mode_config('test_groups').maximum_cumulative_analysis_warning_time = 0
 
     root = create_root_analysis(uuid=str(uuid.uuid4()), analysis_mode='test_groups')
     root.initialize_storage()
@@ -1131,7 +1128,7 @@ def test_maximum_cumulative_analysis_warning_time_analysis_mode():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_groups')
+    engine.configuration_manager.enable_module('basic_test', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
     
     assert log_count('ACE has been analyzing') == 1
@@ -1139,7 +1136,7 @@ def test_maximum_cumulative_analysis_warning_time_analysis_mode():
 @pytest.mark.integration
 def test_maximum_cumulative_analysis_fail_time():
     # setting this to zero should cause it to happen right away
-    get_config()['global']['maximum_cumulative_analysis_fail_time'] = '0'
+    get_config().global_settings.maximum_cumulative_analysis_fail_time = 0
 
     root = create_root_analysis(uuid=str(uuid.uuid4()), analysis_mode='test_groups')
     root.initialize_storage()
@@ -1148,7 +1145,7 @@ def test_maximum_cumulative_analysis_fail_time():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_groups')
+    engine.configuration_manager.enable_module('basic_test', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     assert log_count('ACE took too long to analyze') == 2
@@ -1159,10 +1156,10 @@ def test_maximum_cumulative_analysis_fail_time():
 @pytest.mark.integration
 def test_maximum_cumulative_analysis_fail_time_ignore():
     # setting this to zero should cause it to happen right away
-    get_config()['global']['maximum_cumulative_analysis_fail_time'] = '0'
+    get_config().global_settings.maximum_cumulative_analysis_fail_time = 0
 
     # setting this should cause this analysis mode to ignore the cumulative fail time
-    get_config()['service_engine']['analysis_modes_ignore_cumulative_timeout'] = 'test_groups'
+    get_engine_config().analysis_modes_ignore_cumulative_timeout = ['test_groups']
 
     root = create_root_analysis(uuid=str(uuid.uuid4()), analysis_mode='test_groups')
     root.initialize_storage()
@@ -1171,7 +1168,7 @@ def test_maximum_cumulative_analysis_fail_time_ignore():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_groups')
+    engine.configuration_manager.enable_module('basic_test', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     assert log_count('ACE took too long to analyze') == 0
@@ -1184,7 +1181,7 @@ def test_maximum_cumulative_analysis_fail_time_ignore():
 def test_maximum_cumulative_analysis_fail_time_analysis_mode():
     # same thing as before except we set the timeout for just the analysis mode
     # setting this to zero should cause it to happen right away
-    get_config()['analysis_mode_test_groups']['maximum_cumulative_analysis_fail_time'] = '0'
+    get_config().get_analysis_mode_config('test_groups').maximum_cumulative_analysis_fail_time = 0
 
     root = create_root_analysis(uuid=str(uuid.uuid4()), analysis_mode='test_groups')
     root.initialize_storage()
@@ -1193,7 +1190,7 @@ def test_maximum_cumulative_analysis_fail_time_analysis_mode():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_groups')
+    engine.configuration_manager.enable_module('basic_test', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     assert log_count('ACE took too long to analyze') == 2
@@ -1204,9 +1201,8 @@ def test_maximum_cumulative_analysis_fail_time_analysis_mode():
 @pytest.mark.integration
 def test_maximum_analysis_time_global():
     # setting this to zero should cause it to happen right away
-    get_config()['global']['maximum_analysis_time'] = '0'
+    get_config().global_settings.maximum_analysis_time = 0
     # this needs to be set explicitly because it defaults to the global maximum if not set
-    get_config()['analysis_module_basic_test']['maximum_analysis_time'] = '60'
 
     root = create_root_analysis(uuid=str(uuid.uuid4()), analysis_mode='test_groups')
     root.initialize_storage()
@@ -1215,7 +1211,7 @@ def test_maximum_analysis_time_global():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_groups')
+    engine.configuration_manager.enable_module('basic_test', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # 6/10/2025 - reduced to 1 since execute_analysis now returns COMPLETE
@@ -1228,7 +1224,7 @@ def test_maximum_analysis_time_global():
 def test_maximum_analysis_time_analysis_mode():
     # same thing as before except we set the timeout for just the analysis mode
     # setting this to zero should cause it to happen right away
-    get_config()['analysis_mode_test_groups']['maximum_analysis_time'] = '0'
+    get_config().get_analysis_mode_config("test_groups").maximum_analysis_time = 0
 
     root = create_root_analysis(uuid=str(uuid.uuid4()), analysis_mode='test_groups')
     root.initialize_storage()
@@ -1237,7 +1233,7 @@ def test_maximum_analysis_time_analysis_mode():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_groups')
+    engine.configuration_manager.enable_module('basic_test', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # 6/10/2025 - reduced to 1 since execute_analysis now returns COMPLETE
@@ -1255,7 +1251,7 @@ def test_is_module_enabled():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_dependency_test', 'test_groups')
+    engine.configuration_manager.enable_module('dependency_test', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1289,7 +1285,7 @@ def test_analysis_mode_priority():
     test_2_uuid = root.uuid
 
     engine = Engine(config=EngineConfiguration(analysis_mode_priority="test_groups"))
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     # we should see test_2_uuid get selected BEFORE test_1_uuid gets selected
@@ -1316,7 +1312,7 @@ def test_analysis_mode_no_priority():
     test_2_uuid = root.uuid
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # since we don't have any kind of priority set they should get selected in order they were inserted (FIFO)
@@ -1328,7 +1324,7 @@ def test_analysis_mode_no_priority():
 @pytest.mark.integration
 def test_error_reporting():
     # trigger the failure this way
-    get_config()['global']['maximum_cumulative_analysis_fail_time'] = '0'
+    get_config().global_settings.maximum_cumulative_analysis_fail_time = 0
 
     # remember what was already in the error reporting directory
     def _enum_error_reporting():
@@ -1343,7 +1339,7 @@ def test_error_reporting():
     root.schedule()
 
     engine = Engine(config=EngineConfiguration(copy_analysis_on_error=True))
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # look at what is in the error reporting directory now
@@ -1364,7 +1360,7 @@ def test_error_reporting():
 
 @pytest.mark.integration
 def test_file_error_reporting():
-    get_config()[CONFIG_ENGINE][CONFIG_ENGINE_COPY_FILE_ON_ERROR] = 'yes'
+    get_engine_config().copy_file_on_error = True
 
     # remember what was already in the error reporting directory
     def _enum_error_reporting():
@@ -1383,7 +1379,7 @@ def test_file_error_reporting():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should have a single error report and a single storage directory in the error reporting directory
@@ -1420,7 +1416,7 @@ def test_stats():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # there should be one subdir in the engine's stats dir
@@ -1445,7 +1441,7 @@ def test_exclusion():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1470,11 +1466,11 @@ def test_limited_analysis():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
-    engine.configuration_manager.enable_module('analysis_module_test_delayed_analysis')
-    engine.configuration_manager.enable_module('analysis_module_test_engine_locking')
-    engine.configuration_manager.enable_module('analysis_module_test_final_analysis')
-    engine.configuration_manager.enable_module('analysis_module_test_post_analysis')
+    engine.configuration_manager.enable_module('basic_test')
+    engine.configuration_manager.enable_module('test_delayed_analysis')
+    engine.configuration_manager.enable_module('test_engine_locking')
+    engine.configuration_manager.enable_module('test_final_analysis')
+    engine.configuration_manager.enable_module('test_post_analysis')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1499,11 +1495,11 @@ def test_limited_analysis_invalid():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
-    engine.configuration_manager.enable_module('analysis_module_test_delayed_analysis')
-    engine.configuration_manager.enable_module('analysis_module_test_engine_locking')
-    engine.configuration_manager.enable_module('analysis_module_test_final_analysis')
-    engine.configuration_manager.enable_module('analysis_module_test_post_analysis')
+    engine.configuration_manager.enable_module('basic_test')
+    engine.configuration_manager.enable_module('test_delayed_analysis')
+    engine.configuration_manager.enable_module('test_engine_locking')
+    engine.configuration_manager.enable_module('test_final_analysis')
+    engine.configuration_manager.enable_module('test_post_analysis')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1546,7 +1542,7 @@ def test_no_cleanup():
 @pytest.mark.integration
 def test_cleanup_with_delayed_analysis():
     # we are set to cleanup, however, we don't because we have delayed analysis
-    get_config()['analysis_mode_test_groups']['cleanup'] = 'yes'
+    get_config().get_analysis_mode_config("test_groups").cleanup = True
     root = create_root_analysis(uuid=str(uuid.uuid4()), analysis_mode='test_groups')
     root.initialize_storage()
     observable = root.add_observable_by_spec(F_TEST, '00:00|00:01')
@@ -1554,7 +1550,7 @@ def test_cleanup_with_delayed_analysis():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_delayed_analysis', "test_groups")
+    engine.configuration_manager.enable_module('test_delayed_analysis', "test_groups")
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     assert not os.path.isdir(root.storage_dir)
@@ -1571,7 +1567,7 @@ def test_local_analysis_mode_single():
     root.schedule()
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['test_groups']))
-    engine.configuration_manager.enable_module('analysis_module_basic_test', "test_groups")
+    engine.configuration_manager.enable_module('basic_test', "test_groups")
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1592,7 +1588,7 @@ def test_excluded_analysis_mode():
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=[], excluded_analysis_modes=['test_groups']))
 
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.SINGLE_SHOT)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1617,7 +1613,7 @@ def test_local_analysis_mode_missing_default():
     root.schedule()
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['test_empty'], default_analysis_mode="test_single"))
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -1655,7 +1651,7 @@ def test_local_analysis_mode_not_local():
 
     # we say we only support test_empty analysis modes
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['test_empty'], default_analysis_mode="test_empty"))
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_empty')
+    engine.configuration_manager.enable_module('basic_test', 'test_empty')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # this should exit out since the workload entry is for test_single analysis mode
@@ -1670,11 +1666,11 @@ def test_local_analysis_mode_not_local():
 def test_target_nodes():
 
     # only pull work from the local node
-    get_config()['service_engine']['target_nodes'] = 'LOCAL'
+    get_engine_config().target_nodes = ['LOCAL']
 
     # initialize this node
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # schedule work on the current node
@@ -1689,7 +1685,7 @@ def test_target_nodes():
     existing_node_id = g_int(G_SAQ_NODE_ID)
 
     # now start another engine on a different "node"
-    get_config()['global']['node'] = 'second_host'
+    get_config().global_settings.node = 'second_host'
     reset_node('second_host')
     set_g(G_SAQ_NODE_ID, None)
 
@@ -1698,7 +1694,7 @@ def test_target_nodes():
 
     engine = Engine()
     assert engine.node_manager.target_nodes == [g(G_SAQ_NODE)]
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should still have that workload in the database
@@ -1708,14 +1704,14 @@ def test_target_nodes():
         assert cursor.fetchone()[0] == 1
 
     # change our node back
-    get_config()['global']['node'] = existing_node
+    get_config().global_settings.node = existing_node
     reset_node(existing_node)
     set_g(G_SAQ_NODE_ID, None)
 
     # run again -- we should pick it up this time
     engine = Engine()
     assert engine.node_manager.target_nodes == [g(G_SAQ_NODE)]
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # workload should be clear
@@ -1743,16 +1739,16 @@ def test_local_analysis_mode_remote_pickup(mock_api_call, monkeypatch):
     # we say we only support test_empty analysis modes
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['test_empty'], analysis_pools={'test_empty': 1}, default_analysis_mode="test_empty"))
 
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # make sure our stuff is still there
     assert os.path.exists(old_storage_dir)
 
     # now start another engine on a different "node"
-    get_config()['global']['node'] = 'second_host'
+    get_engine_config().node = 'second_host'
     reset_node('second_host')
-    get_config()['analysis_mode_test_single']['cleanup'] = 'no'
+    get_config().get_analysis_mode_config("test_single").cleanup = False
 
     # we trick the api server into using the old storage dir
     import aceapi.engine
@@ -1763,7 +1759,7 @@ def test_local_analysis_mode_remote_pickup(mock_api_call, monkeypatch):
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=["test_single"], analysis_pools={"test_single": 1}, default_analysis_mode="test_single"))
 
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # look for the log to move the work target
@@ -1814,20 +1810,20 @@ def test_local_analysis_mode_remote_pickup_invalid_company_id(mock_api_call):
 
     # we say we only support test_empty analysis modes
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['test_empty'], analysis_pools={'test_empty': 1}, default_analysis_mode="test_empty"))
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # make sure our stuff is still there
     assert os.path.exists(old_storage_dir)
 
     # now start another engine on a different "node"
-    get_config()['global']['node'] = 'second_host'
+    get_config().global_settings.node = 'second_host'
     reset_node('second_host')
-    get_config()['analysis_mode_test_single']['cleanup'] = 'no'
+    get_config().get_analysis_mode_config("test_single").cleanup = False
 
     # and this node handles the test_single mode
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['test_single'], analysis_pools={'test_single': 1}, default_analysis_mode="test_single"))
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # make sure our stuff is still there
@@ -1884,7 +1880,7 @@ def test_node_modes_update_any():
 def test_primary_node():
 
     # test having a node become the primary node
-    get_config()['service_engine']['node_status_update_frequency'] = '0'
+    get_engine_config().node_status_update_frequency = 0
     engine = Engine()
     engine.node_manager.execute_primary_node_routines()
     
@@ -1899,7 +1895,7 @@ def test_primary_node():
 def test_primary_node_contest():
     # test having a node become the primary node
     # and then another node NOT becoming a primary node because there already is one
-    get_config()['service_engine']['node_status_update_frequency'] = '0'
+    get_engine_config().node_status_update_frequency = 0
     engine = Engine()
     engine.node_manager.execute_primary_node_routines()
     
@@ -1920,7 +1916,7 @@ def test_primary_node_contest():
 def test_primary_node_contest_winning():
     # test having a node become the primary node
     # after another node times out
-    get_config()['service_engine']['node_status_update_frequency'] = '0'
+    get_engine_config().node_status_update_frequency = 0
     engine = Engine()
     engine.node_manager.execute_primary_node_routines()
     
@@ -1976,7 +1972,7 @@ def test_engine_worker_recovery():
     root.schedule()
     
     engine = Engine(config=EngineConfiguration(pool_size_limit=1))
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine_process = engine.start_nonblocking()
     assert engine_process.pid
     engine.wait_for_start()
@@ -2001,8 +1997,8 @@ def test_failed_analysis_module():
     
     engine = Engine(config=EngineConfiguration(pool_size_limit=1))
     # basic test should run before low_priority does
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
-    engine.configuration_manager.enable_module('analysis_module_low_priority')
+    engine.configuration_manager.enable_module('basic_test')
+    engine.configuration_manager.enable_module('low_priority')
     engine_process = engine.start_nonblocking()
     assert engine_process.pid
     engine.wait_for_start()
@@ -2028,11 +2024,11 @@ def test_failed_analysis_module():
     assert analysis
 
 @pytest.mark.system
-def test_analysis_module_timeout():
+def test_timeout():
 
     # deal with analysis modules that never return from their execute_analyis() call
 
-    get_config()['analysis_module_basic_test']['maximum_analysis_time'] = '0'
+    get_analysis_module_config("basic_test").maximum_analysis_time = 0
 
     root_uuid = str(uuid.uuid4())
     root = create_root_analysis(uuid=root_uuid, storage_dir=get_storage_dir(root_uuid))
@@ -2043,8 +2039,8 @@ def test_analysis_module_timeout():
     
     engine = Engine(config=EngineConfiguration(pool_size_limit=1))
     # basic test should run before low_priority does
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
-    engine.configuration_manager.enable_module('analysis_module_low_priority')
+    engine.configuration_manager.enable_module('basic_test')
+    engine.configuration_manager.enable_module('low_priority')
     engine_process = engine.start_nonblocking()
     assert engine_process.pid
     engine.wait_for_start()
@@ -2077,8 +2073,8 @@ def test_copy_terminated_analysis_cause():
     # when an analysis module times out that is analyzing a file
     # we make a copy of that file
 
-    get_config()['analysis_module_basic_test']['maximum_analysis_time'] = '0'
-    get_config()['service_engine']['copy_terminated_analysis_causes'] = 'yes'
+    get_analysis_module_config("basic_test").maximum_analysis_time = 0
+    get_engine_config().copy_terminated_analysis_causes = True
 
     root_uuid = str(uuid.uuid4())
     root = create_root_analysis(uuid=root_uuid, storage_dir=get_storage_dir(root_uuid))
@@ -2092,7 +2088,7 @@ def test_copy_terminated_analysis_cause():
     root.schedule()
     
     engine = Engine(config=EngineConfiguration(pool_size_limit=1))
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine_process = engine.start_nonblocking()
     engine.wait_for_start()
     # we should see it die
@@ -2126,15 +2122,15 @@ def test_copy_terminated_analysis_cause():
         assert fp.read() == 'Hello, world!'
 
 @pytest.mark.system
-def test_analysis_module_timeout_root_flushed():
+def test_timeout_root_flushed():
 
     # this test ensures that analysis is flushed as it goes along
     # so that if an analysis module causes the worker process to die
     # we don't lose the work we've already done so far
 
-    get_config()['analysis_module_generate_file']['priority'] = '0'
-    get_config()['analysis_module_basic_test']['priority'] = '10'
-    get_config()['analysis_module_basic_test']['maximum_analysis_time'] = '0'
+    get_analysis_module_config("generate_file").priority = 0
+    get_analysis_module_config("basic_test").priority = 10
+    get_analysis_module_config("basic_test").maximum_analysis_time = 0
 
     root_uuid = str(uuid.uuid4())
     root = create_root_analysis(uuid=root_uuid, storage_dir=get_storage_dir(root_uuid))
@@ -2145,8 +2141,8 @@ def test_analysis_module_timeout_root_flushed():
     
     engine = Engine(config=EngineConfiguration(pool_size_limit=1))
     # basic test should run before low_priority does
-    engine.configuration_manager.enable_module('analysis_module_generate_file')
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('generate_file')
+    engine.configuration_manager.enable_module('basic_test')
     engine_process = engine.start_nonblocking()
     engine.wait_for_start()
     # we should see it die
@@ -2168,7 +2164,7 @@ def test_analysis_module_timeout_root_flushed():
 def test_local_mode():
 
     engine = Engine(config=EngineConfiguration(engine_type=EngineType.LOCAL))
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.initialize_single_threaded_worker(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root_uuid = str(uuid.uuid4())
@@ -2234,7 +2230,7 @@ def test_action_counters():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
+    engine.configuration_manager.enable_module('basic_test')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we have an action count limit of 2, so 2 of these should have analysis and 1 should not
@@ -2266,8 +2262,8 @@ def test_module_priority():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_high_priority')
-    engine.configuration_manager.enable_module('analysis_module_low_priority')
+    engine.configuration_manager.enable_module('high_priority')
+    engine.configuration_manager.enable_module('low_priority')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should see the high priority execute before the low priority
@@ -2282,8 +2278,8 @@ def test_module_priority():
     assert hp_log_entry.created < lp_log_entry.created
 
     # swap the priorities
-    get_config()['analysis_module_high_priority']['priority'] = '1'
-    get_config()['analysis_module_low_priority']['priority'] = '0'
+    get_analysis_module_config("high_priority").priority = 1
+    get_analysis_module_config("low_priority").priority = 0
 
     root_uuid = str(uuid.uuid4())
     root = create_root_analysis(uuid=root_uuid, storage_dir=get_storage_dir(root_uuid))
@@ -2293,8 +2289,8 @@ def test_module_priority():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_high_priority')
-    engine.configuration_manager.enable_module('analysis_module_low_priority')
+    engine.configuration_manager.enable_module('high_priority')
+    engine.configuration_manager.enable_module('low_priority')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should see the high priority execute before the low priority
@@ -2309,8 +2305,8 @@ def test_module_priority():
     assert lp_log_entry.created < hp_log_entry.created
 
     # test a high priority analysis against an analysis without a priority
-    get_config()['analysis_module_high_priority']['priority'] = '0'
-    del get_config()['analysis_module_low_priority']['priority']
+    get_analysis_module_config("high_priority").priority = 0
+    get_analysis_module_config("low_priority").priority = 10 # default priority is 10
 
     root_uuid = str(uuid.uuid4())
     root = create_root_analysis(uuid=root_uuid, storage_dir=get_storage_dir(root_uuid))
@@ -2319,13 +2315,13 @@ def test_module_priority():
     root.save()
     root.schedule()
 
-    get_config()['analysis_module_high_priority']['priority'] = '-1'
-    get_config()['analysis_module_low_priority']['priority'] = '1'
+    get_analysis_module_config("high_priority").priority = -1
+    get_analysis_module_config("low_priority").priority = 1
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_high_priority')
-    engine.configuration_manager.enable_module('analysis_module_low_priority')
-    engine.configuration_manager.enable_module('analysis_module_no_priority')
+    engine.configuration_manager.enable_module('high_priority')
+    engine.configuration_manager.enable_module('low_priority')
+    engine.configuration_manager.enable_module('no_priority')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should see the high priority execute before the low priority
@@ -2355,7 +2351,7 @@ def test_post_analysis_multi_mode():
     root.schedule()
     
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['test_groups', 'test_single', 'test_empty']))
-    engine.configuration_manager.enable_module('analysis_module_post_analysis_multi_mode', ['test_groups', 'test_single', 'test_empty'])
+    engine.configuration_manager.enable_module('post_analysis_multi_mode', ['test_groups', 'test_single', 'test_empty'])
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # at the end of analysis in test_groups mode post_analysis will execute and change the mode to test_single
@@ -2375,7 +2371,7 @@ def test_post_analysis_delayed_analysis():
     root.schedule()
     
     engine = Engine(config=EngineConfiguration(local_analysis_modes=["test_single"]))
-    engine.configuration_manager.enable_module('analysis_module_test_post_analysis', "test_single")
+    engine.configuration_manager.enable_module('test_post_analysis', "test_single")
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     assert log_count('execute_post_analysis called') == 1
@@ -2395,7 +2391,7 @@ def test_alt_workload_move():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_forced_detection', 'test_groups')
+    engine.configuration_manager.enable_module('forced_detection', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # root should have moved
@@ -2414,7 +2410,7 @@ def test_analysis_reset():
     root.schedule()
     
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')  
+    engine.configuration_manager.enable_module('basic_test')  
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
     
     root = load_root(get_storage_dir(root.uuid))
@@ -2488,10 +2484,10 @@ def test_analysis_reset_locked():
 def test_watched_files():
 
     # make sure we check every time
-    get_config()['global']['check_watched_files_frequency'] = '0'
+    get_config().global_settings.check_watched_files_frequency = 0
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')  
+    engine.configuration_manager.enable_module('basic_test')  
     engine.configuration_manager.load_modules()
 
     # the module creates the file we're going to watch, so wait for that to appear
@@ -2533,7 +2529,7 @@ def test_archive():
 
     engine = Engine()
     engine.configuration_manager.config.alerting_enabled = True # XXX kind of a hack?
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_single')
+    engine.configuration_manager.enable_module('basic_test', 'test_single')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     alert = load_alert(root.uuid)
@@ -2601,14 +2597,14 @@ def test_cleanup():
 
     engine = Engine()
     engine.configuration_manager.config.alerting_enabled = True # XXX kind of a hack?
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_single')
+    engine.configuration_manager.enable_module('basic_test', 'test_single')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     alert = load_alert(fp_root.uuid)
 
     # we'll set the time of the disposition to one day past the configured limit
     alert.disposition = DISPOSITION_FALSE_POSITIVE
-    alert.disposition_time = datetime.now() - timedelta(days=get_config()['global'].getint('fp_days') + 1)
+    alert.disposition_time = datetime.now() - timedelta(days=get_config().global_settings.fp_days + 1)
     alert.sync()
 
     get_db().remove()
@@ -2617,7 +2613,7 @@ def test_cleanup():
 
     # we'll set the time of the disposition to one day past the configured limit
     alert.disposition = DISPOSITION_IGNORE
-    alert.disposition_time = datetime.now() - timedelta(days=get_config()['global'].getint('ignore_days') + 1)
+    alert.disposition_time = datetime.now() - timedelta(days=get_config().global_settings.ignore_days + 1)
     alert.sync()
 
     get_db().remove()
@@ -2646,7 +2642,7 @@ def test_analysis_mode_dispositioned():
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['test_single', ANALYSIS_MODE_CORRELATION]))
     engine.configuration_manager.config.alerting_enabled = True # XXX kind of a hack?
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_single')
+    engine.configuration_manager.enable_module('basic_test', 'test_single')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should have a single alert
@@ -2692,7 +2688,7 @@ def test_analysis_mode_dispositioned():
     add_workload(alert.root_analysis) # why am I not calling schedule here?
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['test_single', ANALYSIS_MODE_CORRELATION]))
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_single')
+    engine.configuration_manager.enable_module('basic_test', 'test_single')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # make sure observable_2 got analyzed
@@ -2716,7 +2712,7 @@ def test_analysis_mode_dispositioned_ignore():
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['test_single', ANALYSIS_MODE_CORRELATION]))
     engine.configuration_manager.config.alerting_enabled = True # XXX kind of a hack?
-    engine.configuration_manager.enable_module('analysis_module_basic_test', 'test_single')
+    engine.configuration_manager.enable_module('basic_test', 'test_single')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should have a single alert
@@ -2748,8 +2744,8 @@ def test_observable_whitelisting():
     root.schedule()
 
     engine = Engine(config=EngineConfiguration(default_analysis_mode="test_single"))
-    engine.configuration_manager.enable_module('analysis_module_basic_test', "test_single")
-    engine.configuration_manager.enable_module('analysis_module_user_defined_tagging', "test_single")
+    engine.configuration_manager.enable_module('basic_test', "test_single")
+    engine.configuration_manager.enable_module('user_defined_tagging', "test_single")
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should only see the user-defined tagging analysis
@@ -2771,8 +2767,8 @@ def test_observable_whitelisting():
     root.schedule()
 
     engine = Engine(config=EngineConfiguration(default_analysis_mode="test_single"))
-    engine.configuration_manager.enable_module('analysis_module_basic_test', "test_single")
-    engine.configuration_manager.enable_module('analysis_module_user_defined_tagging', "test_single")
+    engine.configuration_manager.enable_module('basic_test', "test_single")
+    engine.configuration_manager.enable_module('user_defined_tagging', "test_single")
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should see any one analysis for this observable
@@ -2801,8 +2797,8 @@ def test_file_observable_whitelisting():
     root.schedule()
 
     engine = Engine(config=EngineConfiguration(default_analysis_mode="test_single"))
-    engine.configuration_manager.enable_module('analysis_module_generic_test', 'test_single')
-    engine.configuration_manager.enable_module('analysis_module_user_defined_tagging', "test_single")
+    engine.configuration_manager.enable_module('generic_test', 'test_single')
+    engine.configuration_manager.enable_module('user_defined_tagging', "test_single")
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should NOT see any analysis for this observable
@@ -2827,8 +2823,8 @@ def test_file_observable_whitelisting():
     root.schedule()
 
     engine = Engine(config=EngineConfiguration(default_analysis_mode="test_single"))
-    engine.configuration_manager.enable_module('analysis_module_generic_test', 'test_single')
-    engine.configuration_manager.enable_module('analysis_module_user_defined_tagging', "test_single")
+    engine.configuration_manager.enable_module('generic_test', 'test_single')
+    engine.configuration_manager.enable_module('user_defined_tagging', "test_single")
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # we should see analysis for this observable
@@ -2847,8 +2843,8 @@ def test_module_instance():
     root.schedule()
 
     engine = Engine(config=EngineConfiguration(local_analysis_modes=['test_groups', ANALYSIS_MODE_CORRELATION]))
-    engine.configuration_manager.enable_module('analysis_module_instance_1', 'test_groups')
-    engine.configuration_manager.enable_module('analysis_module_instance_2', 'test_groups')
+    engine.configuration_manager.enable_module('instance_1', 'test_groups')
+    engine.configuration_manager.enable_module('instance_2', 'test_groups')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     assert log_count('loading module ') == 2
@@ -2871,7 +2867,7 @@ def test_module_instance():
 @pytest.mark.integration
 def test_automation_limit():
 
-    get_config()['analysis_module_generic_test']['automation_limit'] = '1'
+    get_analysis_module_config('generic_test').automation_limit = 1
 
     root_uuid = str(uuid.uuid4())
     root = create_root_analysis(uuid=root_uuid, storage_dir=get_storage_dir(root_uuid))
@@ -2883,7 +2879,7 @@ def test_automation_limit():
     root.schedule()
 
     engine = Engine(config=EngineConfiguration(default_analysis_mode="test_single"))
-    engine.configuration_manager.enable_module('analysis_module_generic_test', 'test_single')
+    engine.configuration_manager.enable_module('generic_test', 'test_single')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -2903,7 +2899,7 @@ def test_automation_limit():
     root.schedule()
 
     engine = Engine(config=EngineConfiguration(default_analysis_mode="test_single"))
-    engine.configuration_manager.enable_module('analysis_module_generic_test', 'test_single')
+    engine.configuration_manager.enable_module('generic_test', 'test_single')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -2919,7 +2915,7 @@ def test_missing_analysis():
     root.schedule()
 
     engine = Engine(config=EngineConfiguration(default_analysis_mode="test_single"))
-    engine.configuration_manager.enable_module('analysis_module_generic_test', 'test_single')
+    engine.configuration_manager.enable_module('generic_test', 'test_single')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     # the idea here is a module was removed but it wasn't added to the deprecated analysis modules list
@@ -2957,10 +2953,10 @@ def test_cancel_analysis():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
-    engine.configuration_manager.enable_module('analysis_module_test_final_analysis')
-    engine.configuration_manager.enable_module('analysis_module_test_post_analysis')
-    engine.configuration_manager.enable_module('analysis_module_low_priority')
+    engine.configuration_manager.enable_module('basic_test')
+    engine.configuration_manager.enable_module('test_final_analysis')
+    engine.configuration_manager.enable_module('test_post_analysis')
+    engine.configuration_manager.enable_module('low_priority')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -2979,10 +2975,10 @@ def test_cancel_analysis():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_basic_test')
-    engine.configuration_manager.enable_module('analysis_module_test_final_analysis')
-    engine.configuration_manager.enable_module('analysis_module_test_post_analysis')
-    engine.configuration_manager.enable_module('analysis_module_low_priority')
+    engine.configuration_manager.enable_module('basic_test')
+    engine.configuration_manager.enable_module('test_final_analysis')
+    engine.configuration_manager.enable_module('test_post_analysis')
+    engine.configuration_manager.enable_module('low_priority')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -3010,7 +3006,7 @@ def test_file_size_limit():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_file_size_limit')
+    engine.configuration_manager.enable_module('test_file_size_limit')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -3033,7 +3029,7 @@ def test_file_size_limit():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_file_size_limit')
+    engine.configuration_manager.enable_module('test_file_size_limit')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -3058,7 +3054,7 @@ def test_file_size_limit():
     os.remove(observable.full_path)
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_file_size_limit')
+    engine.configuration_manager.enable_module('test_file_size_limit')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))
@@ -3074,7 +3070,7 @@ def test_file_size_limit():
     root.initialize_storage()
 
     # delete the configuration option
-    del get_config()['analysis_module_test_file_size_limit']['file_size_limit']
+    get_analysis_module_config('test_file_size_limit').file_size_limit = 0 # (default value)
     target_path = root.create_file_path("target.txt")
     with open(target_path, 'w') as fp:
         fp.write('aaa')
@@ -3084,7 +3080,7 @@ def test_file_size_limit():
     root.schedule()
 
     engine = Engine()
-    engine.configuration_manager.enable_module('analysis_module_test_file_size_limit')
+    engine.configuration_manager.enable_module('test_file_size_limit')
     engine.start_single_threaded(execution_mode=EngineExecutionMode.UNTIL_COMPLETE)
 
     root = load_root(get_storage_dir(root.uuid))

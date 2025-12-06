@@ -7,8 +7,7 @@ import time
 import pymysql
 from sqlalchemy import Executable
 from sqlalchemy.exc import DBAPIError
-from saq.configuration.config import get_config_value_as_boolean
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_LOG_SQL
+from saq.configuration.config import get_config
 from saq.database.pool import get_db
 from saq.error import report_exception
 
@@ -56,7 +55,7 @@ def execute_with_retry(db, cursor, sql_or_func, params=(), attempts=15, commit=F
                 results.append(sql_or_func(db, cursor, *params))
             else:
                 for (_sql, _params) in zip(sql_or_func, params):
-                    if get_config_value_as_boolean(CONFIG_GLOBAL, CONFIG_GLOBAL_LOG_SQL):
+                    if get_config().global_settings.log_sql:
                         logging.debug(f"executing with retry (attempt #{count}) sql {_sql} with paramters {_params}")
                     cursor.execute(_sql, _params)
                     results.append(cursor.rowcount)

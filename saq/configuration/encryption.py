@@ -2,15 +2,14 @@ import base64
 import logging
 
 from saq.configuration.error import EncryptedPasswordError
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_ENCRYPTED_PASSWORDS_DB, G_ENCRYPTION_KEY
+from saq.constants import G_ENCRYPTION_KEY
 from saq.environment import g
 
 def export_encrypted_passwords():
     """Returns a JSON dict of all the encrypted passwords with decrypted values."""
     from saq.database import get_db_connection
-    from saq.configuration.config import get_config_value_as_str
-
-    with get_db_connection(name=get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_ENCRYPTED_PASSWORDS_DB)) as db:
+    from saq.configuration.config import get_config
+    with get_db_connection(name=get_config().global_settings.encrypted_passwords_db) as db:
         c = db.cursor()
         c.execute("""
 SELECT
@@ -38,11 +37,11 @@ def import_encrypted_passwords(export):
 def encrypt_password(key, value):
     """Stores sensitive data as an encrypted value."""
     from saq.crypto import encrypt_chunk
-    from saq.configuration.config import get_config_value_as_str
+    from saq.configuration.config import get_config
     encrypted_value = base64.b64encode(encrypt_chunk(value.encode('utf8')))
 
     from saq.database import get_db_connection
-    with get_db_connection(name=get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_ENCRYPTED_PASSWORDS_DB)) as db:
+    with get_db_connection(name=get_config().global_settings.encrypted_passwords_db) as db:
         c = db.cursor()
         c.execute("""
 INSERT INTO `encrypted_passwords` ( `key`, `encrypted_value` )
@@ -54,9 +53,8 @@ ON DUPLICATE KEY UPDATE
 def delete_password(key):
     """Deletes the given password from the database. Returns True if the password was deleted."""
     from saq.database import get_db_connection
-    from saq.configuration.config import get_config_value_as_str
-
-    with get_db_connection(name=get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_ENCRYPTED_PASSWORDS_DB)) as db:
+    from saq.configuration.config import get_config
+    with get_db_connection(name=get_config().global_settings.encrypted_passwords_db) as db:
         c = db.cursor()
         c.execute("DELETE FROM `encrypted_passwords` WHERE `key` = %s", (key,))
         db.commit()
@@ -65,9 +63,8 @@ def delete_password(key):
 def decrypt_password(key):
     """Returns the decrypted value for the given key."""
     from saq.database import get_db_connection
-    from saq.configuration.config import get_config_value_as_str
-
-    with get_db_connection(name=get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_ENCRYPTED_PASSWORDS_DB)) as db:
+    from saq.configuration.config import get_config
+    with get_db_connection(name=get_config().global_settings.encrypted_passwords_db) as db:
         c = db.cursor()
         c.execute("""
 SELECT 

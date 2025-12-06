@@ -2,7 +2,9 @@ import logging
 import os
 import signal
 from multiprocessing import Event, Process
-from typing import Optional
+from typing import Optional, Type, Union
+
+from pydantic import Field
 
 from saq.constants import (
     G_SAQ_NODE,
@@ -17,6 +19,50 @@ from saq.error import report_exception
 from saq.engine.configuration_manager import ConfigurationManager
 from saq.service import ACEServiceInterface
 from saq.engine.enums import EngineState, EngineExecutionMode
+from saq.configuration.schema import ServiceConfig
+
+class EngineServiceConfig(ServiceConfig):
+    # analysis pool settings
+    # if NO analysis pools are specified then a single pool with no equal priority will be created with a size equal to the number of CPU cores
+    analysis_pools: dict[str, Union[str, int]] = Field(..., description="analysis pool settings")
+    # in a multi-node configuration nodes are free to pull work from other nodes (target_nodes)
+    # this setting is OPTIONAL and controls which nodes this node will pull work from
+    # you can specify the special value of LOCAL to only pull work from the local node
+    target_nodes: list[str] = Field(default_factory=list, description="optional list of nodes this node will pull work from")
+    # how often to discard the worker processes and create new ones (in seconds) (disabled until restart issue resolved)
+    auto_refresh_frequency: int = Field(..., description="how often to discard the worker processes and create new ones (in seconds)")
+    # the default analysis mode if none is specified, or an unknown analysis mode is specified
+    default_analysis_mode: str = Field(..., description="the default analysis mode if none is specified, or an unknown analysis mode is specified")
+    # local/excluded analysis modes
+    local_analysis_modes: list[str] = Field(..., description="local/excluded analysis modes")
+    excluded_analysis_modes: list[str] = Field(..., description="local/excluded analysis modes")
+    # the nodes database table keeps track of all the ace nodes that are currently available
+    # this settings specifies how often (in seconds) we update the table with our current information
+    node_status_update_frequency: int = Field(..., description="how often (in seconds) we update the table with our current information")
+    # if this is set to yes then any analysis that fails is copied to a directory for review later (can take a lot of disk space)
+    copy_analysis_on_error: bool = Field(..., description="if this is set to yes then any analysis that fails is copied to a directory for review later")
+    # if this is set to yes then any time an analysis module fails when analyzing a file, the engine will copy that file, along with details, to a directory for review
+    copy_file_on_error: bool = Field(..., description="if this is set to yes then any time an analysis module fails when analyzing a file, the engine will copy that file, along with details, to a directory for review")
+    # make copies of files analyzed by analysis modules that ended up timing out and getting killed by the worker manager (can take a lot of disk space)
+    copy_terminated_analysis_causes: bool = Field(..., description="make copies of files analyzed by analysis modules that ended up timing out and getting killed by the worker manager")
+    # in some cases you might want your work to be performed on a different hard drive; if set then new non-alert analysis will be performed in this directory (relative to SAQ_HOME)
+    work_dir: Optional[str] = Field(default=None, description="in some cases you might want your work to be performed on a different hard drive; if set then new non-alert analysis will be performed in this directory (relative to SAQ_HOME)")
+    # when an analyst dispositions an alert ace will stop analyzing it if the alert is in correlation mode
+    # this specifies how often ace checks the database for the disposition value (in seconds)
+    alert_disposition_check_frequency: int = Field(..., description="how often ace checks the database for the disposition value (in seconds)")
+    # a comma separated list of analysis modes that will NOT become alerts if detections are made (correlation, dispositioned, event)
+    non_detectable_modes: list[str] = Field(..., description="a comma separated list of analysis modes that will NOT become alerts if detections are made")
+    # yes/no to stop any running analysis on an alert if it is dispositioned before the analysis completes
+    stop_analysis_on_any_alert_disposition: bool = Field(..., description="yes/no to stop any running analysis on an alert if it is dispositioned before the analysis completes")
+    # A comma separated list of alert dispositions to trigger stopping any running analysis in the alert.
+    stop_analysis_on_dispositions: list[str] = Field(..., description="A comma separated list of alert dispositions to trigger stopping any running analysis in the alert")
+    # A comma separated list of analysis modes that should ignore the cumulative analysis timeout.
+    analysis_modes_ignore_cumulative_timeout: list[str] = Field(..., description="A comma separated list of analysis modes that should ignore the cumulative analysis timeout")
+    # If this is set to yes then whenever an analysis times out completely it gets logged at the WARNING level instead of ERROR (useful in unstable environments)
+    log_analysis_timeout_as_warning: bool = Field(..., description="If this is set to yes then whenever an analysis times out completely it gets logged at the WARNING level instead of ERROR")
+    # By default alerting is enabled. If this is set to no then the engine will not check to see if an analysis should become an alert.
+    alerting_enabled: bool = Field(..., description="By default alerting is enabled. If this is set to no then the engine will not check to see if an analysis should become an alert")
+    pool_size_limit: Optional[int] = Field(default=None, description="The maximum number of workers that can be created for any analysis mode")
 
 
 class Engine():
@@ -264,3 +310,7 @@ class EngineService(ACEServiceInterface):
 
     def stop(self):
         self.engine._controlled_stop()
+
+    @classmethod
+    def get_config_class(cls) -> Type[ServiceConfig]:
+        return EngineServiceConfig

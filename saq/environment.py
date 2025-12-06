@@ -64,7 +64,6 @@ from saq.constants import (
     G_EMAIL_ARCHIVE_SERVER_ID,
     G_ENCRYPTION_INITIALIZED,
     G_ENCRYPTION_KEY,
-    G_EXECUTION_THREAD_LONG_TIMEOUT,
     G_FORCED_ALERTS,
     G_GUI_WHITELIST_EXCLUDED_OBSERVABLE_TYPES,
     G_INSTANCE_TYPE,
@@ -240,9 +239,6 @@ GLOBAL_ENV = {
         value=False,
         description="set to True to cause tracebacks to be dumped to standard output",
     ),
-    G_EXECUTION_THREAD_LONG_TIMEOUT: GlobalEnvironmentSetting(
-        name=G_EXECUTION_THREAD_LONG_TIMEOUT, value=None, description=""
-    ),
     G_COMPANY_NAME: GlobalEnvironmentSetting(
         name=G_COMPANY_NAME, value=None, description="the company this node belongs to"
     ),
@@ -367,7 +363,7 @@ def initialize_data_dir():
     g(G_DATA_DIR) must be set prior to this call and the directory must already
     exist or an exception is raised."""
 
-    from saq.configuration import get_config_value_as_str
+    from saq.configuration import get_config
     from saq.local_locking import get_lock_directory
     from saq.email_archive import get_email_archive_dir
     from saq.collectors.base_collector import get_collection_error_dir
@@ -389,24 +385,24 @@ def initialize_data_dir():
         os.path.join(data_dir, "review", "misc"),
         os.path.join(
             data_dir,
-            get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_ERROR_REPORTING_DIR, default="error_reports"),
+            get_config().global_settings.error_reporting_dir,
         ),
         g(G_STATS_DIR),
         g(G_MODULE_STATS_DIR),
         os.path.join(g(G_STATS_DIR), "brocess"),  # get rid of this
         os.path.join(g(G_STATS_DIR), "metrics"),
         # XXX this should be done by the splunk module?
-        os.path.join(get_data_dir(), get_config_value_as_str("splunk_logging", "splunk_log_dir")),
-        os.path.join(get_data_dir(), get_config_value_as_str("splunk_logging", "splunk_log_dir"), "smtp"),
+        os.path.join(get_data_dir(), get_config().splunk_logging.splunk_log_dir),
+        os.path.join(get_data_dir(), get_config().splunk_logging.splunk_log_dir, "smtp"),
         g(G_TEMP_DIR),
         g(G_SERVICES_DIR),
         os.path.join(
             data_dir,
-            get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_PERSISTENCE_DIR, default="var/collection/persistence"),
+            get_config().collection.persistence_dir,
         ),
         os.path.join(
             data_dir,
-            get_config_value_as_str(CONFIG_COLLECTION, CONFIG_COLLECTION_INCOMING_DIR, default="var/collection/incoming"),
+            get_config().collection.incoming_dir,
         ),
         get_collection_error_dir(),
         g(G_DAEMON_DIR),
@@ -457,11 +453,8 @@ def initialize_environment(
     from saq.database import initialize_database, initialize_automation_user
     from saq.configuration import (
         get_config,
-        get_config_value_as_str,
-        get_config_value_as_boolean,
-        get_config_value_as_int,
-        get_config_value_as_list,
         initialize_configuration,
+        resolve_configuration,
     )
     from saq.integration.integration_loader import load_integrations, initialize_integrations
 
@@ -473,7 +466,7 @@ def initialize_environment(
     set_g(
         G_DATA_DIR,
         data_dir if data_dir else os.path.join(
-            get_base_dir(), get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_DATA_DIR)
+            get_base_dir(), get_config().global_settings.data_dir
         ),
     )
 
@@ -481,48 +474,40 @@ def initialize_environment(
         G_ANALYST_DATA_DIR,
         os.path.join(
             get_base_dir(),
-            get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_ANALYST_DATA_DIR),
+            get_config().global_settings.analyst_data_dir,
         ),
     )
 
     # figure out where the tmp dir should be
     if not temp_dir:
-        temp_dir = get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_TEMP_DIR, default=os.path.join(tempfile.gettempdir(), "ace"))
+        temp_dir = get_config().global_settings.tmp_dir or os.path.join(tempfile.gettempdir(), "ace")
         if os.path.isabs(temp_dir):
             temp_dir = os.path.join(get_base_dir(), temp_dir)
 
     set_g(G_TEMP_DIR, temp_dir)
     set_g(G_DAEMON_DIR, os.path.join(get_data_dir(), "var", "daemon"))
     set_g(G_SERVICES_DIR, os.path.join(get_data_dir(), "var", "services"))
-    set_g(G_COMPANY_NAME, get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_COMPANY_NAME))
+    set_g(G_COMPANY_NAME, get_config().global_settings.company_name)
     set_g(
-        G_COMPANY_ID, get_config_value_as_int(CONFIG_GLOBAL, CONFIG_GLOBAL_COMPANY_ID)
+        G_COMPANY_ID, get_config().global_settings.company_id
     )
     set_g(
         G_LOCAL_DOMAINS,
-        get_config_value_as_list(CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_DOMAINS),
+        get_config().global_settings.local_domains,
     )
     set_g(
         G_SQLITE3_TIMEOUT,
-        get_config_value_as_int(CONFIG_SQLITE3, CONFIG_SQLITE3_TIMEOUT, default=5),
+        get_config().sqlite3.timeout,
     )
     set_g(
         G_OBSERVABLE_LIMIT,
-        get_config_value_as_int(
-            CONFIG_GLOBAL, CONFIG_GLOBAL_MAXIMUM_OBSERVABLE_COUNT, default=0
-        ),
+        get_config().global_settings.maximum_observable_count,
     )
 
     minutes, seconds = map(
-        int, get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_LOCK_TIMEOUT).split(":")
+        int, get_config().global_settings.lock_timeout.split(":")
     )
     set_g(G_LOCK_TIMEOUT_SECONDS, (minutes * 60) + seconds)
-    set_g(
-        G_EXECUTION_THREAD_LONG_TIMEOUT,
-        get_config_value_as_int(
-            CONFIG_GLOBAL, CONFIG_GLOBAL_EXECUTION_THREAD_LONG_TIMEOUT
-        ),
-    )
 
     # user specified log level
     LOG_LEVEL = logging.INFO
@@ -550,9 +535,7 @@ def initialize_environment(
 
     initialize_logging(
         logging_config_path,
-        log_sql=get_config_value_as_boolean(
-            CONFIG_GLOBAL, CONFIG_GLOBAL_LOG_SQL, False
-        ),
+        log_sql=get_config().global_settings.log_sql,
         # optional fluent-bit tag will set the tag for all log messages sent to fluent-bit
         fluent_bit_tag=os.environ.get(ENV_FLUENT_BIT_TAG),
     )  # this log file just gets some startup information
@@ -564,24 +547,20 @@ def initialize_environment(
     initialize_encryption(encryption_password_plaintext=encryption_password_plaintext)
 
     # resolve any encrypted values that were referenced in the config
-    get_config().decrypt_all_values()
+    resolve_configuration(get_config())
 
     set_g(
         G_GUI_WHITELIST_EXCLUDED_OBSERVABLE_TYPES,
-        set(
-            get_config_value_as_list(
-                CONFIG_GUI, CONFIG_GUI_WHITELIST_EXCLUDED_OBSERVABLE_TYPES
-            )
-        ),
+        set(get_config().gui.whitelist_excluded_observable_types)
     )
 
     # what node is this?
-    node = get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_NODE)
+    node = get_config().global_settings.node
     if node == "AUTO":
         node = socket.getfqdn()
 
     # configure prefix
-    set_g(G_API_PREFIX, get_config_value_as_str(CONFIG_API, CONFIG_API_PREFIX))
+    set_g(G_API_PREFIX, get_config().api.prefix)
     if g(G_API_PREFIX) == "AUTO":
         set_g(G_API_PREFIX, socket.getfqdn())
 
@@ -590,7 +569,7 @@ def initialize_environment(
     logging.debug("node {} has api prefix {}".format(g(G_SAQ_NODE), g(G_API_PREFIX)))
 
     # what type of instance is this?
-    set_g(G_INSTANCE_TYPE, get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_TYPE))
+    set_g(G_INSTANCE_TYPE, get_config().global_settings.instance_type)
     if g(G_INSTANCE_TYPE) not in [
         INSTANCE_TYPE_PRODUCTION,
         INSTANCE_TYPE_QA,
@@ -623,7 +602,7 @@ def initialize_environment(
     # we can globally disable semaphores with this flag
     set_g(
         G_SEMAPHORES_ENABLED,
-        get_config_value_as_boolean(CONFIG_GLOBAL, CONFIG_GLOBAL_ENABLE_SEMAPHORES),
+        get_config().global_settings.enable_semaphores,
     )
 
     # some settings can be set to PROMPT
@@ -636,17 +615,17 @@ def initialize_environment(
     set_g(
         G_CA_CHAIN_PATH,
         os.path.join(
-            get_base_dir(), get_config_value_as_str(CONFIG_SSL, CONFIG_SSL_CA_CHAIN_PATH)
+            get_base_dir(), get_config().SSL.ca_chain_path
         ),
     )
     ace_api.set_default_ssl_ca_path(g(G_CA_CHAIN_PATH))
 
     # set the api key if it's available
-    if get_config_value_as_str(CONFIG_API, CONFIG_API_KEY):
-        ace_api.set_default_api_key(get_config_value_as_str(CONFIG_API, CONFIG_API_KEY))
+    if get_config().api.api_key:
+        ace_api.set_default_api_key(get_config().api.api_key)
 
-    if get_config_value_as_str(CONFIG_API, CONFIG_API_PREFIX):
-        ace_api.set_default_remote_host(get_config_value_as_str(CONFIG_API, CONFIG_API_PREFIX))
+    if get_config().api.prefix:
+        ace_api.set_default_remote_host(get_config().api.prefix)
 
     # initialize the database connection
     initialize_database()
@@ -677,52 +656,13 @@ def initialize_environment(
                 )
             del os.environ[proxy_key.upper()]
 
-    # load any additional proxies specified in the config sections proxy_*
-    for section in get_config().keys():
-        if section.startswith("proxy_"):
-            proxy_name = section[len("proxy_") :]
-            g_dict(G_OTHER_PROXIES)[proxy_name] = {}
-            for proxy_key in ["http", "https"]:
-                if (
-                    get_config_value_as_str(section, "host")
-                    and get_config_value_as_str(section, "port")
-                    and get_config_value_as_str(section, "transport")
-                ):
-                    if get_config_value_as_str(section, "user") and get_config_value_as_str(
-                        section, "password"
-                    ):
-                        g_dict(G_OTHER_PROXIES)[proxy_name][proxy_key] = (
-                            "{}://{}:{}@{}:{}".format(
-                                get_config_value_as_str(section, "transport"),
-                                urllib.parse.quote_plus(
-                                    get_config_value_as_str(section, "user")
-                                ),
-                                urllib.parse.quote_plus(
-                                    get_config_value_as_str(section, "password")
-                                ),
-                                get_config_value_as_str(section, "host"),
-                                get_config_value_as_str(section, "port"),
-                            )
-                        )
-                    else:
-                        g_dict(G_OTHER_PROXIES)[proxy_name][proxy_key] = (
-                            "{}://{}:{}".format(
-                                get_config_value_as_str(section, "transport"),
-                                get_config_value_as_str(section, "host"),
-                                get_config_value_as_str(section, "port"),
-                            )
-                        )
-
     # load global constants
     import iptools
 
     # for cidr in CONFIG['network_configuration']['managed_networks'].split(','):
-    for cidr in get_config_value_as_list(
-        CONFIG_NETWORK_CONFIGURATION, CONFIG_NETWORK_CONFIGURATION_MANAGED_NETWORKS
-    ):
+    for cidr in get_config().network_configuration.managed_networks:
         try:
-            if cidr:
-                g_list(G_MANAGED_NETWORKS).append(iptools.IpRange(cidr.strip()))
+            g_list(G_MANAGED_NETWORKS).append(iptools.IpRange(cidr.strip()))
         except Exception as e:
             logging.error("invalid managed network {}: {}".format(cidr, str(e)))
 

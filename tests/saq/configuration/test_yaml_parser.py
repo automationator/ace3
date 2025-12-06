@@ -1,139 +1,11 @@
 import os
 import sys
-import yaml
 
 import pytest
 
-from saq.configuration.error import ConfigurationException
 from saq.configuration.yaml_parser import (
-    EnvVarRef,
-    EncryptedRef,
-    YAMLSectionProxy,
     YAMLConfig,
-    _yaml_env_constructor,
-    _yaml_enc_constructor,
 )
-
-
-@pytest.mark.unit
-def test_envvarref_initialization():
-    """Test EnvVarRef class initialization and representation."""
-    ref = EnvVarRef("TEST_VAR")
-    assert ref.variable_name == "TEST_VAR"
-    assert repr(ref) == "EnvVarRef('TEST_VAR')"
-
-
-@pytest.mark.unit
-def test_encryptedref_initialization():
-    """Test EncryptedRef class initialization and representation."""
-    ref = EncryptedRef("test_key")
-    assert ref.key == "test_key"
-    assert repr(ref) == "EncryptedRef('test_key')"
-
-
-@pytest.mark.unit
-def test_yaml_env_constructor_scalar():
-    """Test YAML !env constructor with scalar node."""
-    loader = yaml.SafeLoader("!env TEST_VAR")
-    node = yaml.ScalarNode(tag="!env", value="TEST_VAR")
-    result = _yaml_env_constructor(loader, node)
-    
-    assert isinstance(result, EnvVarRef)
-    assert result.variable_name == "TEST_VAR"
-
-
-@pytest.mark.unit
-def test_yaml_env_constructor_mapping():
-    """Test YAML !env constructor with mapping node."""
-    loader = yaml.SafeLoader("{name: TEST_VAR}")
-    # Create a mapping node with name key
-    key_node = yaml.ScalarNode(tag="tag:yaml.org,2002:str", value="name")
-    value_node = yaml.ScalarNode(tag="tag:yaml.org,2002:str", value="TEST_VAR")
-    node = yaml.MappingNode(tag="tag:yaml.org,2002:map", value=[(key_node, value_node)])
-    
-    result = _yaml_env_constructor(loader, node)
-    
-    assert isinstance(result, EnvVarRef)
-    assert result.variable_name == "TEST_VAR"
-
-
-@pytest.mark.unit
-def test_yaml_enc_constructor_scalar():
-    """Test YAML !enc constructor with scalar node."""
-    loader = yaml.SafeLoader("!enc test_key")
-    node = yaml.ScalarNode(tag="!enc", value="test_key")
-    result = _yaml_enc_constructor(loader, node)
-    
-    assert isinstance(result, EncryptedRef)
-    assert result.key == "test_key"
-
-
-@pytest.mark.unit
-def test_yaml_enc_constructor_mapping():
-    """Test YAML !enc constructor with mapping node."""
-    loader = yaml.SafeLoader("{key: test_key}")
-    # Create a mapping node with key key
-    key_node = yaml.ScalarNode(tag="tag:yaml.org,2002:str", value="key")
-    value_node = yaml.ScalarNode(tag="tag:yaml.org,2002:str", value="test_key")
-    node = yaml.MappingNode(tag="tag:yaml.org,2002:map", value=[(key_node, value_node)])
-    
-    result = _yaml_enc_constructor(loader, node)
-    
-    assert isinstance(result, EncryptedRef)
-    assert result.key == "test_key"
-
-
-@pytest.mark.unit
-def test_yaml_section_proxy_basic_operations(tmpdir):
-    """Test YAMLSectionProxy basic mapping operations."""
-    # Set up environment variable for testing
-    os.environ["TEST_YAML_VAR"] = "test_value"
-    
-    try:
-        config = YAMLConfig()
-        test_data = {
-            "key1": "value1",
-            "key2": EnvVarRef("TEST_YAML_VAR"),
-            "key3": "env:TEST_YAML_VAR"
-        }
-        
-        proxy = YAMLSectionProxy(config, "test_section", test_data)
-        
-        # Test __getitem__
-        assert proxy["key1"] == "value1"
-        assert proxy["key2"] == "test_value"  # EnvVarRef resolved
-        assert proxy["key3"] == "test_value"  # env: prefix resolved
-        
-        # Test get method
-        assert proxy.get("key1") == "value1"
-        assert proxy.get("nonexistent", "default") == "default"
-        
-        # Test __setitem__ and __delitem__
-        proxy["new_key"] = "new_value"
-        assert proxy["new_key"] == "new_value"
-        
-        del proxy["new_key"]
-        assert proxy.get("new_key") is None
-        
-        # Test __iter__ and __len__
-        keys = list(proxy)
-        assert len(keys) == 3
-        assert "key1" in keys
-        assert "key2" in keys
-        assert "key3" in keys
-        assert len(proxy) == 3
-        
-        # Test items()
-        items = list(proxy.items())
-        assert len(items) == 3
-        # Check that values are resolved
-        item_dict = dict(items)
-        assert item_dict["key1"] == "value1"
-        assert item_dict["key2"] == "test_value"
-        assert item_dict["key3"] == "test_value"
-        
-    finally:
-        del os.environ["TEST_YAML_VAR"]
 
 
 @pytest.mark.unit
@@ -149,38 +21,6 @@ def test_yaml_config_initialization():
 
 
 @pytest.mark.unit
-def test_yaml_config_basic_mapping_operations():
-    """Test YAMLConfig basic mapping operations."""
-    config = YAMLConfig()
-    
-    # Test __setitem__ and __getitem__
-    config["test_section"] = {"key1": "value1", "key2": "value2"}
-    section = config["test_section"]
-    assert isinstance(section, YAMLSectionProxy)
-    assert section["key1"] == "value1"
-    assert section["key2"] == "value2"
-    
-    # Test __delitem__
-    config["temp_section"] = {"temp_key": "temp_value"}
-    del config["temp_section"]
-    assert "temp_section" not in config
-    
-    # Test __iter__ and __len__
-    keys = list(config)
-    assert len(keys) == 1
-    assert "test_section" in keys
-    assert len(config) == 1
-    
-    # Test sections method
-    sections = config.sections()
-    assert sections == ["test_section"]
-    
-    # Test get method
-    assert config.get("test_section", "key1") == "value1"
-    assert config.get("nonexistent_section", "key1", "default") == "default"
-
-
-@pytest.mark.unit
 def test_yaml_config_environment_variable_resolution():
     """Test environment variable resolution in YAMLConfig."""
     # Set up test environment variables
@@ -190,16 +30,10 @@ def test_yaml_config_environment_variable_resolution():
     try:
         config = YAMLConfig()
         
-        # Test EnvVarRef resolution
-        assert config._resolve_value(EnvVarRef("TEST_YAML_VAR1")) == "env_value_1"
-        
         # Test env: prefix resolution
         assert config._resolve_value("env:TEST_YAML_VAR2") == "env_value_2"
         
         # Test error for unknown environment variable
-        with pytest.raises(RuntimeError, match="configuration referenced unknown environment variable"):
-            config._resolve_value(EnvVarRef("NONEXISTENT_VAR"))
-        
         with pytest.raises(RuntimeError, match="configuration referenced unknown environment variable"):
             config._resolve_value("env:NONEXISTENT_VAR")
         
@@ -227,10 +61,6 @@ def test_yaml_config_encrypted_password_resolution():
     try:
         # Test with encryption not initialized
         set_g(G_ENCRYPTION_INITIALIZED, False)
-        
-        # Test EncryptedRef when encryption not initialized
-        result = config._resolve_value(EncryptedRef("test_key"))
-        assert result == "encrypted:test_key"
         
         # Test encrypted: prefix when encryption not initialized
         result = config._resolve_value("encrypted:test_key")
@@ -260,80 +90,20 @@ section2:
     result = config.load_file(str(yaml_file))
     
     assert result is True  # File was loaded
-    assert "section1" in config
-    assert "section2" in config
+    data = config._data
+    assert "section1" in data
+    assert "section2" in data
     
-    assert config["section1"]["key1"] == "value1"
-    assert config["section1"]["key2"] == "value2"
-    assert config["section2"]["key3"] == "value3"
-    assert config["section2"]["key4"] == 42
+    assert data["section1"]["key1"] == "value1"
+    assert data["section1"]["key2"] == "value2"
+    assert data["section2"]["key3"] == "value3"
+    assert data["section2"]["key4"] == 42
     
     assert str(yaml_file) in config.loaded_files
     
     # Test loading same file again returns False
     result = config.load_file(str(yaml_file))
     assert result is False
-
-
-@pytest.mark.unit
-def test_yaml_config_load_file_with_tags(tmpdir):
-    """Test YAML file loading with custom tags."""
-    os.environ["TEST_YAML_TAG_VAR"] = "tag_test_value"
-    
-    try:
-        yaml_file = tmpdir.join("test_tags.yaml")
-        yaml_content = """
-section1:
-  env_scalar: !env TEST_YAML_TAG_VAR
-  env_mapping: !env {name: TEST_YAML_TAG_VAR}
-  enc_scalar: !enc test_encrypted_key
-  enc_mapping: !enc {key: test_encrypted_key}
-"""
-        yaml_file.write(yaml_content)
-        
-        config = YAMLConfig()
-        config.load_file(str(yaml_file))
-        
-        # Test that tags are properly parsed as reference objects
-        section = config["section1"]
-        
-        # These should resolve the environment variable
-        assert section["env_scalar"] == "tag_test_value"
-        assert section["env_mapping"] == "tag_test_value"
-        
-        # For encrypted values, the behavior depends on encryption initialization state
-        # Since we can't easily control this in tests, we just verify they don't return the raw YAML
-        enc_scalar_result = section["enc_scalar"] 
-        enc_mapping_result = section["enc_mapping"]
-        
-        # They should be processed (not the original YAML string) - either decrypted, error message, or None
-        assert enc_scalar_result != "!enc test_encrypted_key"
-        assert enc_mapping_result != "!enc {key: test_encrypted_key}"
-        
-    finally:
-        del os.environ["TEST_YAML_TAG_VAR"]
-
-
-@pytest.mark.unit
-def test_yaml_config_load_file_scalar_top_level(tmpdir):
-    """Test YAML file loading with scalar values at top level."""
-    yaml_file = tmpdir.join("test_scalar.yaml")
-    yaml_content = """
-scalar_key: scalar_value
-section1:
-  key1: value1
-"""
-    yaml_file.write(yaml_content)
-    
-    config = YAMLConfig()
-    config.load_file(str(yaml_file))
-    
-    # Scalar at top-level should be put in a pseudo-section
-    assert "scalar_key" in config
-    assert config["scalar_key"]["value"] == "scalar_value"
-    
-    # Regular section should work normally
-    assert config["section1"]["key1"] == "value1"
 
 
 @pytest.mark.unit
@@ -350,13 +120,11 @@ def test_yaml_config_load_file_invalid_yaml(tmpdir):
 
 
 @pytest.mark.unit
-def test_yaml_config_apply():
-    """Test the apply method for merging configurations."""
+def test_yaml_config_merge():
+    """Test the merge method for merging configurations."""
     config = YAMLConfig()
-    
-    # Set initial configuration
-    config["section1"] = {"key1": "value1", "key2": "value2"}
-    config["section2"] = {"key3": "value3"}
+    config._data["section1"] = {"key1": "value1", "key2": "value2"}
+    config._data["section2"] = {"key3": "value3"}
     
     # Apply another configuration
     other_config = {
@@ -364,18 +132,18 @@ def test_yaml_config_apply():
         "section3": {"key5": "value5"}  # New section
     }
     
-    config.apply(other_config)
+    config.merge(other_config)
     
     # Check that existing values were updated
-    assert config["section1"]["key1"] == "updated_value1"
+    assert config._data["section1"]["key1"] == "updated_value1"
     # Check that existing values not in other_config remain
-    assert config["section1"]["key2"] == "value2"
+    assert config._data["section1"]["key2"] == "value2"
     # Check that new values were added
-    assert config["section1"]["key4"] == "value4"
+    assert config._data["section1"]["key4"] == "value4"
     # Check that untouched sections remain
-    assert config["section2"]["key3"] == "value3"
+    assert config._data["section2"]["key3"] == "value3"
     # Check that new sections were added
-    assert config["section3"]["key5"] == "value5"
+    assert config._data["section3"]["key5"] == "value5"
 
 
 @pytest.mark.unit
@@ -409,13 +177,13 @@ main_section:
     config.load_file(str(main_file))
     
     # Check that all sections are loaded
-    assert "main_section" in config
-    assert "included_section1" in config
-    assert "included_section2" in config
+    assert "main_section" in config._data
+    assert "included_section1" in config._data
+    assert "included_section2" in config._data
     
-    assert config["main_section"]["main_key"] == "main_value"
-    assert config["included_section1"]["inc_key1"] == "inc_value1"
-    assert config["included_section2"]["inc_key2"] == "inc_value2"
+    assert config._data["main_section"]["main_key"] == "main_value"
+    assert config._data["included_section1"]["inc_key1"] == "inc_value1"
+    assert config._data["included_section2"]["inc_key2"] == "inc_value2"
     
     # Check that all files are in loaded_files
     assert str(main_file) in config.loaded_files
@@ -456,14 +224,14 @@ app:
     config.load_file(str(main_file))
     
     # Check that all sections are loaded
-    assert "app" in config
-    assert "database" in config
-    assert "redis" in config
+    assert "app" in config._data
+    assert "database" in config._data
+    assert "redis" in config._data
     
-    assert config["app"]["name"] == "test_app"
-    assert config["database"]["host"] == "localhost"
-    assert config["database"]["port"] == 3306
-    assert config["redis"]["host"] == "redis-server"
+    assert config._data["app"]["name"] == "test_app"
+    assert config._data["database"]["host"] == "localhost"
+    assert config._data["database"]["port"] == 3306
+    assert config._data["redis"]["host"] == "redis-server"
 
 
 @pytest.mark.unit
@@ -489,52 +257,11 @@ main_section:
     config.load_file(str(main_file))
     
     # Main section should still be loaded
-    assert "main_section" in config
-    assert config["main_section"]["key"] == "value"
+    assert "main_section" in config._data
+    assert config._data["main_section"]["key"] == "value"
     
     # txt file should not be in loaded_files
     assert str(txt_file) not in config.loaded_files
-
-
-@pytest.mark.unit
-def test_yaml_config_verify_success():
-    """Test verify method when no OVERRIDE values exist."""
-    config = YAMLConfig()
-    config["section1"] = {"key1": "value1", "key2": "value2"}
-    config["section2"] = {"key3": "value3"}
-    
-    # Should return True when no OVERRIDE values
-    result = config.verify()
-    assert result is True
-
-
-@pytest.mark.unit
-def test_yaml_config_verify_with_overrides():
-    """Test verify method when OVERRIDE values exist."""
-    config = YAMLConfig()
-    config["section1"] = {"key1": "value1", "key2": "OVERRIDE"}
-    config["section2"] = {"key3": "OVERRIDE", "key4": "value4"}
-    
-    # Should raise ConfigurationException when OVERRIDE values exist
-    with pytest.raises(ConfigurationException, match="missing OVERRIDES in configuration"):
-        config.verify()
-
-
-@pytest.mark.unit
-def test_yaml_config_verify_with_resolved_overrides():
-    """Test verify method with values that resolve to OVERRIDE."""
-    os.environ["OVERRIDE_VAR"] = "OVERRIDE"
-    
-    try:
-        config = YAMLConfig()
-        config["section1"] = {"key1": "value1", "key2": "env:OVERRIDE_VAR"}
-        
-        # Should raise ConfigurationException when resolved value is OVERRIDE
-        with pytest.raises(ConfigurationException, match="missing OVERRIDES in configuration"):
-            config.verify()
-            
-    finally:
-        del os.environ["OVERRIDE_VAR"]
 
 
 @pytest.mark.unit
@@ -549,7 +276,7 @@ def test_yaml_config_apply_path_references():
         test_path2 = "/test/path2"
         
         # Set up path section with various value types
-        config["path"] = {
+        config._data["path"] = {
             "path1": test_path1,
             "path2": test_path2,
             "not_string": 42,  # Should be ignored
@@ -574,7 +301,7 @@ def test_yaml_config_apply_path_references_with_env_var():
     
     try:
         config = YAMLConfig()
-        config["path"] = {"env_path": "env:TEST_PATH_VAR"}
+        config._data["path"] = {"env_path": "env:TEST_PATH_VAR"}
         
         config.apply_path_references()
         
@@ -593,7 +320,7 @@ def test_yaml_config_apply_path_references_no_path_section():
     
     try:
         config = YAMLConfig()
-        config["other_section"] = {"key": "value"}
+        config._data["other_section"] = {"key": "value"}
         
         # Should not raise an error
         config.apply_path_references()
@@ -652,10 +379,10 @@ section2:
     config.load_file(str(file1))
     
     # Should handle circular references gracefully
-    assert "section1" in config
-    assert "section2" in config
-    assert config["section1"]["key1"] == "value1"
-    assert config["section2"]["key2"] == "value2"
+    assert "section1" in config._data
+    assert "section2" in config._data
+    assert config._data["section1"]["key1"] == "value1"
+    assert config._data["section2"]["key2"] == "value2"
     
     # Both files should be in loaded_files (loaded only once each)
     assert str(file1) in config.loaded_files
@@ -672,6 +399,154 @@ def test_yaml_config_get_decrypted_password_cached():
     
     result = config._get_decrypted_password("test_key")
     assert result == "cached_password"
+
+
+@pytest.mark.unit
+def test_yaml_config_merge_scalars():
+    """Test merge with scalar values - scalars should be replaced."""
+    config = YAMLConfig()
+    config._data = {
+        "section1": {"key1": "original_value", "key2": 42, "key3": True}
+    }
+
+    # Merge with updated scalar values
+    other_config = {
+        "section1": {"key1": "new_value", "key2": 99}
+    }
+
+    config.merge(other_config)
+
+    # Scalars should be replaced
+    assert config._data["section1"]["key1"] == "new_value"
+    assert config._data["section1"]["key2"] == 99
+    # Unmodified values should remain
+    assert config._data["section1"]["key3"] is True
+
+
+@pytest.mark.unit
+def test_yaml_config_merge_lists():
+    """Test merge with lists - lists should be appended."""
+    config = YAMLConfig()
+    config._data = {
+        "section1": {"items": ["item1", "item2", "item3"]}
+    }
+
+    # Merge with list containing new items
+    other_config = {
+        "section1": {"items": ["item2", "item4", "item5"]}
+    }
+
+    config.merge(other_config)
+
+    # List should be appended, not replaced
+    result = config._data["section1"]["items"]
+    assert result == ["item1", "item2", "item3", "item2", "item4", "item5"]
+    assert "item1" in result
+    assert "item2" in result
+    assert "item3" in result
+    assert "item4" in result
+    assert "item5" in result
+
+
+@pytest.mark.unit
+def test_yaml_config_merge_nested_dicts():
+    """Test merge with nested dictionaries - should merge recursively."""
+    config = YAMLConfig()
+    config._data = {
+        "section1": {
+            "level1": {
+                "level2": {
+                    "key1": "value1",
+                    "key2": "value2"
+                },
+                "other_key": "other_value"
+            }
+        }
+    }
+
+    # Merge with nested structure
+    other_config = {
+        "section1": {
+            "level1": {
+                "level2": {
+                    "key2": "updated_value2",  # Update nested value
+                    "key3": "value3"  # Add new nested value
+                },
+                "new_key": "new_value"  # Add new key at level1
+            }
+        }
+    }
+
+    config.merge(other_config)
+
+    # Check recursive merge
+    assert config._data["section1"]["level1"]["level2"]["key1"] == "value1"  # Preserved
+    assert config._data["section1"]["level1"]["level2"]["key2"] == "updated_value2"  # Updated
+    assert config._data["section1"]["level1"]["level2"]["key3"] == "value3"  # Added
+    assert config._data["section1"]["level1"]["other_key"] == "other_value"  # Preserved
+    assert config._data["section1"]["level1"]["new_key"] == "new_value"  # Added
+
+
+@pytest.mark.unit
+def test_yaml_config_merge_complex_mixed():
+    """Test merge with complex structure containing scalars, lists, and dicts."""
+    config = YAMLConfig()
+    config._data = {
+        "app": {
+            "name": "original_app",
+            "version": 1,
+            "features": ["feature1", "feature2"],
+            "database": {
+                "host": "localhost",
+                "port": 3306,
+                "options": ["opt1", "opt2"]
+            }
+        }
+    }
+
+    # Merge complex structure
+    other_config = {
+        "app": {
+            "name": "updated_app",  # Scalar replacement
+            "features": ["feature3"],  # List append
+            "database": {
+                "port": 5432,  # Nested scalar replacement
+                "username": "admin",  # New nested scalar
+                "options": ["opt3"]  # Nested list append
+            },
+            "new_section": {  # New nested dict
+                "key": "value"
+            }
+        }
+    }
+
+    config.merge(other_config)
+
+    # Check scalar replacement
+    assert config._data["app"]["name"] == "updated_app"
+    assert config._data["app"]["version"] == 1  # Preserved
+
+    # Check list append
+    features = config._data["app"]["features"]
+    assert features == ["feature1", "feature2", "feature3"]
+    assert "feature1" in features
+    assert "feature2" in features
+    assert "feature3" in features
+
+    # Check nested dict merging
+    assert config._data["app"]["database"]["host"] == "localhost"  # Preserved
+    assert config._data["app"]["database"]["port"] == 5432  # Replaced
+    assert config._data["app"]["database"]["username"] == "admin"  # Added
+
+    # Check nested list append
+    options = config._data["app"]["database"]["options"]
+    assert options == ["opt1", "opt2", "opt3"]
+    assert "opt1" in options
+    assert "opt2" in options
+    assert "opt3" in options
+
+    # Check new section added
+    assert config._data["app"]["new_section"]["key"] == "value"
 
 
 @pytest.mark.unit
@@ -696,6 +571,6 @@ section1:
     config.load_file(str(file2))
     
     # Check that sections were merged
-    assert config["section1"]["key1"] == "value1"  # Original value preserved
-    assert config["section1"]["key2"] == "updated_value2"  # Value updated
-    assert config["section1"]["key3"] == "value3"  # New value added
+    assert config._data["section1"]["key1"] == "value1"  # Original value preserved
+    assert config._data["section1"]["key2"] == "updated_value2"  # Value updated
+    assert config._data["section1"]["key3"] == "value3"  # New value added

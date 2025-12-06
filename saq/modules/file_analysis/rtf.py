@@ -1,11 +1,13 @@
 import logging
 import os
 from subprocess import PIPE, Popen
-from typing import override
+from typing import Type, override
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import DIRECTIVE_SANDBOX, F_FILE, R_EXTRACTED_FROM, AnalysisExecutionResult
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.is_file_type import is_rtf_file
 from saq.observables.file import FileObservable
 from saq.util.strings import format_item_list_for_summary
@@ -73,17 +75,24 @@ class RTFOLEObjectAnalysis(Analysis):
 
         return f"{self.display_name}: extracted {format_item_list_for_summary(self.extracted_files)}"
 
+class RTFOLEObjectAnalyzerConfig(AnalysisModuleConfig):
+    rtfobj_path: str = Field(..., description="Full path to the rtfobj.py script from oletools package.")
+    suspect_ext: str = Field(..., description="Comma separated list of extensions that are automatically suspect if found inside an RTF OLE object.")
+    suspect_mime_type: str = Field(..., description="Comma separated list of mime types that are automatically suspect.")
+
 class RTFOLEObjectAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return RTFOLEObjectAnalyzerConfig
 
     @property
     def rtfobj_path(self):
         """Path to the rtfobj.py tool from oletools package."""
-        return self.config['rtfobj_path']
+        return self.config.rtfobj_path
         
 
     def verify_environment(self):
-        self.verify_config_exists('rtfobj_path')
-        self.verify_path_exists(self.config['rtfobj_path'])
+        self.verify_path_exists(self.config.rtfobj_path)
 
     @property
     def generated_analysis_type(self):
@@ -156,26 +165,30 @@ class RTFOLEObjectAnalyzer(AnalysisModule):
 class ExtractedRTFAnalysis(Analysis):
     pass
 
+class ExtractedRTFAnalyzerConfig(AnalysisModuleConfig):
+    suspect_ext: str = Field(..., description="Comma separated list of extensions that are automatically suspect if found inside an RTF.")
+    suspect_mime_type: str = Field(..., description="Comma separated list of mime types that are automatically suspect if found inside an RTF.")
+    suspect_file_type: str = Field(..., description="Comma separated list of file types that are automatically suspect if found inside an RTF.")
+
 class ExtractedRTFAnalyzer(AnalysisModule):
-    def verify_environment(self):
-        self.verify_config_exists('suspect_ext')
-        self.verify_config_exists('suspect_mime_type')
-        self.verify_config_exists('suspect_file_type')
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return ExtractedRTFAnalyzerConfig
 
     @property
     def suspect_ext(self):
         """Comma separated list of extensions that are automatically suspect if found inside an RTF OLE object."""
-        return map(lambda x: x.strip(), self.config['suspect_ext'].split(','))
+        return map(lambda x: x.strip(), self.config.suspect_ext.split(','))
 
     @property
     def suspect_mime_type(self):
         """Comma separated list of mime types that are automatically suspect if found inside an RTF OLE object."""
-        return map(lambda x: x.strip(), self.config['suspect_mime_type'].split(','))
+        return map(lambda x: x.strip(), self.config.suspect_mime_type.split(','))
 
     @property
     def suspect_file_type(self):
         """Comma separated list of types types that are automatically suspect if found inside an RTF OLE object."""
-        return map(lambda x: x.strip(), self.config['suspect_file_type'].split(','))
+        return map(lambda x: x.strip(), self.config.suspect_file_type.split(','))
 
     @property
     def generated_analysis_type(self):

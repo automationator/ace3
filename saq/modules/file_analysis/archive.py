@@ -2,12 +2,14 @@ import logging
 import os
 import re
 from subprocess import PIPE, Popen, TimeoutExpired
-from typing import override
+from typing import Type, override
 import zipfile
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import AnalysisExecutionResult, DIRECTIVE_EXTRACT_URLS, DIRECTIVE_SANDBOX, F_FILE, R_EXTRACTED_FROM
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.is_file_type import is_msi_file, is_office_file, is_ole_file
 from saq.observables.file import FileObservable
 from saq.util.strings import format_item_list_for_summary
@@ -109,11 +111,19 @@ COMPRESSION_MIN_SIZE = 2**16
 # listed: 1 files, totaling 711.168 bytes (compressed 326.520)
 UNACE_SUMMARY_REGEX = re.compile(rb'^listed: (\d+) files,.*')
 
+class ArchiveAnalyzerConfig(AnalysisModuleConfig):
+    excluded_mime_types: str = Field(..., description="Comma separated list of excluded mime types we do not want to extract.")
+    max_file_count: int = Field(..., description="If an archive has more than max_file_count files then we do not analyze it. More attacks only have a single file inside the zip; avoid archives with thousands of files.")
+    max_jar_file_count: int = Field(..., description="Use a different max file count for jar files.")
+    timeout: int = Field(..., description="The maximum amount of time (in seconds) to wait for 7z to complete. 7z can go nuts and consume all system memory, so this tries to prevent that.")
+    java_class_decompile_limit: int = Field(default=30, description="The archive analyzer also decompiles java class files (limit for number of class files).")
+
 class ArchiveAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return ArchiveAnalyzerConfig
+
     def verify_environment(self):
-        self.verify_config_exists('max_file_count')
-        self.verify_config_exists('max_jar_file_count')
-        self.verify_config_exists('timeout')
         self.verify_program_exists('7z')
         self.verify_program_exists('unrar')
         self.verify_program_exists('unace')
@@ -122,26 +132,24 @@ class ArchiveAnalyzer(AnalysisModule):
 
     @property
     def max_file_count(self):
-        return self.config.getint('max_file_count')
+        return self.config.max_file_count
 
     @property
     def max_jar_file_count(self):
-        return self.config.getint('max_jar_file_count')
+        return self.config.max_jar_file_count
 
     @property
     def java_class_decompile_limit(self):
         """Returns the maximum number of java class files to decompile."""
-        return self.config.getint('java_class_decompile_limit', fallback=100)
+        return self.config.java_class_decompile_limit
 
     @property
     def timeout(self):
-        return self.config.getint('timeout')
+        return self.config.timeout
 
     @property
     def excluded_mime_types(self):
-        if 'excluded_mime_types' in self.config:
-            return map(lambda x: x.strip(), self.config['excluded_mime_types'].split(','))
-        return []
+        return [x.strip() for x in self.config.excluded_mime_types.split(',')]
 
     @property
     def generated_analysis_type(self):

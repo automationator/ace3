@@ -1,7 +1,24 @@
-splunk:
+api_query_defaults_splunk:
+  name: splunk
+  wide_duration_before: "01:00:00:00"
+  wide_duration_after: "01:00:00:00"
+  narrow_duration_before: "00:01:00:00"
+  narrow_duration_after: "00:01:00:00"
+  max_result_count: 1000
+  query_timeout: 300
+  # how long to wait between calls to check for status of an async query
+  async_delay: 1
+  use_index_time: true
+  
+splunk_config_default:
+  name: default
+  # are we using this splunk server?
   enabled: true
+  # is this the default splunk server?
+  default: true
   # the splunk query server
-  uri: ""
+  host: ""
+  port: 443
   # user account information for splunk
   username: ""
   password: ""
@@ -20,20 +37,23 @@ splunk:
 # a comma separated list of for_detect observables types to export to splunk lookup table
 # NOTE: these map directly to observable type string representations!
 splunk_export:
-  export_list: "email_address, email_subject, email_x_mailer, file_name, fqdn, ipv4, uri_path, url, user_agent, md5, sha256"
+  export_list: [email_address, email_subject, email_x_mailer, file_name, fqdn, ipv4, uri_path, url, user_agent, md5, sha256]
   max_export: 500
-  api: splunk
-  user_context: ""
-  app: ""
+  api: default
+  user_context: 
+  app:
 
 service_network_semaphore:
-  semaphore_splunk: 1
+  semaphore_capacity_limits:
+    splunk: 1
 
 hunt_type_splunk:
-  module: saq.collectors.hunter.splunk_hunter
-  class: SplunkHunt
-  rule_dirs: hunts/splunk
-  splunk_config: splunk
+  name: splunk
+  python_module: saq.collectors.hunter.splunk_hunter
+  python_class: SplunkHunt
+  rule_dirs:
+    - hunts/splunk
+  splunk_config: default
   update_frequency: 60
 
 config:

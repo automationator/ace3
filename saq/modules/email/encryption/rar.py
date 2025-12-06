@@ -1,14 +1,16 @@
 import logging
 import os
 from subprocess import PIPE, Popen
-from typing import override
+from typing import Type, override
 
+from pydantic import Field
 from html2text import html2text
 from saq.analysis.analysis import Analysis
 from saq.analysis.search import search_down
 from saq.constants import DIRECTIVE_EXTRACT_URLS, F_FILE, AnalysisExecutionResult
 from saq.cracking import crack_password, generate_wordlist
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.observables.file import FileObservable
 
 KEY_ENCRYPTION_INFO = 'encryption_info'
@@ -105,7 +107,19 @@ class RarEncryptionAnalysis(Analysis):
             return f"{result}: could not decrypt"
 
 
+class RarEncryptionAnalyzerConfig(AnalysisModuleConfig):
+    range_low: int = Field(..., description="The minimum size of the passwords to try.")
+    range_high: int = Field(..., description="The maximum size of the passwords to try.")
+    byte_limit: int = Field(..., description="How many bytes into the email do you want to look?")
+    list_limit: int = Field(..., description="The maximum size of the word list created.")
+    john_bin_path: str = Field(..., description="Full path to john the ripper binary.")
+    attempt_brute_force: bool = Field(default=True, description="Whether brute force decryption should be attempted if wordlist fails.")
+
 class RarEncryptionAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return RarEncryptionAnalyzerConfig
+
     @property
     def generated_analysis_type(self):
         return RarEncryptionAnalysis
@@ -116,27 +130,27 @@ class RarEncryptionAnalyzer(AnalysisModule):
 
     @property
     def range_low(self):
-        return self.config.getint('range_low')
+        return self.config.range_low
 
     @property
     def range_high(self):
-        return self.config.getint('range_high')
+        return self.config.range_high
 
     @property
     def byte_limit(self):
-        return self.config.getint('byte_limit')
+        return self.config.byte_limit
 
     @property
     def list_limit(self):
-        return self.config.getint('list_limit')
+        return self.config.list_limit
 
     @property
     def john_bin_path(self):
-        return self.config.get('john_bin_path')
+        return self.config.john_bin_path
 
     @property
     def attempt_brute_force(self):
-        return self.config.getboolean('attempt_brute_force')
+        return self.config.attempt_brute_force
 
     def execute_analysis(self, _file) -> AnalysisExecutionResult:
         assert isinstance(_file, FileObservable)

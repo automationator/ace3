@@ -93,7 +93,7 @@ def manager_kwargs(rules_dir):
                 'rule_dirs': [rules_dir,],
                 'hunt_cls': TestHunt,
                 'concurrency_limit': 1,
-                'persistence_dir': os.path.join(get_data_dir(), get_config()['collection']['persistence_dir']),
+                'persistence_dir': os.path.join(get_data_dir(), get_config().collection.persistence_dir),
                 'update_frequency': 60,
                 'config': {},
                 'execution_mode': ExecutionMode.SINGLE_SHOT}
@@ -118,9 +118,7 @@ def hunter_service_multi_threaded(hunter_service):
 @pytest.fixture(autouse=True, scope="function")
 def setup():
     # delete all the existing hunt types
-    hunt_type_sections = [_ for _ in get_config().sections() if _.startswith('hunt_type_')]
-    for hunt_type_section in hunt_type_sections:
-        del get_config()[hunt_type_section]
+    get_config().clear_hunt_type_configs()
 
 @pytest.mark.system
 def test_start_stop(hunter_service_multi_threaded):
@@ -756,7 +754,7 @@ def test_initialize_last_execution_time(monkeypatch, tmpdir):
     p_dir = data_dir / "p"
     p_dir.mkdir()
     monkeypatch.setattr(g_obj(G_DATA_DIR), "value", str(data_dir))
-    monkeypatch.setitem(get_config()["collection"], "persistence_dir", "p")
+    monkeypatch.setattr(get_config().collection, "persistence_dir", "p")
     #monkeypatch.setattr(saq, "CONFIG", { "collection": { "persistence_dir": "p" } })
     hunt = Hunt(manager=MockManager(), config=default_hunt_config(name="test", frequency="00:00:10"))
     #hunt.frequency = timedelta(seconds=10)
@@ -776,7 +774,7 @@ def test_initialize_last_execution_time_cron(monkeypatch, tmpdir):
     p_dir = data_dir / "p"
     p_dir.mkdir()
     monkeypatch.setattr(g_obj(G_DATA_DIR), "value", str(data_dir))
-    monkeypatch.setitem(get_config()["collection"], "persistence_dir", "p")
+    monkeypatch.setattr(get_config().collection, "persistence_dir", "p")
     #monkeypatch.setattr(saq, "CONFIG", { "collection": { "persistence_dir": "p" } })
     hunt = Hunt(manager=MockManager(), config=default_hunt_config(name="test", cron_schedule="*/10 * * * *"))
     #hunt.cron_schedule = "*/10 * * * *"
@@ -796,7 +794,7 @@ def test_next_execution_time_cron_with_previous_execution(monkeypatch, tmpdir):
     p_dir = data_dir / "p"
     p_dir.mkdir()
     monkeypatch.setattr(g_obj(G_DATA_DIR), "value", str(data_dir))
-    monkeypatch.setitem(get_config()["collection"], "persistence_dir", "p")
+    monkeypatch.setattr(get_config().collection, "persistence_dir", "p")
     hunt = Hunt(manager=MockManager(), config=default_hunt_config(name="test", frequency="*/10 * * * *"))
 
     # set a previous execution time
@@ -865,7 +863,7 @@ def test_load_hunt_without_instance_types(rules_dir, manager_kwargs):
 @pytest.mark.integration
 def test_is_valid_instance_type_empty(manager_kwargs, monkeypatch):
     # when instance_types is empty, hunt should not be valid (instance type must be specified)
-    monkeypatch.setitem(get_config()["global"], "instance_type", "production")
+    monkeypatch.setattr(get_config().global_settings, "instance_type", "production")
 
     hunter = HuntManager(**manager_kwargs)
     hunt = default_hunt(manager=hunter, instance_types=[])
@@ -875,7 +873,7 @@ def test_is_valid_instance_type_empty(manager_kwargs, monkeypatch):
 @pytest.mark.integration
 def test_is_valid_instance_type_matching(manager_kwargs, monkeypatch):
     # hunt with instance_types=['production'] should be valid for production instance
-    monkeypatch.setitem(get_config()["global"], "instance_type", "production")
+    monkeypatch.setattr(get_config().global_settings, "instance_type", "production")
 
     hunter = HuntManager(**manager_kwargs)
     hunt = default_hunt(manager=hunter, instance_types=['production', 'development'])
@@ -885,7 +883,7 @@ def test_is_valid_instance_type_matching(manager_kwargs, monkeypatch):
 @pytest.mark.integration
 def test_is_valid_instance_type_case_insensitive(manager_kwargs, monkeypatch):
     # instance type matching should be case insensitive
-    monkeypatch.setitem(get_config()["global"], "instance_type", "Production")
+    monkeypatch.setattr(get_config().global_settings, "instance_type", "Production")
 
     hunter = HuntManager(**manager_kwargs)
     hunt = default_hunt(manager=hunter, instance_types=['PRODUCTION', 'development'])
@@ -895,7 +893,7 @@ def test_is_valid_instance_type_case_insensitive(manager_kwargs, monkeypatch):
 @pytest.mark.integration
 def test_is_valid_instance_type_non_matching(manager_kwargs, monkeypatch):
     # hunt with instance_types=['production'] should not be valid for development instance
-    monkeypatch.setitem(get_config()["global"], "instance_type", "development")
+    monkeypatch.setattr(get_config().global_settings, "instance_type", "development")
 
     hunter = HuntManager(**manager_kwargs)
     hunt = default_hunt(manager=hunter, instance_types=['production'])
@@ -905,7 +903,7 @@ def test_is_valid_instance_type_non_matching(manager_kwargs, monkeypatch):
 @pytest.mark.integration
 def test_hunt_execution_skips_invalid_instance_type(manager_kwargs, monkeypatch):
     # hunts with invalid instance types should not execute
-    monkeypatch.setitem(get_config()["global"], "instance_type", "production")
+    monkeypatch.setattr(get_config().global_settings, "instance_type", "production")
 
     hunter = HuntManager(**manager_kwargs)
 

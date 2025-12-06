@@ -1,6 +1,7 @@
 import pytest
 
 from saq.configuration.config import get_config
+from saq.configuration.schema import ServiceConfig
 from saq.constants import (
     CONFIG_SERVICE_CLASS,
     CONFIG_SERVICE_ENABLED,
@@ -48,22 +49,25 @@ class TestServiceValidForInstance:
 
     def test_service_valid_no_instance_types_configured(self):
         """test that service is valid when no instance types are configured"""
-        config = get_config()
-        config.add_section("service_test_service")
-        config["service_test_service"][CONFIG_SERVICE_MODULE] = "test.module"
-        config["service_test_service"][CONFIG_SERVICE_CLASS] = "TestClass"
+        get_config().add_service_config("test_service", ServiceConfig(
+            name="test_service", 
+            description="test service",
+            enabled=True,
+            python_module="test.module", 
+            python_class="TestClass"))
 
         result = service_valid_for_instance("test_service")
-
         assert result is True
 
     def test_service_valid_matching_instance_type(self):
         """test that service is valid when instance type matches"""
-        config = get_config()
-        config.add_section("service_test_service")
-        config["service_test_service"][CONFIG_SERVICE_MODULE] = "test.module"
-        config["service_test_service"][CONFIG_SERVICE_CLASS] = "TestClass"
-        config["service_test_service"][CONFIG_SERVICE_INSTANCE_TYPES] = [INSTANCE_TYPE_UNITTEST]
+        get_config().add_service_config("test_service", ServiceConfig(
+            name="test_service", 
+            description="test service",
+            enabled=True,
+            python_module="test.module", 
+            python_class="TestClass",
+            instance_types=[INSTANCE_TYPE_UNITTEST]))
 
         result = service_valid_for_instance("test_service")
 
@@ -71,11 +75,13 @@ class TestServiceValidForInstance:
 
     def test_service_invalid_non_matching_instance_type(self):
         """test that service is invalid when instance type does not match"""
-        config = get_config()
-        config.add_section("service_test_service")
-        config["service_test_service"][CONFIG_SERVICE_MODULE] = "test.module"
-        config["service_test_service"][CONFIG_SERVICE_CLASS] = "TestClass"
-        config["service_test_service"][CONFIG_SERVICE_INSTANCE_TYPES] = [INSTANCE_TYPE_PRODUCTION]
+        get_config().add_service_config("test_service", ServiceConfig(
+            name="test_service", 
+            description="test service",
+            enabled=True,
+            python_module="test.module", 
+            python_class="TestClass",
+            instance_types=[INSTANCE_TYPE_PRODUCTION]))
 
         result = service_valid_for_instance("test_service")
 
@@ -83,11 +89,13 @@ class TestServiceValidForInstance:
 
     def test_service_valid_with_multiple_instance_types(self):
         """test that service is valid when one of multiple instance types matches"""
-        config = get_config()
-        config.add_section("service_test_service")
-        config["service_test_service"][CONFIG_SERVICE_MODULE] = "test.module"
-        config["service_test_service"][CONFIG_SERVICE_CLASS] = "TestClass"
-        config["service_test_service"][CONFIG_SERVICE_INSTANCE_TYPES] = [INSTANCE_TYPE_PRODUCTION, INSTANCE_TYPE_UNITTEST]
+        get_config().add_service_config("test_service", ServiceConfig(
+            name="test_service", 
+            description="test service",
+            enabled=True,
+            python_module="test.module", 
+            python_class="TestClass",
+            instance_types=[INSTANCE_TYPE_PRODUCTION, INSTANCE_TYPE_UNITTEST]))
 
         result = service_valid_for_instance("test_service")
 
@@ -95,7 +103,7 @@ class TestServiceValidForInstance:
 
     def test_service_valid_raises_error_for_nonexistent_service(self):
         """test that service_valid_for_instance raises error for non-existent service"""
-        with pytest.raises(RuntimeError, match="configuration section service_nonexistent_service not found"):
+        with pytest.raises(ValueError, match="service config for nonexistent_service not found"):
             service_valid_for_instance("nonexistent_service")
 
 
@@ -153,9 +161,12 @@ class TestLoadServiceByName:
     def test_load_service_by_name_success(self):
         """test that load_service_by_name successfully loads a service"""
         config = get_config()
-        config.add_section("service_test_service")
-        config["service_test_service"][CONFIG_SERVICE_MODULE] = "tests.saq.test_service"
-        config["service_test_service"][CONFIG_SERVICE_CLASS] = "MockService"
+        config.add_service_config("test_service", ServiceConfig(
+            name="test_service", 
+            description="test service",
+            enabled=True,
+            python_module="tests.saq.test_service", 
+            python_class="MockService"))
 
         service = load_service_by_name("test_service")
 
@@ -166,10 +177,13 @@ class TestLoadServiceByName:
     def test_load_service_by_name_with_instance_type_validation(self):
         """test that load_service_by_name validates instance type"""
         config = get_config()
-        config.add_section("service_valid_service")
-        config["service_valid_service"][CONFIG_SERVICE_MODULE] = "tests.saq.test_service"
-        config["service_valid_service"][CONFIG_SERVICE_CLASS] = "MockService"
-        config["service_valid_service"][CONFIG_SERVICE_INSTANCE_TYPES] = [INSTANCE_TYPE_UNITTEST]
+        config.add_service_config("valid_service", ServiceConfig(
+            name="valid_service", 
+            description="valid service",
+            enabled=True,
+            python_module="tests.saq.test_service", 
+            python_class="MockService",
+            instance_types=[INSTANCE_TYPE_UNITTEST]))
 
         service = load_service_by_name("valid_service")
 
@@ -178,26 +192,30 @@ class TestLoadServiceByName:
     def test_load_service_by_name_fails_invalid_instance_type(self):
         """test that load_service_by_name fails for invalid instance type"""
         config = get_config()
-        config.add_section("service_invalid_service")
-        config["service_invalid_service"][CONFIG_SERVICE_MODULE] = "tests.saq.test_service"
-        config["service_invalid_service"][CONFIG_SERVICE_CLASS] = "MockService"
-        config["service_invalid_service"][CONFIG_SERVICE_INSTANCE_TYPES] = [INSTANCE_TYPE_PRODUCTION]
-        config["service_invalid_service"][CONFIG_SERVICE_ENABLED] = True
+        config.add_service_config("invalid_service", ServiceConfig(
+            name="invalid_service", 
+            description="invalid service",
+            enabled=True,
+            python_module="tests.saq.test_service", 
+            python_class="MockService",
+            instance_types=[INSTANCE_TYPE_PRODUCTION]))
 
         assert isinstance(load_service_by_name("invalid_service"), DisabledService)
 
     def test_load_service_by_name_nonexistent_service(self):
         """test that load_service_by_name raises error for non-existent service"""
-        with pytest.raises(RuntimeError, match="configuration section service_nonexistent_service not found"):
+        with pytest.raises(ValueError, match="service config for nonexistent_service not found"):
             load_service_by_name("nonexistent_service")
 
     def test_load_service_by_name_invalid_module(self):
         """test that load_service_by_name raises error when module cannot be loaded"""
         config = get_config()
-        config.add_section("service_bad_module")
-        config["service_bad_module"][CONFIG_SERVICE_MODULE] = "invalid.module"
-        config["service_bad_module"][CONFIG_SERVICE_CLASS] = "TestClass"
-        config["service_bad_module"][CONFIG_SERVICE_ENABLED] = True
+        config.add_service_config("bad_module", ServiceConfig(
+            name="bad_module", 
+            description="bad module",
+            python_module="invalid.module", 
+            python_class="TestClass",
+            enabled=True))
 
         with pytest.raises(ModuleNotFoundError):
             load_service_by_name("bad_module")
@@ -205,10 +223,12 @@ class TestLoadServiceByName:
     def test_load_service_by_name_invalid_class(self):
         """test that load_service_by_name raises error when class cannot be found"""
         config = get_config()
-        config.add_section("service_bad_class")
-        config["service_bad_class"][CONFIG_SERVICE_MODULE] = "tests.saq.test_service"
-        config["service_bad_class"][CONFIG_SERVICE_CLASS] = "NonExistentClass"
-        config["service_bad_class"][CONFIG_SERVICE_ENABLED] = True
+        config.add_service_config("bad_class", ServiceConfig(
+            name="bad_class", 
+            description="bad class",
+            python_module="tests.saq.test_service", 
+            python_class="NonExistentClass",
+            enabled=True))
 
         with pytest.raises(AttributeError):
             load_service_by_name("bad_class")

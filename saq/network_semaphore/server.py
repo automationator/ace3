@@ -1,49 +1,22 @@
-from dataclasses import dataclass
 from datetime import datetime
-import ipaddress
 import logging
 import os
 import re
 import socket
-import sys
 from threading import RLock, Thread
 import threading
-import time
 from typing import Optional
 from saq.configuration.config import get_config
-from saq.constants import CONFIG_NETWORK_SEMAPHORE
-from saq.environment import get_data_dir
+from saq.constants import SERVICE_NETWORK_SEMAPHORE
 from saq.error.reporting import report_exception
+from saq.network_semaphore.config import NetworkSemaphoreConfig
 from saq.network_semaphore.fallback import initialize_fallback_semaphores
 from saq.network_semaphore.logging import LoggingSemaphore
 
-@dataclass
-class NetworkSemaphoreConfig:
-    bind_address: str
-    bind_port: int
-    semaphore_limits: dict[str, int]
-    stats_dir: str
-
-    @staticmethod
-    def load_from_config() -> "NetworkSemaphoreConfig":
-        config = get_config()[CONFIG_NETWORK_SEMAPHORE]
-        semaphore_limits = {}
-        for key in config.keys():
-            if key.startswith('semaphore_'):
-                semaphore_name = key[len('semaphore_'):]
-                semaphore_limits[semaphore_name] = config.getint(key)
-
-        return NetworkSemaphoreConfig(
-            bind_address=config['bind_address'],
-            bind_port=config.getint('bind_port'),
-            semaphore_limits=semaphore_limits,
-            stats_dir=os.path.join(get_data_dir(), "var", "stats", "network_semaphore"))
-
-
 class NetworkSemaphoreServer:
-    def __init__(self, config: Optional[NetworkSemaphoreConfig] = None):
+    def __init__(self, config: Optional[NetworkSemaphoreConfig]=None):
         if config is None:
-            config = NetworkSemaphoreConfig.load_from_config()
+            config = get_config().get_service_config(SERVICE_NETWORK_SEMAPHORE)
 
         self.config = config
 
@@ -135,9 +108,9 @@ class NetworkSemaphoreServer:
 
     def load_configured_semaphores(self):
         """Loads all network semaphores defined in the configuration."""
-        for semaphore_name, count in self.config.semaphore_limits.items():
-            self.defined_semaphores[semaphore_name] = LoggingSemaphore(count)
-            self.defined_semaphores[semaphore_name].semaphore_name = semaphore_name 
+        for name, limit in self.config.semaphore_capacity_limits.items():
+            self.defined_semaphores[name] = LoggingSemaphore(limit)
+            self.defined_semaphores[name].semaphore_name = name 
 
     def get_semaphore(self, name: str) -> Optional[LoggingSemaphore]:
         return self.defined_semaphores.get(name)

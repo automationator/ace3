@@ -57,7 +57,7 @@ def observable_action():
         elif action_id == ACTION_FILE_SEND_TO:
             try:
                 remote_host = request.form.get("hostname")
-                remote_path = get_config()[f"send_to_{remote_host}"].get("remote_path")
+                remote_path = get_config().raw._data[f"send_to_{remote_host}"].get("remote_path")
 
                 rsync(
                     alert=alert,

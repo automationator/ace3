@@ -1,14 +1,16 @@
 from datetime import datetime
 import logging
 import os
-import socket
-from typing import Generator
+from typing import Generator, Type
 from uuid import uuid4
+
+from pydantic import Field
 from saq.analysis.root import RootAnalysis, Submission
 from saq.collectors.base_collector import Collector, CollectorService
 from saq.collectors.collector_configuration import CollectorServiceConfiguration
-from saq.configuration.config import get_config, get_config_value_as_str
-from saq.constants import ANALYSIS_MODE_EMAIL, ANALYSIS_TYPE_MAILBOX, CONFIG_EMAIL, CONFIG_EMAIL_COLLECTOR, CONFIG_EMAIL_COLLECTOR_ASSIGNMENT_YARA_RULE_PATH, CONFIG_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_PATH, CONFIG_EMAIL_DIR, CONFIG_EMAIL_SUBDIR_FORMAT, DIRECTIVE_ARCHIVE, DIRECTIVE_NO_SCAN, DIRECTIVE_ORIGINAL_EMAIL, G_TEMP_DIR
+from saq.configuration.config import get_config, get_service_config
+from saq.configuration.schema import ServiceConfig
+from saq.constants import ANALYSIS_MODE_EMAIL, ANALYSIS_TYPE_MAILBOX, DIRECTIVE_ARCHIVE, DIRECTIVE_NO_SCAN, DIRECTIVE_ORIGINAL_EMAIL, G_TEMP_DIR, SERVICE_EMAIL_COLLECTOR
 from saq.environment import g, get_data_dir
 
 import yara
@@ -22,10 +24,10 @@ class EmailCollector(Collector):
         super().__init__(*args, **kwargs)
 
         # the location of the incoming emails
-        self.email_dir = os.path.join(get_data_dir(), get_config_value_as_str(CONFIG_EMAIL, CONFIG_EMAIL_DIR))
+        self.email_dir = os.path.join(get_data_dir(), get_config().email.email_dir)
 
         # the datetime format string used to create the subdirectories that contain the emails
-        self.subdir_format = get_config_value_as_str(CONFIG_EMAIL, CONFIG_EMAIL_SUBDIR_FORMAT)
+        self.subdir_format = get_config().email.subdir_format
 
         # a list (set) of subdirs that we tried to delete but couldn't
         # we keep this list so we don't keep trying to delete them
@@ -33,8 +35,8 @@ class EmailCollector(Collector):
 
         # inbound emails are scanned by this yara context to support node assignment
         self.yara_context = None
-        self.assignment_yara_rule_path = get_config_value_as_str(CONFIG_EMAIL_COLLECTOR, CONFIG_EMAIL_COLLECTOR_ASSIGNMENT_YARA_RULE_PATH)
-        self.blacklist_yara_rule_path = get_config_value_as_str(CONFIG_EMAIL_COLLECTOR, CONFIG_EMAIL_COLLECTOR_BLACKLIST_YARA_RULE_PATH)
+        self.assignment_yara_rule_path = get_service_config(SERVICE_EMAIL_COLLECTOR).assignment_yara_rule_path
+        self.blacklist_yara_rule_path = get_service_config(SERVICE_EMAIL_COLLECTOR).blacklist_yara_rule_path
 
         rule = ""
 
@@ -162,6 +164,15 @@ class EmailCollector(Collector):
     def cleanup(self) -> None:
         pass
 
+class EmailCollectorConfig(CollectorServiceConfiguration):
+    assignment_yara_rule_path: str = Field(..., description="The path to the yara rule for assigning emails to collectors.")
+    blacklist_yara_rule_path: str = Field(..., description="The path to the yara rule for blacklisting emails.")
+    blacklist_yara_rule_check_frequency: int = Field(..., description="The frequency of checking the blacklist yara rule in seconds.")
+
 class EmailCollectorService(CollectorService):
     def __init__(self, *args, **kwargs):
-        super().__init__(collector=EmailCollector(), config=CollectorServiceConfiguration.from_config(get_config()['service_email_collector']), *args, **kwargs)
+        super().__init__(collector=EmailCollector(), config=get_config().get_service_config(SERVICE_EMAIL_COLLECTOR), *args, **kwargs)
+
+    @classmethod
+    def get_config_class(cls) -> Type[ServiceConfig]:
+        return EmailCollectorConfig

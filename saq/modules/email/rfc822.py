@@ -19,9 +19,11 @@ from saq.email import decode_rfc2822, is_local_email_domain, normalize_email_add
 from saq.environment import get_base_dir, get_data_dir, get_local_timezone
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.email.constants import KEY_CC, KEY_DECODED_SUBJECT, KEY_EMAIL, KEY_ENV_MAIL_FROM, KEY_ENV_RCPT_TO, KEY_FROM, KEY_FROM_ADDRESS, KEY_HEADERS, KEY_LOG_ENTRY, KEY_MESSAGE_ID, KEY_ORIGINATING_IP, KEY_PARSING_ERROR, KEY_REPLY_TO, KEY_REPLY_TO_ADDRESS, KEY_RETURN_PATH, KEY_SUBJECT, KEY_TO, KEY_TO_ADDRESSES, KEY_USER_AGENT, KEY_X_AUTH_ID, KEY_X_MAILER, KEY_X_ORIGINAL_SENDER, KEY_X_SENDER, KEY_X_SENDER_ID, KEY_X_SENDER_IP
 from saq.observables.file import FileObservable
 from saq.whitelist import WHITELIST_TYPE_SMTP_FROM, WHITELIST_TYPE_SMTP_TO, BrotexWhitelist
+from pydantic import Field
 
 TAG_OUTBOUND_EMAIL = 'outbound_email'
 TAG_OUTBOUND_EXCEPTION_EMAIL = 'outbound_email_exception'
@@ -428,25 +430,32 @@ class EmailAnalysis(Analysis):
  #15.1.707.6; Thu, 10 Nov 2016 15:47:33 +0000
 
 _PATTERN_RECEIVED_IPADDR = re.compile(r'from\s\S+\s\(([^)]+)\)\s', re.M)
+
+class EmailAnalyzerConfig(AnalysisModuleConfig):
+    whitelist_path: str = Field(..., description="Relative path to the brotex custom whitelist file.")
+    scan_inbound_only: bool = Field(..., description="Office365 journaling will cause outbound emails to also get journaled. Set this to no to scan outbound office365 emails.")
+    outbound_exceptions: str = Field(..., description="When only scanning inbound emails from office365, scan the following outbound emails found in outbound_exceptions. Comma separated list!")
+
 class EmailAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return EmailAnalyzerConfig
+
     @override
     def get_presenter_class(self) -> Type[AnalysisPresenter]:
         return EmailAnalysisPresenter
 
     def verify_environment(self):
-        self.verify_config_exists('whitelist_path')
-        self.verify_path_exists(self.config['whitelist_path'])
-        self.verify_config_exists('scan_inbound_only')
-        self.verify_config_exists('outbound_exceptions')
+        self.verify_path_exists(self.config.whitelist_path)
 
     @cached_property
     def whitelist(self) -> BrotexWhitelist:
-        result = BrotexWhitelist(os.path.join(get_base_dir(), self.config['whitelist_path']))
+        result = BrotexWhitelist(os.path.join(get_base_dir(), self.config.whitelist_path))
         result.check_whitelist()
         return result
 
     #def load_config(self):
-        #self.whitelist = BrotexWhitelist(os.path.join(get_base_dir(), self.config['whitelist_path']))
+        #self.whitelist = BrotexWhitelist(os.path.join(get_base_dir(), self.config.whitelist_path))
         #self.auto_reload()
 
     def auto_reload(self):
@@ -463,7 +472,7 @@ class EmailAnalyzer(AnalysisModule):
 
     @property
     def outbound_exception_list(self):
-        return self.config['outbound_exceptions'].split(',')
+        return self.config.outbound_exceptions.split(',')
 
     def analyze_rfc822(self, _file):
         assert isinstance(_file, FileObservable)
@@ -659,7 +668,7 @@ class EmailAnalyzer(AnalysisModule):
             if 'X-MS-Exchange-Organization-MessageDirectionality' in target_email:
                 if target_email['X-MS-Exchange-Organization-MessageDirectionality'] != 'Incoming':
                     _file.add_tag(TAG_OUTBOUND_EMAIL)
-                    if self.config.getboolean('scan_inbound_only'):
+                    if self.config.scan_inbound_only:
                         # do we have a configured exception?
                         for email_exception in self.outbound_exception_list:
                             logging.debug("searching header To addresses ({}) for '{}'".format(header_tos,

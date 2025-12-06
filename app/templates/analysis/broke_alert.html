@@ -31,12 +31,6 @@
         <td class="col-2">Alert Type</td>
         <td class="col-10">{{alert.alert_type}}</td>
     </tr>
-    {% if alert.name %}
-    <tr>
-        <td class="col-2">Alert Documentation</td>
-        <td class="col-10"><a target="_blank" href="{{ace_config['mediawiki']['uri']}}{{ace_config['mediawiki']['alert_suffix']}}{{alert.name | replace(' ', '_')}}">{{alert.name}}</a></td>
-    </tr>
-    {% endif %}
     <tr>
         <td class="col-2">Storage</td>
         <td class="col-10">{{alert.storage_dir}}</td>

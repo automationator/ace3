@@ -14,7 +14,7 @@ from saq.database.util.locking import acquire_lock
 @require_permission('event', 'read')
 def send_event_to():
     remote_host = request.json['remote_host']
-    remote_path = get_config()[f"send_to_{remote_host}"].get("remote_path")
+    remote_path = get_config().raw._data[f"send_to_{remote_host}"].get("remote_path")
     event_uuid = request.json['event_uuid']
 
     try:

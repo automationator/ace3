@@ -43,11 +43,11 @@
             {% if action.name is none %}
                 <li role="separator" class="dropdown-divider"></li>
             {% else %}
-	        {% if 'file_upload_vx' in action.name and not ace_config['gui'].getboolean('upload_vxstream') %}
+	        {% if 'file_upload_vx' in action.name and not ace_config.gui.upload_vxstream %}
 		    <li><a class="dropdown-item" disabled tabindex="-1"><span class="bi bi-{{action.icon}}"></span>  <del>{{action.description}}</del></a></li>
-		{% elif 'file_view_vx' in action.name and not ace_config['gui'].getboolean('view_in_vx') %}
+		{% elif 'file_view_vx' in action.name and not ace_config.gui.view_in_vx %}
 		    <li><a class="dropdown-item" disabled tabindex="-1"><span class="bi bi-{{action.icon}}"></span>  <del>{{action.description}}</del></a></li>
-		{% elif 'file_upload_vt' in action.name and not ace_config['gui'].getboolean('upload_vt') %}
+		{% elif 'file_upload_vt' in action.name and not ace_config.gui.upload_vt %}
                     <li><a class="dropdown-item" disabled tabindex="-1"><span class="bi bi-{{action.icon}}"></span>  <del>{{action.description}}</del></a></li>
 		{% else %}
                     <li><a class="dropdown-item" style="cursor: pointer" id="action_{{action.name}}_{{unique_reference}}"><span class="bi bi-{{action.icon}}"></span>  {{action.description}}</a></li>

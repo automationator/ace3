@@ -1,6 +1,6 @@
 from aceapi.blueprints import register_blueprints
-from saq.configuration import get_config, get_config_value_as_str
-from saq.constants import CONFIG_API, CONFIG_API_SECRET_KEY, CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_NAME
+from saq.configuration import get_config
+from saq.configuration.config import get_database_config
 from saq.database.pool import set_db
 
 from flask import Flask
@@ -18,26 +18,27 @@ class CustomSQLAlchemy(SQLAlchemy):
 
 def create_app(testing=False):
     class _config(object):
-        SECRET_KEY = get_config_value_as_str(CONFIG_API, CONFIG_API_SECRET_KEY)
+        SECRET_KEY = get_config().api.secret_key
         SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-        INSTANCE_NAME = get_config_value_as_str(CONFIG_GLOBAL, CONFIG_GLOBAL_INSTANCE_NAME)
+        INSTANCE_NAME = get_config().global_settings.instance_name
 
         # also see lib/saq/database.py:initialize_database
-        if get_config()['database_ace'].get('unix_socket', fallback=None):
+        db_config = get_database_config()
+        if db_config.unix_socket:
             SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://{username}:{password}@{hostname}/{database}?unix_socket={unix_socket}&charset=utf8mb4'.format(
-                username=get_config().get('database_ace', 'username'),
-                password=get_config().get('database_ace', 'password'),
-                hostname=get_config().get('database_ace', 'hostname'),
-                database=get_config().get('database_ace', 'database'),
-                unix_socket=get_config().get('database_ace', 'unix_socket'))
+                username=db_config.username,
+                password=db_config.password,
+                hostname=db_config.hostname,
+                database=db_config.database,
+                unix_socket=db_config.unix_socket)
         else:
             SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://{username}:{password}@{hostname}:{port}/{database}?charset=utf8mb4'.format(
-                username=get_config().get('database_ace', 'username'),
-                password=get_config().get('database_ace', 'password'),
-                hostname=get_config().get('database_ace', 'hostname'),
-                port=get_config().get('database_ace', 'port'),
-                database=get_config().get('database_ace', 'database'))
+                username=db_config.username,
+                password=db_config.password,
+                hostname=db_config.hostname,
+                port=db_config.port,
+                database=db_config.database)
 
         SQLALCHEMY_POOL_TIMEOUT = 30
         SQLALCHEMY_POOL_RECYCLE = 60 * 10
@@ -55,15 +56,14 @@ def create_app(testing=False):
             super().__init__(*args, **kwargs)
 
             # are we using SSL for MySQL connections? (you should be)
-            if not get_config()['database_ace'].get('unix_socket', fallback=None):
-                if get_config()['database_ace'].get('ssl_ca', fallback=None) \
-                or get_config()['database_ace'].get('ssl_cert', fallback=None) \
-                or get_config()['database_ace'].get('ssl_key', fallback=None):
-                    ssl_options = { 'ca': abs_path(get_config()['database_ace']['ssl_ca']) }
-                    if get_config()['database_ace'].get('ssl_cert', fallback=None):
-                        ssl_options['cert'] = abs_path(get_config()['database_ace']['ssl_cert'])
-                    if get_config()['database_ace'].get('ssl_key', fallback=None):
-                        ssl_options['key'] = abs_path(get_config()['database_ace']['ssl_key'])
+            db_config = get_database_config()
+            if not db_config.unix_socket:
+                if db_config.ssl_ca or db_config.ssl_cert or db_config.ssl_key:
+                    ssl_options = { 'ca': abs_path(db_config.ssl_ca) }
+                    if db_config.ssl_cert:
+                        ssl_options['cert'] = abs_path(db_config.ssl_cert)
+                    if db_config.ssl_key:
+                        ssl_options['key'] = abs_path(db_config.ssl_key)
                     self.SQLALCHEMY_DATABASE_OPTIONS['connect_args']['ssl'] = ssl_options
 
     class _test_config(_config):

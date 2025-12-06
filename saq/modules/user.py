@@ -4,21 +4,31 @@ import os
 import os.path
 import logging
 import json
+from typing import Type
 
+from pydantic import Field
 from saq.analysis import Analysis
 from saq.analysis.presenter import AnalysisPresenter, register_analysis_presenter
-from saq.configuration import get_config_value_as_str
-from saq.constants import CONFIG_LDAP, CONFIG_LDAP_TOP_USER, F_EMAIL_ADDRESS, F_USER, AnalysisExecutionResult
+from saq.configuration.config import get_config
+from saq.constants import F_EMAIL_ADDRESS, F_USER, AnalysisExecutionResult
 from saq.environment import get_base_dir
 from saq.ldap import lookup_email_address, lookup_user
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.email import is_local_email_domain, normalize_email_address
 
 # XXX this is stupid, we just need a global list of observable matching to tag
 class UserTagAnalysis(Analysis):
     pass
 
+class UserTaggingAnalyzerConfig(AnalysisModuleConfig):
+    json_path: str = Field(..., description="Location of the cache (use saq update-organization to build this file).")
+
 class UserTaggingAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return UserTaggingAnalyzerConfig
+
     @property
     def generated_analysis_type(self):
         return UserTagAnalysis
@@ -29,7 +39,7 @@ class UserTaggingAnalyzer(AnalysisModule):
 
     @property
     def json_path(self):
-        return os.path.join(get_base_dir(), self.config['json_path'])
+        return os.path.join(get_base_dir(), self.config.json_path)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -125,7 +135,7 @@ class UserAnalyzer(AnalysisModule):
                 new_observable.add_directive(directive)
 
         # get manager info and determine if user is executive
-        top_user = get_config_value_as_str(CONFIG_LDAP, CONFIG_LDAP_TOP_USER)
+        top_user = get_config().ldap.top_user
         if 'manager_cn' in analysis.details['ldap'] and analysis.details['ldap']['manager_cn'] is not None:
             analysis.details['manager_ldap'] = lookup_user(analysis.details['ldap']['manager_cn'])
             if analysis.details['manager_ldap'] is None:

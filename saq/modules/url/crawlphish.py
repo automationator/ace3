@@ -4,7 +4,9 @@ import logging
 import os
 import re
 import shutil
+from typing import Type
 from urllib.parse import urlunparse
+from pydantic import Field
 
 import requests
 import urllib
@@ -17,6 +19,7 @@ from saq.constants import ANALYSIS_MODE_CORRELATION, ANALYSIS_TYPE_MANUAL, DIREC
 from saq.crawlphish_filter import CrawlphishURLFilter
 from saq.environment import g, g_dict, get_data_dir
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.proxy import proxies
 from saq.util.networking import is_ipv4
 from werkzeug.utils import secure_filename
@@ -490,51 +493,46 @@ class CrawlphishAnalysisV2(Analysis):
 
         return result
 
+class CrawlphishAnalyzerConfig(AnalysisModuleConfig):
+    whitelist_path: str = Field(..., description="Path to whitelisted netloc.")
+    regex_path: str = Field(..., description="Path to whitelisted path regexes.")
+    blacklist_path: str = Field(..., description="Path to blacklisted netloc.")
+    uncommon_network_threshold: int = Field(..., description="Threshold for uncommon networks (total connections threshold).")
+    user_agent: str = Field(..., alias="user-agent", description="The user-agent to send with requests.")
+    timeout: int = Field(..., description="How long to wait (in full seconds) until a request is timed out.")
+    max_download_size: int = Field(..., description="Maximum file size (in MB).")
+    max_file_name_length: int = Field(..., description="Maximum file name length of downloaded files (in bytes) file names are truncated past this value.")
+    update_brocess: bool = Field(..., description="Update the brocess database with requests made with crawlphish.")
+    proxies: list[str] = Field(default_factory=list, description="Comma separate list of proxies to use. The special value GLOBAL refers to the global proxy settings.")
+    auto_crawl_all_alert_urls: bool = Field(default=False, description="Enable automatic crawlphish analysis for all url observables.")
+    blacklist_filter_enabled: bool = Field(default=True, description="Enable blacklist filtering.")
+    whitelist_filter_enabled: bool = Field(default=True, description="Enable whitelist filtering.")
+    path_regex_filter_enabled: bool = Field(default=True, description="Enable path regex filtering.")
+    common_filter_enabled: bool = Field(default=True, description="Enable common filter.")
+    intel_filter_enabled: bool = Field(default=True, description="Enable intel filter.")
+    direct_ipv4_filter_enabled: bool = Field(default=True, description="Enable direct IPv4 filter.")
+    cache_downloaded_files: bool = Field(default=False, description="Set this to true to cache anything downloaded by crawlphish.")
+    cache_directory: str = Field(default="crawlphish_cache", description="Directory to store cached downloaded files into (relative to DATA_DIR).")
+    user_agent_list_path: str = Field(default="crawlphish_uas.txt", description="Path (relative to ANALYST_DATA_DIR) to file that contains all the user agents to use (one per line).")
+
 class CrawlphishAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return CrawlphishAnalyzerConfig
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.headers = {
-            'User-Agent': self.config['user-agent']
+            'User-Agent': self.config.user_agent
         }
 
         self._initialized = False
 
-        self.auto_crawl_all_alert_urls = self.config.getboolean('auto_crawl_all_alert_urls')
+        self.auto_crawl_all_alert_urls = self.config.auto_crawl_all_alert_urls
 
         # list of user agent strings to attempt to use
         self.ua_list: list = None
-
-    def verify_environment(self):
-        for config_item in [ 
-            'whitelist_path',
-            'regex_path',
-            'blacklist_path',
-            'uncommon_network_threshold',
-            'user-agent',
-            'timeout',
-            'max_download_size',
-            'max_file_name_length',
-            'cooldown_period',
-            'update_brocess',
-            'proxies',
-            'blacklist_filter_enabled',
-            'whitelist_filter_enabled',
-            'path_regex_filter_enabled',
-            'common_filter_enabled',
-            'intel_filter_enabled',
-            'direct_ipv4_filter_enabled',
-            'cache_downloaded_files',
-            'cache_directory',
-        ]:
-            self.verify_config_exists(config_item)
-        
-        for name in self.config['proxies']:
-            if name == 'GLOBAL':
-                continue
-
-            if 'proxy_{}'.format(name) not in get_config():
-                logging.error("invalid proxy name {} in crawlphish config".format(name))
 
     @property
     def whitelist_path(self):
@@ -551,17 +549,17 @@ class CrawlphishAnalyzer(AnalysisModule):
     @property
     def uncommon_network_threshold(self):
         """How many connections decides that a given fqdn or ip address is an "uncommon network"? """
-        return self.config.getint('uncommon_network_threshold')
+        return self.config.uncommon_network_threshold
 
     @property
     def user_agent(self):
         """User agent string to use if user_agent_list is empty."""
-        return self.config['user-agent']
+        return self.config.user_agent
 
     @property
     def user_agent_list_path(self) -> str:
         """Returns the path to the file that contains a list of UAs to use."""
-        return os.path.join(g(G_ANALYST_DATA_DIR), self.config['user_agent_list_path'])
+        return os.path.join(g(G_ANALYST_DATA_DIR), self.config.user_agent_list_path)
 
     @property
     def user_agent_list(self):
@@ -597,51 +595,51 @@ class CrawlphishAnalyzer(AnalysisModule):
     @property
     def timeout(self):
         """How long to wait for an HTTP request to time out (in seconds)."""
-        return self.config.getint('timeout')
+        return self.config.timeout
 
     @property
     def max_download_size(self):
         """Maximum download size (in MB)."""
-        return self.config.getint('max_download_size') * 1024 * 1024
+        return self.config.max_download_size * 1024 * 1024
 
     @property
     def max_file_name_length(self):
         """Maximum file name length (in bytes) to use for download file path."""
-        return self.config.getint('max_file_name_length')
+        return self.config.max_file_name_length
 
     @property
     def update_brocess(self):
         """Are we updating brocess when we make a request?"""
-        return self.config.getboolean('update_brocess')
+        return self.config.update_brocess
 
     @property
     def proxies(self):
         """The list of proxies we'll use to download URLs, attepted in order."""
-        return self.config['proxies']
+        return self.config.proxies
 
     @property
     def blacklist_filter_enabled(self):
-        return self.config.getboolean('blacklist_filter_enabled')
+        return self.config.blacklist_filter_enabled
 
     @property
     def whitelist_filter_enabled(self):
-        return self.config.getboolean('whitelist_filter_enabled')
+        return self.config.whitelist_filter_enabled
 
     @property
     def path_regex_filter_enabled(self):
-        return self.config.getboolean('path_regex_filter_enabled')
+        return self.config.path_regex_filter_enabled
 
     @property
     def common_filter_enabled(self):
-        return self.config.getboolean('common_filter_enabled')
+        return self.config.common_filter_enabled
 
     @property
     def intel_filter_enabled(self):
-        return self.config.getboolean('intel_filter_enabled')
+        return self.config.intel_filter_enabled
 
     @property
     def direct_ipv4_filter_enabled(self):
-        return self.config.getboolean('direct_ipv4_filter_enabled')
+        return self.config.direct_ipv4_filter_enabled
 
     @property
     def generated_analysis_type(self):
@@ -653,11 +651,11 @@ class CrawlphishAnalyzer(AnalysisModule):
 
     @property
     def cache_downloaded_files(self):
-        return self.config.getboolean('cache_downloaded_files')
+        return self.config.cache_downloaded_files
 
     @property
     def cache_directory(self):
-        return os.path.join(get_data_dir(), self.config.get('cache_directory'))
+        return os.path.join(get_data_dir(), self.config.cache_directory)
 
     def custom_requirement(self, url):
         # should we be crawling this url?
@@ -723,7 +721,7 @@ class CrawlphishAnalyzer(AnalysisModule):
         # what proxies are we going to use to attempt to download the url?
         # these are attempted in the order specified in the configuration setting
         proxy_configs = []
-        for name in self.proxies.split(','):
+        for name in self.proxies:
             if name == 'GLOBAL':
                 proxy_configs.append(( name, proxies() ))
             else:

@@ -2,11 +2,13 @@ import logging
 from mmap import PROT_READ, mmap
 import os
 from subprocess import Popen
-from typing import override
+from typing import Type, override
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import DIRECTIVE_SANDBOX, F_FILE, AnalysisExecutionResult
 from saq.environment import get_base_dir
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.modules.file_analysis.is_file_type import is_office_file
 from saq.observables.file import FileObservable
 
@@ -59,7 +61,16 @@ class VBScriptAnalysis(Analysis):
 
         return f"{self.display_name}: {self.total_hex_strings} total hex strings, {self.largest_hex_string} largest hex string, {self.percentage_of_hex_strings}% percentage of file is hex strings"
 
+class VBScriptAnalyzerConfig(AnalysisModuleConfig):
+    large_hex_string_size: int = Field(..., description="How many characters are considered to be a large hex string.")
+    large_hex_string_quantity: int = Field(..., description="How many hex strings of size greater than large_hex_string_size is considered suspect.")
+    large_hex_string_quantity_count: int = Field(..., description="Alternative count threshold for large hex strings.")
+    hex_string_percentage_limit: float = Field(..., description="What percentage of the file that is hex string is considered suspect (between 0.0 and 0.99).")
+
 class VBScriptAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return VBScriptAnalyzerConfig
 
     @property
     def generated_analysis_type(self):
@@ -71,19 +82,19 @@ class VBScriptAnalyzer(AnalysisModule):
 
     @property
     def large_hex_string_size(self):
-        return self.config.getint('large_hex_string_size')
+        return self.config.large_hex_string_size
 
     @property
     def large_hex_string_quantity(self):
-        return self.config.getint('large_hex_string_quantity')
+        return self.config.large_hex_string_quantity
 
     @property
     def large_hex_string_quantity_count(self):
-        return self.config.getint('large_hex_string_quantity_count')
+        return self.config.large_hex_string_quantity_count
 
     @property
     def hex_string_percentage_limit(self):
-        return self.config.getfloat('hex_string_percentage_limit')
+        return self.config.hex_string_percentage_limit
 
     def execute_analysis(self, _file: FileObservable) -> AnalysisExecutionResult:
         local_file_path = _file.full_path
@@ -189,7 +200,13 @@ class PCodeAnalysis(Analysis):
 
         return f"{self.display_name}: decoded {self.line_count} lines"
 
+class PCodeAnalyzerConfig(AnalysisModuleConfig):
+    pcodedmp_path: str = Field(..., description="Full path to the pcodedmp command line utility.")
+
 class PCodeAnalyzer(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return PCodeAnalyzerConfig
     
     @property
     def generated_analysis_type(self):
@@ -205,7 +222,7 @@ class PCodeAnalyzer(AnalysisModule):
     @property
     def pcodedmp_path(self):
         """Returns the full path to the pcodedmp command line utility."""
-        return self.config['pcodedmp_path']
+        return self.config.pcodedmp_path
 
     def execute_analysis(self, _file: FileObservable) -> AnalysisExecutionResult:
         from saq.modules.file_analysis.file_type import FileTypeAnalysis

@@ -6,9 +6,9 @@ import pytest
 
 from saq.analysis.root import RootAnalysis
 from saq.analysis.adapter import RootAnalysisAdapter
-from saq.engine.configuration_manager import ConfigurationManager
 from saq.modules.base_module import AnalysisModule
-from saq.modules.state_repository import InMemoryStateRepository, StateRepositoryFactory
+from saq.modules.config import AnalysisModuleConfig
+from saq.modules.state_repository import InMemoryStateRepository
 from tests.saq.test_util import create_test_context
 
 
@@ -31,7 +31,13 @@ class TestAnalysisModuleStateIntegration:
         context = create_test_context(root=root_analysis)
         
         # Create analysis module
-        module = TestAnalysisModule(context=context, instance="test_instance")
+        module = TestAnalysisModule(AnalysisModuleConfig(
+            name="test_module",
+            python_module="tests.saq.modules.test_analysis_module_state_integration",
+            python_class="TestAnalysisModule",
+            instance="test_instance",
+            enabled=True,
+        ), context=context)
         
         # Test state operations
         test_state = {"test_key": "test_value", "counter": 42}
@@ -51,7 +57,13 @@ class TestAnalysisModuleStateIntegration:
         root_analysis = RootAnalysis()
         context = create_test_context(root=root_analysis)
         
-        module = TestAnalysisModule(context=context, instance="test_instance")
+        module = TestAnalysisModule(AnalysisModuleConfig(
+            name="test_module",
+            python_module="tests.saq.modules.test_analysis_module_state_integration",
+            python_class="TestAnalysisModule",
+            instance="test_instance",
+            enabled=True,
+        ), context=context)
         
         # Initialize with custom state
         initial_state = {"initialized": True, "version": 1}
@@ -68,7 +80,13 @@ class TestAnalysisModuleStateIntegration:
         root_analysis = RootAnalysis()
         context = create_test_context(root=root_analysis)
         
-        module = TestAnalysisModule(context=context, instance="test_instance")
+        module = TestAnalysisModule(AnalysisModuleConfig(
+            name="test_module",
+            python_module="tests.saq.modules.test_analysis_module_state_integration",
+            python_class="TestAnalysisModule",
+            instance="test_instance",
+            enabled=True,
+        ), context=context)
         
         # Initialize with default (empty dict)
         module.initialize_state()
@@ -81,18 +99,22 @@ class TestAnalysisModuleStateIntegration:
         custom_repository = InMemoryStateRepository()
         
         # Manually create context with custom repository
-        from saq.configuration.config import get_config
         from saq.filesystem.adapter import FileSystemAdapter
         from saq.modules.context import AnalysisModuleContext
         
         context = AnalysisModuleContext(
             root=RootAnalysisAdapter(root_analysis),
-            config=get_config(),
             filesystem=FileSystemAdapter(),
             state_repository=custom_repository
         )
         
-        module = TestAnalysisModule(context=context, instance="test_instance")
+        module = TestAnalysisModule(AnalysisModuleConfig(
+            name="test_module",
+            python_module="tests.saq.modules.test_analysis_module_state_integration",
+            python_class="TestAnalysisModule",
+            instance="test_instance",
+            enabled=True,
+        ), context=context)
         
         # Test state operations
         test_state = {"custom_repo": True}
@@ -110,8 +132,20 @@ class TestAnalysisModuleStateIntegration:
         root_analysis = RootAnalysis()
         context = create_test_context(root=root_analysis)
         
-        module1 = TestAnalysisModule(context=context, instance="instance1")
-        module2 = TestAnalysisModule(context=context, instance="instance2")
+        module1 = TestAnalysisModule(AnalysisModuleConfig(
+            name="test_module1",
+            python_module="tests.saq.modules.test_analysis_module_state_integration",
+            python_class="TestAnalysisModule",
+            instance="instance1",
+            enabled=True,
+        ), context=context)
+        module2 = TestAnalysisModule(AnalysisModuleConfig(
+            name="test_module2",
+            python_module="tests.saq.modules.test_analysis_module_state_integration",
+            python_class="TestAnalysisModule",
+            instance="instance2",
+            enabled=True,
+        ), context=context)
         
         # Set different state for each module
         module1.state = {"module": "one", "data": [1, 2, 3]}
@@ -131,14 +165,26 @@ class TestAnalysisModuleStateIntegration:
         
         # First analysis run
         context1 = create_test_context(root=root_analysis)
-        module1 = TestAnalysisModule(context=context1, instance="persistent_test")
+        module1 = TestAnalysisModule(AnalysisModuleConfig(
+            name="test_module",
+            python_module="tests.saq.modules.test_analysis_module_state_integration",
+            python_class="TestAnalysisModule",
+            instance="persistent_test",
+            enabled=True,
+        ), context=context1)
         
         test_state = {"persistent_data": "should_survive", "run_count": 1}
         module1.state = test_state
         
         # Second analysis run (new context, same root analysis)
         context2 = create_test_context(root=root_analysis)
-        module2 = TestAnalysisModule(context=context2, instance="persistent_test")
+        module2 = TestAnalysisModule(AnalysisModuleConfig(
+            name="test_module",
+            python_module="tests.saq.modules.test_analysis_module_state_integration",
+            python_class="TestAnalysisModule",
+            instance="persistent_test",
+            enabled=True,
+        ), context=context2)
         
         # State should persist
         assert module2.state == test_state
@@ -148,7 +194,13 @@ class TestAnalysisModuleStateIntegration:
         
         # Third analysis run
         context3 = create_test_context(root=root_analysis)
-        module3 = TestAnalysisModule(context=context3, instance="persistent_test")
+        module3 = TestAnalysisModule(AnalysisModuleConfig(
+            name="test_module",
+            python_module="tests.saq.modules.test_analysis_module_state_integration",
+            python_class="TestAnalysisModule",
+            instance="persistent_test",
+            enabled=True,
+        ), context=context3)
         
         assert module3.state["run_count"] == 2
     
@@ -157,7 +209,13 @@ class TestAnalysisModuleStateIntegration:
         root_analysis = RootAnalysis()
         context = create_test_context(root=root_analysis)
         
-        module = TestAnalysisModule(context=context, instance="legacy_test")
+        module = TestAnalysisModule(AnalysisModuleConfig(
+            name="test_module",
+            python_module="tests.saq.modules.test_analysis_module_state_integration",
+            python_class="TestAnalysisModule",
+            instance="legacy_test",
+            enabled=True,
+        ), context=context)
         
         # Simulate legacy code setting state directly on root analysis
         legacy_state = {"legacy": True, "set_directly": "on_root"}

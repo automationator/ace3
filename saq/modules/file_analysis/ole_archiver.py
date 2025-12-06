@@ -1,11 +1,14 @@
 import logging
 import os
 import shutil
+from typing import Type
+from pydantic import Field
 from saq.analysis.analysis import Analysis
 from saq.constants import F_FILE, AnalysisExecutionResult
 from saq.environment import get_base_dir
 from saq.error.reporting import report_exception
 from saq.modules import AnalysisModule
+from saq.modules.config import AnalysisModuleConfig
 from saq.observables.file import FileObservable
 from saq.util.filesystem import get_local_file_path
 
@@ -27,14 +30,20 @@ class OLEArchiverAnalysis_v1_0(Analysis):
     def archive_path(self, value):
         self.details['archive_path'] = value
 
+class OLEArchiverConfig(AnalysisModuleConfig):
+    ole_archive_dir: str = Field(..., description="The directory (relative to SAQ_DATA) to store the archived OLE documents.")
+
 class OLEArchiver_v1_0(AnalysisModule):
+    @classmethod
+    def get_config_class(cls) -> Type[AnalysisModuleConfig]:
+        return OLEArchiverConfig
+
     def verify_environment(self):
-        self.verify_config_exists('ole_archive_dir')
-        self.verify_path_exists(self.config['ole_archive_dir'])
+        self.verify_path_exists(self.config.ole_archive_dir)
 
     @property
     def ole_archive_dir(self):
-        result = self.config['ole_archive_dir']
+        result = self.config.ole_archive_dir
         if os.path.isabs(result):
             return result
 
