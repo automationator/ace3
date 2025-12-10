@@ -59,7 +59,7 @@ class TestGitRepo:
             update_frequency=3600,
             branch="main"
         ))
-        
+
         repo2 = GitRepo(config=GitRepoConfig(
             name="repo2",
             description="repo2",
@@ -68,8 +68,53 @@ class TestGitRepo:
             update_frequency=7200,
             branch="develop"
         ))
-        
+
         assert repo1 != repo2
+
+    def test_env_property_without_ssh_key(self):
+        repo = GitRepo(config=GitRepoConfig(
+            name="repo",
+            description="repo",
+            local_path="/path/to/repo",
+            git_url="https://github.com/user/repo.git",
+            update_frequency=3600,
+            branch="main"
+        ))
+
+        env = repo.env
+
+        assert env == {}
+
+    def test_env_property_with_ssh_key(self):
+        repo = GitRepo(config=GitRepoConfig(
+            name="repo",
+            description="repo",
+            local_path="/path/to/repo",
+            git_url="git@github.com:user/repo.git",
+            update_frequency=3600,
+            branch="main",
+            ssh_key_path="/path/to/ssh/key"
+        ))
+
+        env = repo.env
+
+        assert "GIT_SSH_COMMAND" in env
+        assert env["GIT_SSH_COMMAND"] == "ssh -i /path/to/ssh/key -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"
+
+    def test_env_property_with_empty_ssh_key_path(self):
+        repo = GitRepo(config=GitRepoConfig(
+            name="repo",
+            description="repo",
+            local_path="/path/to/repo",
+            git_url="git@github.com:user/repo.git",
+            update_frequency=3600,
+            branch="main",
+            ssh_key_path=""
+        ))
+
+        env = repo.env
+
+        assert env == {}
 
 
 @pytest.mark.unit

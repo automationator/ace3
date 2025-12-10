@@ -24,7 +24,7 @@ class GitRepo:
 
         if self.config.ssh_key_path:
             # see https://stackoverflow.com/questions/4565700/how-to-specify-the-private-ssh-key-to-use-when-executing-shell-command-on-git#comment105376577_29754018
-            result["GIT_SSH_COMMAND"] = f"ssh -i {self.ssh_key_path} -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"
+            result["GIT_SSH_COMMAND"] = f"ssh -i {self.config.ssh_key_path} -o IdentitiesOnly=yes -o StrictHostKeyChecking=no"
 
         return result
 
