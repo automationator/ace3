@@ -27,29 +27,6 @@ class ACEServiceInterface(Protocol):
     def get_config_class(cls) -> Type[ServiceConfig]:
         ...
 
-class ACEServiceAdapter(ACEServiceInterface):
-    def __init__(self, service: ACEServiceInterface):
-        self.service = service
-        
-    def start(self):
-        self.service.start()
-
-    def wait_for_start(self, timeout: float = 5) -> bool:
-        return self.service.wait_for_start(timeout)
-
-    def start_single_threaded(self):
-        self.service.start_single_threaded()
-
-    def stop(self):
-        self.service.stop()
-
-    def wait(self):
-        self.service.wait()
-
-    @classmethod
-    def get_config_class(cls) -> Type[ServiceConfig]:
-        return cls.service.get_config_class()
-
 class DisabledService(ACEServiceInterface):
     """This is a placeholder service that is used to indicate that a service is disabled by configuration.
     It is used to prevent the service from being started if it is disabled by configuration."""
@@ -99,7 +76,7 @@ def service_enabled(name: str) -> bool:
 def load_service(_module: str, _class: str) -> ACEServiceInterface:
     module = importlib.import_module(_module)
     class_definition = getattr(module, _class)
-    return ACEServiceAdapter(class_definition())
+    return class_definition()
 
 def load_service_by_name(name: str) -> ACEServiceInterface:
     if not service_valid_for_instance(name):
