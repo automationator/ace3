@@ -54,6 +54,8 @@ class EmailLoggingAnalysis(Analysis):
     pass
 
 class EmailLoggingAnalyzer(AnalysisModule):
+    config: EmailLoggingConfig
+
     @classmethod
     def get_config_class(cls) -> Type[AnalysisModuleConfig]:
         return EmailLoggingConfig
@@ -170,28 +172,28 @@ class EmailLoggingAnalyzer(AnalysisModule):
         entry.update({'extracted_urls': extracted_urls})
         entry.update({'archive_path': None if archive_path is None else os.path.relpath(archive_path, start=get_base_dir())})
 
-        if self.json_logging_enabled:
+        if self.config.json_logging_enabled:
             try:
                 self.export_to_json(entry.copy())
             except Exception as e:
                 logging.error(f"unable to create JSON log export for {email_file}: {e}")
                 report_exception()
 
-        if self.splunk_log_enabled:
+        if self.config.splunk_log_enabled:
             try:
                 self.export_to_splunk(entry.copy())
             except Exception as e:
                 logging.error(f"unable to create splunk log export for {email_file}: {e}")
                 report_exception()
 
-        if self.brocess_logging_enabled:
+        if self.config.brocess_logging_enabled:
             try:
                 self.export_to_brocess(entry.copy())
             except Exception as e:
                 logging.error(f"unable to create brocess log export for {email_file}: {e}")
                 report_exception()
 
-        if self.fluent_bit_logging_enabled:
+        if self.config.fluent_bit_logging_enabled:
             try:
                 self.export_to_fluent_bit(entry.copy())
             except Exception as e:
