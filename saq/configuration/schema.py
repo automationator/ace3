@@ -215,8 +215,8 @@ class MessagingConfig(BaseModel):
 class EmailArchiveConfig(BaseModel):
     target: str = Field(..., description="possible values: minio, s3")
     primary: str = Field(..., description="if this system is archiving emails, this determines what section to use for the database config")
-    s3_config: str = Field(..., description="controls which section of the config to use for the s3 config")
     s3_bucket: str = Field(..., description="the bucket to use for the email archive")
+    s3_region: Optional[str] = Field(default=None, description="the region to use for the email archive")
 
 class MemcachedConfig(BaseModel):
     client_address: str = Field(..., description="the address of the memcached system used by ACE")

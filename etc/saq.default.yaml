@@ -484,6 +484,8 @@ email_archive:
   s3_config: minio
   # the bucket to use for the email archive
   s3_bucket: ace-email-archive
+  # the region to use for the email archive
+  s3_region:
 
 memcached:
   # the address of the memcached system used by ACE

@@ -23,8 +23,8 @@ class EmailArchiveS3(EmailArchiveLocal):
         s3_client = _get_s3_client()
 
         try:
-            result = s3_client.head_object(Bucket=bucket, Key=sha256_hash)
-            return result is not None
+            s3_client.head_object(Bucket=bucket, Key=sha256_hash)
+            return True
         except botocore.exceptions.ClientError as e:
             if e.response["Error"]["Code"] == "404":
                 logging.debug(f"email {sha256_hash} does not exist in s3: {e}")
@@ -37,8 +37,8 @@ class EmailArchiveS3(EmailArchiveLocal):
         metadata = { "message_id": message_id }
         logging.info(f"uploading email archive {sha256_hash} to {bucket} with metadata {metadata}")
         s3_client = _get_s3_client()
-        result = s3_client.upload_file(local_path, bucket, sha256_hash, ExtraArgs={"Metadata": metadata})
-        logging.debug(f"uploaded email archive {sha256_hash} to {bucket}: {result}")
+        s3_client.upload_file(local_path, bucket, sha256_hash, ExtraArgs={"Metadata": metadata})
+        logging.debug(f"uploaded email archive {sha256_hash} to {bucket}")
         return True
 
     def download_from_s3(self, target_path: str) -> str:
