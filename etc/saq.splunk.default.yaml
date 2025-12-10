@@ -14,16 +14,14 @@ splunk_config_default:
   name: default
   # are we using this splunk server?
   enabled: true
-  # is this the default splunk server?
-  default: true
   # the splunk query server
-  host: ""
+  host:
   port: 443
   # user account information for splunk
-  username: ""
-  password: ""
+  username:
+  password:
   # (optiona) use token authentication instead of username/password
-  token: ""
+  token:
   timezone: GMT
   # directory that contains splunk query performance data
   # leave this empty to disable
@@ -53,7 +51,6 @@ hunt_type_splunk:
   python_class: SplunkHunt
   rule_dirs:
     - hunts/splunk
-  splunk_config: default
   update_frequency: 60
 
 config:

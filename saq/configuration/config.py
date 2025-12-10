@@ -43,7 +43,7 @@ def get_analysis_module_config(name: str) -> "AnalysisModuleConfig":
 def get_service_config(name: str) -> "ServiceConfig":
     return get_config().get_service_config(name)
 
-def get_splunk_config(name: Optional[str] = None) -> "SplunkConfig":
+def get_splunk_config(name: str = "default") -> "SplunkConfig":
     return get_config().get_splunk_config(name)
 
 def get_proxy_config(name: Optional[str] = None) -> "ProxyConfig":

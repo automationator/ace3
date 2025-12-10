@@ -59,7 +59,7 @@ def manager_kwargs_alt(rules_dir):
         'concurrency_limit': 1,
         'persistence_dir': os.path.join(get_data_dir(), get_config().collection.persistence_dir),
         'update_frequency': 60,
-        'config': get_config().get_splunk_config("splunk_alt")
+        'config': get_splunk_config("splunk_alt")
     }
 
 @pytest.fixture(autouse=True, scope="function")
@@ -259,10 +259,9 @@ def alt_setup(rules_dir):
         
         get_config().clear_splunk_configs()
 
-        get_config().add_splunk_config("splunk",
+        get_config().add_splunk_config("default",
             SplunkConfig(
-                name="splunk",
-                default=True,
+                name="default",
                 enabled=True,
                 host=SPLUNK_HOST,
                 port=SPLUNK_PORT,
@@ -273,7 +272,6 @@ def alt_setup(rules_dir):
         get_config().add_splunk_config("splunk_alt",
             SplunkConfig(
                 name="splunk_alt",
-                default=False,
                 enabled=True,
                 host=SPLUNK_ALT_HOST,
                 port=SPLUNK_ALT_PORT,

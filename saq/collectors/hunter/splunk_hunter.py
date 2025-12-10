@@ -30,6 +30,8 @@ class SplunkHuntConfig(QueryHuntConfig):
 
 class SplunkHunt(QueryHunt):
 
+    config: SplunkHuntConfig
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -38,9 +40,7 @@ class SplunkHunt(QueryHunt):
         # the time spec we're using for the query
         self.time_spec: Optional[str] = None
 
-        # since we have multiple splunk instances, allow config to point to a different one
-        self.splunk_config = self.manager.config
-        
+        self.splunk_config = get_config().get_splunk_config(self.config.splunk_config)
         self.tool_instance = self.splunk_config.host
         self.timezone = self.splunk_config.timezone
 
@@ -121,7 +121,7 @@ class SplunkHunt(QueryHunt):
             return unit_test_query_results
         
         # init splunk
-        searcher = SplunkClient(self.splunk_config, user_context=self.namespace_user, app=self.namespace_app)
+        searcher = SplunkClient(self.splunk_config.name, user_context=self.namespace_user, app=self.namespace_app)
 
         # set search link
         self.search_link = searcher.encoded_query_link(self.formatted_query_timeless(), start_time.astimezone(tz), end_time.astimezone(tz), use_index_time=self.use_index_time)

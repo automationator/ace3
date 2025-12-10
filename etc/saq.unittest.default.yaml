@@ -668,3 +668,6 @@ api_query_defaults_test_api:
   # how long to wait between calls to check for status of an async query
   async_delay: 1
   use_index_time: true
+
+splunk_config_default:
+  host: localhost

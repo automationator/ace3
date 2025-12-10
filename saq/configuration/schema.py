@@ -238,7 +238,6 @@ class SplunkLoggingConfig(BaseModel):
 
 class SplunkConfig(BaseModel):
     name: str = Field(..., description="the name of the splunk server")
-    default: bool = Field(default=False, description="is this the default splunk server?")
     enabled: bool = Field(..., description="are we using this splunk server?")
     host: str = Field(..., description="the splunk query server")
     port: int = Field(..., description="the port of the splunk query server")
@@ -808,22 +807,14 @@ class ACEConfig(BaseModel):
             splunk_config = SplunkConfig.model_validate(value)
             self.add_splunk_config(splunk_name, splunk_config)
 
-    def get_splunk_config(self, name: Optional[str] = None) -> SplunkConfig:
+    def get_splunk_config(self, name: str = "default") -> SplunkConfig:
         if self.__splunk_configs is None:
             self._raise_raw_data_error()
 
-        if name is not None:
-            if name not in self.__splunk_configs:
-                raise ValueError(f"splunk config for {name} not found")
+        if name not in self.__splunk_configs:
+            raise ValueError(f"splunk config for {name} not found")
 
-            return self.__splunk_configs[name]
-        else:
-            for splunk_config in self.__splunk_configs.values():
-                if splunk_config.default:
-                    return splunk_config
-
-            raise ValueError("no default splunk config found")
-
+        return self.__splunk_configs[name]
 
     #
     # api query defaults
