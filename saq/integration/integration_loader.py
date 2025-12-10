@@ -141,7 +141,7 @@ def initialize_integrations():
         #
 
         try:
-            importlib.import_module(integration_config.module)
+            importlib.import_module(integration_config.python_module)
         except Exception as e:
             logging.error(f"failed to import integration module {integration_config.name}: {e}")
             report_exception()

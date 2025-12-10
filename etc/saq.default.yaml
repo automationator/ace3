@@ -502,6 +502,7 @@ email:
 # NOTE: unix_socket is typically /var/run/mysqld/mysqld.sock
 # NOTE: keep password values as strings (e.g., env:ACE_DB_PASSWORD)
 database_ace:
+  name: ace
   hostname: ace-db
   port: 3306
   unix_socket: ""
@@ -516,6 +517,7 @@ database_ace:
   max_connection_lifetime: "00:15:00"
 
 database_collection:
+  name: collection
   hostname: ace-db
   port: 3306
   unix_socket: ""
@@ -529,6 +531,7 @@ database_collection:
   max_connection_lifetime: "00:15:00"
 
 database_brocess:
+  name: brocess
   hostname: ace-db
   port: 3306
   unix_socket: ""
@@ -546,6 +549,7 @@ database_brocess:
   max_connection_lifetime: "00:15:00"
 
 database_email_archive:
+  name: email_archive
   hostname: ace-db
   port: 3306
   unix_socket: ""

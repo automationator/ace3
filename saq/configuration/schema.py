@@ -52,6 +52,7 @@ class ServiceConfig(BaseModel):
     instance_types: Optional[list[str]] = Field(default=None, description="The instance types that the service is valid for.")
 
 class DatabaseConfig(BaseModel):
+    name: str = Field(..., description="The name of the database.")
     hostname: str = Field(..., description="The hostname of the database server.")
     port: int = Field(default=3306, description="The port of the database server.")
     unix_socket: Optional[str] = Field(default=None, description="(Optional) unix socket path.")
@@ -318,6 +319,7 @@ class IntegrationConfig(BaseModel):
     name: str = Field(..., description="the name of the integration")
     description: str = Field(..., description="the description of the integration")
     enabled: bool = Field(..., description="whether the integration is enabled or disabled")
+    python_module: str = Field(..., description="the python module of the integration")
 
 class AnalysisModuleGroupConfig(BaseModel):
     name: str = Field(..., description="the name of the analysis module group")
@@ -506,9 +508,8 @@ class ACEConfig(BaseModel):
             if not key.startswith("database_"):
                 continue
 
-            database_name = key[len("database_"):]
             database_config = DatabaseConfig.model_validate(value)
-            self.add_database_config(database_name, database_config)
+            self.add_database_config(database_config.name, database_config)
 
     def add_database_config(self, name: str, database_config: DatabaseConfig):
         self.__databases[name] = database_config

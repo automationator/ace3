@@ -3099,7 +3099,7 @@ close_event_parser.set_defaults(func=close_event)
 def debug(args):
     from saq.configuration.config import get_config
     # use this when you need it
-    logging.info("%s", get_config().global_settings.memory_limit_warning)
+    logging.info("%s", get_config("crowdstrike"))
     return 0
 
 debug_parser = get_cli_subparsers().add_parser('debug')

@@ -1,5 +1,7 @@
 import sys
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional, Type
+
+from pydantic import BaseModel
 
 from saq.configuration.loader import load_configuration
 from saq.configuration.schema import ACEConfig
@@ -13,9 +15,21 @@ if TYPE_CHECKING:
 # parsed and validated configuration
 CONFIG: Optional[ACEConfig] = None
 
-def get_config() -> ACEConfig:
+# registered integration configurations
+REGISTERED_INTEGRATION_CONFIGURATIONS: dict[str, Type[BaseModel]] = {}
+
+# integration configurations
+INTEGRATION_CONFIGURATIONS: dict[str, BaseModel] = {}
+
+def get_config(name: Optional[str] = None) -> ACEConfig:
     """Returns the global configuration object (YAMLConfig)."""
-    return CONFIG
+    if name is None:
+        return CONFIG
+
+    try:
+        return INTEGRATION_CONFIGURATIONS[name]
+    except KeyError:
+        raise KeyError(f"integration configuration for {name} not found")
 
 def get_database_config(name: str=DB_ACE) -> "DatabaseConfig":
     return get_config().get_database_config(name)
@@ -44,6 +58,16 @@ def resolve_configuration(existing_config: ACEConfig):
     existing_config.resolve_all_values()
     CONFIG = ACEConfig.model_validate(existing_config.raw._data)
     CONFIG.raw = existing_config.raw
+
+    # load integration configurations as separate objects
+    for integration_name, integration_class in REGISTERED_INTEGRATION_CONFIGURATIONS.items():
+        INTEGRATION_CONFIGURATIONS[integration_name] = integration_class.model_validate(existing_config.raw._data)
+
+def register_integration_configuration(integration_name: str, integration_class: Type[BaseModel]):
+    if integration_name in REGISTERED_INTEGRATION_CONFIGURATIONS:
+        raise ValueError(f"integration configuration for {integration_name} already registered")
+
+    REGISTERED_INTEGRATION_CONFIGURATIONS[integration_name] = integration_class
 
 def initialize_configuration(config_paths: Optional[list[str]]=None):
     global CONFIG
