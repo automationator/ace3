@@ -1852,57 +1852,6 @@ display_submission_file_parser.add_argument('storage_dir',
     help="The storage directory of the submission to display")
 display_submission_file_parser.set_defaults(func=display_submission)
 
-
-# ============================================================================
-# general utility commands
-#
-
-def submit_failed_submissions(args):
-    import saq
-    from saq.network_client import submit_alerts
-
-    failed_dir = os.path.join(saq.SAQ_HOME, get_config()['network_client_ace']['failed_dir'])
-    if not os.path.isdir(failed_dir):
-        logging.warning("{} does not exist (no submissions available?".format(failed_dir))
-        sys.exit(0)
-
-    storage_dirs = [os.path.join(failed_dir, d) for d in os.listdir(failed_dir)]
-    if not storage_dirs:
-        logging.warning("nothing available to submit")
-        sys.exit(0)
-
-    logging.info("{} submissions available".format(len(storage_dirs)))
-
-    try:
-        remote_host = get_config()['network_client_ace']['remote_host']
-        remote_port = get_config()['network_client_ace'].getint('remote_port')
-        ssl_cert = os.path.join(saq.SAQ_HOME, get_config()['network_client_ace']['ssl_cert'])
-        ssl_key = os.path.join(saq.SAQ_HOME, get_config()['network_client_ace']['ssl_key'])
-        ca_path = os.path.join(saq.SAQ_HOME, get_config()['network_client_ace']['ca_path'])
-        remote_hostname = get_config()['network_client_ace']['ssl_hostname']
-
-        submit_alerts(remote_host, remote_port, ssl_cert, remote_hostname, ssl_key, ca_path, storage_dirs)
-
-        if args.remove:
-            for storage_dir in storage_dirs:
-                try:
-                    shutil.rmtree(storage_dir)
-                    logging.info("removed {}".format(storage_dir))
-                except Exception:
-                    logging.error("unable to remove {}: {}".format(storage_dir))
-
-        sys.exit(0)
-
-    except Exception as e:
-        logging.error("unable to submit: {}".format(e))
-        sys.exit(1)
-
-submit_failed_submissions_parser = get_cli_subparsers().add_parser('submit-failed-submissions',
-    help="Submit any failed submissions stored in the directory defined in the network_client_ace configuration section.")
-submit_failed_submissions_parser.add_argument('-r', '--remove', required=False, default=False, action='store_true', dest='remove',
-    help="Remove the directories that were submitted after a succuessful submissions.")
-submit_failed_submissions_parser.set_defaults(func=submit_failed_submissions)
-
 #
 # remediation
 #
