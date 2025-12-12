@@ -1,7 +1,7 @@
 import pytest
 
 from saq.analysis import RootAnalysis, Observable
-from saq.constants import *
+from saq.constants import F_EMAIL_ADDRESS, F_EMAIL_DELIVERY, F_IPV4, F_MESSAGE_ID, F_USER, F_YARA_STRING
 from saq.observables import create_observable
 
 @pytest.mark.unit
@@ -20,7 +20,7 @@ def test_observables():
 @pytest.mark.unit
 def test_email_address(address, expected_value):
     root = RootAnalysis()
-    o = root.add_observable_by_spec(F_EMAIL_ADDRESS, address)
+    o = root.add_observable_by_spec(F_EMAIL_ADDRESS, address) 
     if expected_value is None:
         assert o is None
     else:
@@ -79,16 +79,6 @@ def test_yara_string_observable():
         YaraStringObservable("test")
 
     assert root.add_observable_by_spec(F_YARA_STRING, "") is None
-
-@pytest.mark.parametrize('source_url,expected_url', [
-    ('https://urldefense.com/v3/__http://blog.liulianshuo.cn/miseryzw.php?utm_source=commanded&utm_medium=besmirch&utm_campaign=subtractions__;!!MwwqYLOC6b6whF7V!0-s0cwelKF9e6ILM8eHxQsPJoSKGEKwWBcpxrsmug65gs1IGv-y98xCoFqPZtGQECqDgirvyJA$', 'http://blog.liulianshuo.cn/miseryzw.php?utm_source=commanded&utm_medium=besmirch&utm_campaign=subtractions'),
-    ('https://urldefense.com/v3/__http://www.chicagoent.com__;!!MwwqYLOC6b6whF7V!hlFzJJKSgy_yhExaSf_rO2F3t91Y9EI7KMYvQDBN2Pg8rge0Hx-1191NfRJ24_qo96oG0ghxKHs1kWnuNeboNZpokHY$  [https://urldefense.com/v3/__https://chicagoent.com/__;!!MwwqYLOC6b6whF7V!hlFzJJKSgy_yhExaSf_rO2F3t91Y9EI7KMYvQDBN2Pg8rge0Hx-1191NfRJ24_qo96oG0ghxKHs1kWnuNeborJICOjM$ ]', 'http://www.chicagoent.com')
-])
-@pytest.mark.unit
-def test_urldefense_url(source_url, expected_url):
-    from saq.observables import URLObservable
-    url = URLObservable(value=source_url)
-    assert url.value == expected_url
 
 @pytest.mark.unit
 def test_volatile():

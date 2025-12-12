@@ -1,17 +1,11 @@
-import logging
-import re
-import urllib
-from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 from saq.analysis.observable import Observable
 from saq.configuration.config import get_config
 from saq.constants import F_URI_PATH, F_URL, F_USER_AGENT
 from saq.gui import ObservableActionSeparator, ObservableActionUrlCrawl, ObservableActionUrlscan
 from saq.observables.generator import register_observable_type
 from urlfinderlib.url import URL
-from urlfinderlib import find_urls
 
 from saq.util import is_subdomain
-from saq.util.url import PROTECTED_URLS, sanitize_protected_url
 
 
 class UserAgentObservable(Observable):
@@ -43,10 +37,6 @@ class URIPathObservable(Observable):
 class URLObservable(Observable):
     def __init__(self, *args, **kwargs):
         super().__init__(F_URL, *args, **kwargs)
-
-    @Observable.value.setter
-    def value(self, new_value):
-        self._value = sanitize_protected_url(new_value.strip())
 
     @property
     def jinja_available_actions(self):

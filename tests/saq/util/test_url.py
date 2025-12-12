@@ -1,6 +1,6 @@
 import pytest
 
-from saq.util.url import sanitize_protected_url
+from saq.util.url import extract_protected_url
 
 @pytest.mark.parametrize('source_url,expected_url', [
     ('https://no.changes.com/test', 'https://no.changes.com/test'),
@@ -19,9 +19,14 @@ from saq.util.url import sanitize_protected_url
     ('https://lahia-my.sharepoint.com/:b:/g/personal/secure_onedrivemsw_bid/EVdjoBiqZTxMnjAcDW6yR4gBqJ59ALkT1C2I3L0yb_n0uQ?e=naeXYD', 'https://lahia-my.sharepoint.com/personal/secure_onedrivemsw_bid/_layouts/15/download.aspx?e=naeXYD&share=EVdjoBiqZTxMnjAcDW6yR4gBqJ59ALkT1C2I3L0yb_n0uQ'),
     # URLDefense Proofpoint example
     ('https://urldefense.proofpoint.com/v2/url?u=http-3A__www.linkedin.com_company_totallyrealcompany_&d=DwMFAg&c=h4Hco3TqWGhswFY_DB9a0ROb2nz1Kbox_73PUtgNn3M&r=e535Fw3IpJvnSZEQ8eSBhv2S1aSylN4En6TbrM0pu-s&m=LtdAZpeaQEez66l8y9cdhXQ-AQyHhRF7ueGZFY4vMBY&s=2fSW-t6FWhm0XTwMy8e-MeYldedFppe3AtXxlEH8t4A&e=', 'http://www.linkedin.com/company/totallyrealcompany'),
-    # ...
-    ('https://secure-web.cisco.com/1tlPsGZcvzBZyF6NpjvqyfqF58WnrQLomPj19oOwYBXNSPw1XvdHVJpdn4voWDGV0z1edLQLVxlOUf97S3LkBDEqZ_nXGjLkCfKTHb2z7IcLg7ojBsEuagFQXSQnwAJry8m1DoDlCsnhL03BXxECOSt21sPk9ZoeGFpq1mG2z5yVInYa8eowpnrQ3n3fK5TreSxtmzXYe6kFJl2YYm5o7Yk8Go4K3n5_YYqTetUgQhcoTntOlED3zu5hOSORlYFVKifK9JfHm7QTQhF-3beICoQg6yjvSY80Qi9NUNefEzypuJMH37tB4HUXScxZbqtTUGocWRhfhOq-VsgB95vcixwvBpAz0MRxp20wfDT8sTXGw0YdGXQZ4BPlfASqYgYex0anNkcWuQ332F6mmGWXAxAjGsgL8gdp3Fgn7Sd2cvTs/https%3A%2F%2Fus-west-2.protection.sophos.com%2F%3Fd%3Dcudasvc.com%26u%3DaHR0cHM6Ly9saW5rcHJvdGVjdC5jdWRhc3ZjLmNvbS91cmw_YT1odHRwcyUzYSUyZiUyZnNlY3VyZS5zZXJrYXNlcmlncmFmaS5jb20lMmYmYz1FLDEsNm9DcVp1RXdOVXkwOFJ1ejNVMUY1N0FBTkJVbE5kNjlmYXE2UFAwNFB0TTZjRE0ycnc3WG1vaUJNWWV5MEZ0WldaelphaU5DQWZZYVZOd1VRZ2o3OC1UUWF4UHd3ek1hVl9qSm5lb05BQSwsJnR5cG89MQ%3D%3D%26p%3Dm%26i%3DNjI0NWJmMTk0YzU3ZDAxMDkwNjAwMzI3%26t%3DRlVkbkxaSUR4Nm9sSGlKWGVWS1FBaUlTOUZZNGxtUHVIT1B2MFUzcVhWdz0%3D%26h%3D74ce429d578c45ff895e22f7a0b40a7c%26s%3DAVNPUEhUT0NFTkNSWVBUSVanqsQVge8U6-_iPt463foLN-OF69MpSkFFwaQp-z8AVQ#bbea5a886ba5ce04f95eded721586e4f69595fda=eGlhb21AYnYuY29t', 'https://secure.serkaserigrafi.com/')
+    # Cisco protected URL (first layer - extracts Sophos URL)
+    ('https://secure-web.cisco.com/1tlPsGZcvzBZyF6NpjvqyfqF58WnrQLomPj19oOwYBXNSPw1XvdHVJpdn4voWDGV0z1edLQLVxlOUf97S3LkBDEqZ_nXGjLkCfKTHb2z7IcLg7ojBsEuagFQXSQnwAJry8m1DoDlCsnhL03BXxECOSt21sPk9ZoeGFpq1mG2z5yVInYa8eowpnrQ3n3fK5TreSxtmzXYe6kFJl2YYm5o7Yk8Go4K3n5_YYqTetUgQhcoTntOlED3zu5hOSORlYFVKifK9JfHm7QTQhF-3beICoQg6yjvSY80Qi9NUNefEzypuJMH37tB4HUXScxZbqtTUGocWRhfhOq-VsgB95vcixwvBpAz0MRxp20wfDT8sTXGw0YdGXQZ4BPlfASqYgYex0anNkcWuQ332F6mmGWXAxAjGsgL8gdp3Fgn7Sd2cvTs/https%3A%2F%2Fus-west-2.protection.sophos.com%2F%3Fd%3Dcudasvc.com%26u%3DaHR0cHM6Ly9saW5rcHJvdGVjdC5jdWRhc3ZjLmNvbS91cmw_YT1odHRwcyUzYSUyZiUyZnNlY3VyZS5zZXJrYXNlcmlncmFmaS5jb20lMmYmYz1FLDEsNm9DcVp1RXdOVXkwOFJ1ejNVMUY1N0FBTkJVbE5kNjlmYXE2UFAwNFB0TTZjRE0ycnc3WG1vaUJNWWV5MEZ0WldaelphaU5DQWZZYVZOd1VRZ2o3OC1UUWF4UHd3ek1hVl9qSm5lb05BQSwsJnR5cG89MQ%3D%3D%26p%3Dm%26i%3DNjI0NWJmMTk0YzU3ZDAxMDkwNjAwMzI3%26t%3DRlVkbkxaSUR4Nm9sSGlKWGVWS1FBaUlTOUZZNGxtUHVIT1B2MFUzcVhWdz0%3D%26h%3D74ce429d578c45ff895e22f7a0b40a7c%26s%3DAVNPUEhUT0NFTkNSWVBUSVanqsQVge8U6-_iPt463foLN-OF69MpSkFFwaQp-z8AVQ#bbea5a886ba5ce04f95eded721586e4f69595fda=eGlhb21AYnYuY29t', 'https://us-west-2.protection.sophos.com/?d=cudasvc.com&u=aHR0cHM6Ly9saW5rcHJvdGVjdC5jdWRhc3ZjLmNvbS91cmw_YT1odHRwcyUzYSUyZiUyZnNlY3VyZS5zZXJrYXNlcmlncmFmaS5jb20lMmYmYz1FLDEsNm9DcVp1RXdOVXkwOFJ1ejNVMUY1N0FBTkJVbE5kNjlmYXE2UFAwNFB0TTZjRE0ycnc3WG1vaUJNWWV5MEZ0WldaelphaU5DQWZZYVZOd1VRZ2o3OC1UUWF4UHd3ek1hVl9qSm5lb05BQSwsJnR5cG89MQ==&p=m&i=NjI0NWJmMTk0YzU3ZDAxMDkwNjAwMzI3&t=RlVkbkxaSUR4Nm9sSGlKWGVWS1FBaUlTOUZZNGxtUHVIT1B2MFUzcVhWdz0=&h=74ce429d578c45ff895e22f7a0b40a7c&s=AVNPUEhUT0NFTkNSWVBUSVanqsQVge8U6-_iPt463foLN-OF69MpSkFFwaQp-z8AVQ'),
+    # Sophos protected URL (second layer - extracts Cudasvc URL)
+    ('https://us-west-2.protection.sophos.com/?d=cudasvc.com&u=aHR0cHM6Ly9saW5rcHJvdGVjdC5jdWRhc3ZjLmNvbS91cmw_YT1odHRwcyUzYSUyZiUyZnNlY3VyZS5zZXJrYXNlcmlncmFmaS5jb20lMmYmYz1FLDEsNm9DcVp1RXdOVXkwOFJ1ejNVMUY1N0FBTkJVbE5kNjlmYXE2UFAwNFB0TTZjRE0ycnc3WG1vaUJNWWV5MEZ0WldaelphaU5DQWZZYVZOd1VRZ2o3OC1UUWF4UHd3ek1hVl9qSm5lb05BQSwsJnR5cG89MQ==&p=m&i=NjI0NWJmMTk0YzU3ZDAxMDkwNjAwMzI3&t=RlVkbkxaSUR4Nm9sSGlKWGVWS1FBaUlTOUZZNGxtUHVIT1B2MFUzcVhWdz0=&h=74ce429d578c45ff895e22f7a0b40a7c&s=AVNPUEhUT0NFTkNSWVBUSVanqsQVge8U6-_iPt463foLN-OF69MpSkFFwaQp-z8AVQ', 'https://linkprotect.cudasvc.com/url?a=https://secure.serkaserigrafi.com/&c=E,1,6oCqZuEwNUy08Ruz3U1F57AANBUlNd69faq6PP04PtM6cDM2rw7XmoiBMYey0FtZWZzZaiNCAfYaVNwUQgj78-TQaxPwwzMaV_jJneoNAA,,&typo=1'),
+    # Cudasvc protected URL (third layer - extracts final URL)
+    ('https://linkprotect.cudasvc.com/url?a=https://secure.serkaserigrafi.com/&c=E,1,6oCqZuEwNUy08Ruz3U1F57AANBUlNd69faq6PP04PtM6cDM2rw7XmoiBMYey0FtZWZzZaiNCAfYaVNwUQgj78-TQaxPwwzMaV_jJneoNAA,,&typo=1', 'https://secure.serkaserigrafi.com/')
 ])
 @pytest.mark.unit
-def test_urldefense_url(source_url, expected_url):
-    assert sanitize_protected_url(source_url) == expected_url
+def test_extract_protected_url(source_url, expected_url):
+    protection_type, extracted_url = extract_protected_url(source_url)
+    assert extracted_url == expected_url
