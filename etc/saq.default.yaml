@@ -1877,7 +1877,6 @@ module_group_file:
     - pdf_analyzer
     - pdftotext
     - phishkit_analyzer
-    - protected_url_analyzer
     - qrcode
     - rar_encryption_analyzer
     - rtfole
@@ -1910,6 +1909,7 @@ module_group_common:
     - configuration_defined_tagging
     - correlated_tag_analyzer
     - observable_detection
+    - protected_url_analyzer
     - site_tagger
     - user_defined_tagging
     - user_tagger

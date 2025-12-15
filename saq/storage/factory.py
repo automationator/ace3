@@ -8,13 +8,6 @@ the current configuration, currently supporting MinIO storage.
 import logging
 
 from saq.configuration.config import get_config
-from saq.constants import (
-    CONFIG_MINIO,
-    CONFIG_MINIO_HOST,
-    CONFIG_MINIO_PORT,
-    CONFIG_MINIO_ACCESS_KEY,
-    CONFIG_MINIO_SECRET_KEY,
-)
 from saq.storage.adapter import StorageAdapter
 from saq.storage.minio import MinIOStorage
 from saq.storage.error import StorageError
@@ -51,18 +44,13 @@ class StorageFactory:
             return STORAGE_SYSTEM
         
         try:
-            config = get_config()
-            
-            if not config or CONFIG_MINIO not in config:
-                raise StorageError("MinIO configuration section not found in configuration")
-            
-            minio_config = config[CONFIG_MINIO]
+            minio_config = get_config().minio
             
             # Extract MinIO configuration values
-            host = minio_config.get(CONFIG_MINIO_HOST)
-            port = minio_config.get(CONFIG_MINIO_PORT)
-            access_key = minio_config.get(CONFIG_MINIO_ACCESS_KEY)
-            secret_key = minio_config.get(CONFIG_MINIO_SECRET_KEY)
+            host = minio_config.host
+            port = minio_config.port
+            access_key = minio_config.access_key
+            secret_key = minio_config.secret_key
             
             # Validate required configuration
             if not all([host, port, access_key, secret_key]):
