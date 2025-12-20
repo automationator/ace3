@@ -67,7 +67,7 @@ def service_valid_for_instance(name: str) -> bool:
     if not valid_service_instance_types:
         return True
 
-    return instance_type in valid_service_instance_types
+    return "ANY" in valid_service_instance_types or instance_type in valid_service_instance_types
 
 def service_enabled(name: str) -> bool:
     """Returns True if the service (specified by name) is enabled, False otherwise."""

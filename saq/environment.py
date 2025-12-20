@@ -1,14 +1,12 @@
 # default installation directory for ACE)
-from dataclasses import dataclass
 from datetime import tzinfo
 import locale
 import logging
 import os
 import socket
-import sys
 import tempfile
 import time
-from typing import Any, Optional, Type
+from typing import Optional
 
 
 from pydantic import BaseModel, Field
@@ -357,5 +355,27 @@ def initialize_environment(
 
     from saq.phishkit import initialize_phishkit
     initialize_phishkit()
+
+    # XXX remove me when you're done testing
+    from saq.analysis.observable import Observable
+    from saq.remediation.target import ObservableRemediationInterface, RemediationTarget
+    from saq.configuration.schema import RemediatorConfig
+    from saq.constants import F_TEST
+
+    get_config().add_remediator_config("custom", RemediatorConfig(
+        name="custom",
+        display_name="Office365 Email Remediation",
+        description="Removes an email from an Office365 mailbox",
+        observable_type=F_TEST,
+        python_module="tests.saq.remediation.test_remediator",
+        python_class="TestRemediator",
+    ))
+
+    class _custom_remediation_interface(ObservableRemediationInterface):
+        def get_remediation_targets(self, observable: Observable) -> list[RemediationTarget]:
+            return [RemediationTarget("custom", observable.type, observable.value)]
+
+    from saq.remediation.target import register_observable_remediation_interface
+    register_observable_remediation_interface(F_TEST, _custom_remediation_interface())
 
     logging.debug("SAQ initialized")

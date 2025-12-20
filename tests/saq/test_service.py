@@ -3,10 +3,6 @@ import pytest
 from saq.configuration.config import get_config
 from saq.configuration.schema import ServiceConfig
 from saq.constants import (
-    CONFIG_SERVICE_CLASS,
-    CONFIG_SERVICE_ENABLED,
-    CONFIG_SERVICE_INSTANCE_TYPES,
-    CONFIG_SERVICE_MODULE,
     INSTANCE_TYPE_PRODUCTION,
     INSTANCE_TYPE_UNITTEST,
 )
@@ -57,6 +53,20 @@ class TestServiceValidForInstance:
             python_class="TestClass"))
 
         result = service_valid_for_instance("test_service")
+        assert result is True
+
+    def test_service_valid_matching_instance_type_any(self):
+        """test that service is valid when instance type matches"""
+        get_config().add_service_config("test_service", ServiceConfig(
+            name="test_service", 
+            description="test service",
+            enabled=True,
+            python_module="test.module", 
+            python_class="TestClass",
+            instance_types=["ANY"]))
+
+        result = service_valid_for_instance("test_service")
+
         assert result is True
 
     def test_service_valid_matching_instance_type(self):

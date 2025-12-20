@@ -1715,10 +1715,16 @@ class Remediation(Base):
         Integer,
         primary_key=True)
 
+    # corresponds to the observable type this remediation is for
     type = Column(
         String,
-        nullable=False,
-        default='email')
+        nullable=False)
+
+    # corresponds to the `name` of the Remediator that initiated this remediation
+    name = Column(
+        String,
+        nullable=False
+    )
 
     action = Column(
         Enum('remove', 'restore'),
@@ -1754,22 +1760,8 @@ class Remediation(Base):
         default=None)
 
     result = Column(
-        String,
+        Enum('DELAYED', 'ERROR', 'FAILED', 'IGNORE', 'SUCCESS', 'CANCELLED'),
         nullable=True)
-
-    _results = None
-
-    @property
-    def results(self):
-        if self._results is None:
-            try:
-                if self.result is None:
-                    self._results = {}
-                else:
-                    self._results = json.loads(self.result)
-            except:
-                self._results = {'remediator_deprecated': {'complete': True, 'success':self.successful, 'result':self.result}}
-        return self._results
 
     comment = Column(
         String,
@@ -1791,11 +1783,6 @@ class Remediation(Base):
                 continue
 
         return result
-
-    successful = Column(
-        BOOLEAN,
-        nullable=True,
-        default=None)
 
     lock = Column(
         String(36), 
@@ -1828,6 +1815,52 @@ class Remediation(Base):
 
     def __str__(self):
         return f"Remediation: {self.action} - {self.type} - {self.status} - {self.key} - {self.result}"
+
+def get_current_remediation(remediator_name: str, observable_type: str, observable_value: str) -> Optional[Remediation]:
+    """Returns the current remediation status of the given target."""
+    return (
+        get_db()
+        .query(Remediation)
+        .filter(
+            Remediation.name == remediator_name,
+            Remediation.type == observable_type,
+            Remediation.key == observable_value
+        )
+        .order_by(Remediation.id.desc())
+        .first()
+    )
+
+class RemediationHistory(Base):
+
+    __tablename__ = 'remediation_history'
+
+    id = Column(
+        Integer, 
+        primary_key=True)
+
+    remediation_id = Column(
+        Integer, 
+        ForeignKey('remediation.id'), 
+        nullable=False)
+
+    insert_date = Column(
+        TIMESTAMP, 
+        nullable=False, 
+        index=True, 
+        server_default=text('CURRENT_TIMESTAMP'))
+
+    result = Column(
+        Enum('DELAYED', 'ERROR', 'FAILED', 'IGNORE', 'SUCCESS', 'CANCELLED'),
+        nullable=False)
+
+    message = Column(
+        Text, 
+        nullable=False)
+
+    status = Column(
+        Enum('NEW', 'IN_PROGRESS', 'COMPLETED'), 
+        nullable=False, 
+        default='NEW')
 
 class Tag(_Tag, Base):
     

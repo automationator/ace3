@@ -1,3 +1,8 @@
+function toggle_all_remediation_targets() {
+    var checked = $("input[name='all_remediation_targets']").prop("checked");
+    $("input[name$='remediation_target']").prop("checked", checked);
+}
+
 function remediation_targets(method, body, modal_id) {
     (function() {
         fetch('remediation_targets', {
@@ -22,12 +27,25 @@ function remediation_targets(method, body, modal_id) {
 
 function get_remediation_targets() {
     var targets = Array();
-    $("input[name$='remediation_target']").each(function(index) {
+    $("input[name^='remediation_target']").each(function(index) {
         if ($(this).is(":checked")) {
-            targets.push($(this).prop("id"))
+            targets.push({
+                "name": atob($(this).attr("r_name")),
+                "type": atob($(this).attr("r_type")),
+                "value": atob($(this).attr("r_value"))
+            })
         }
     });
     return targets;
+}
+
+function check_targets_selected(targets) {
+    if (targets.length === 0) {
+        alert("Select at least one remediation target");
+        return false;
+    }
+
+    return true;
 }
 
 function show_remediation_targets(alert_uuids) {
@@ -37,42 +55,45 @@ function show_remediation_targets(alert_uuids) {
 }
 
 function restore_remediation_targets() {
+    targets = get_remediation_targets()
+    if (! check_targets_selected(targets))
+        return;
+
     $('#remediation-selection-modal').modal('hide');
     $('#remediation-body').html('restoring targets...');
     $('#remediation-modal').modal('show');
-    targets = get_remediation_targets()
     remediation_targets("PUT", {targets: targets}, '#remediation-body');
-    return false; // prevents form from submitting
 }
 
 function remove_remediation_targets() {
+    targets = get_remediation_targets()
+    if (! check_targets_selected(targets))
+        return;
+
     $('#remediation-selection-modal').modal('hide');
     $('#remediation-body').html('removing targets...');
     $('#remediation-modal').modal('show');
-    targets = get_remediation_targets()
     remediation_targets("DELETE", {targets: targets}, '#remediation-body');
-    return false; // prevents form from submitting
 }
 
 function stop_remediation() {
+    targets = get_remediation_targets();
+    if (! check_targets_selected(targets))
+        return;
+
     $('#remediation-body').html('stopping remediation...');
     $('#remediation-selection-modal').modal('hide');
     $('#remediation-modal').modal('show');
-    targets = get_remediation_targets();
     remediation_targets("PATCH", {targets: targets, 'action': 'stop'}, '#remediation-body');
 }
 
 function delete_remediation() {
+    targets = get_remediation_targets();
+    if (! check_targets_selected(targets))
+        return;
+
     $('#remediation-body').html('deleting remediation...');
     $('#remediation-selection-modal').modal('hide');
     $('#remediation-modal').modal('show');
-    targets = get_remediation_targets();
     remediation_targets("PATCH", {targets: targets, 'action': 'delete'}, '#remediation-body');
-}
-
-function update_checkbox_count(target_type) {
-   let targets = $(`input[name="${target_type}_remediation_target"]`).length;
-   let checked_targets = $(`input[name="${target_type}_remediation_target"]:checked`).length;
-   let checked_counter = $(`#${target_type}_checked_counter`);
-   checked_counter.text(`${checked_targets}/${targets}`);
 }

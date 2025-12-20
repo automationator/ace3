@@ -29,6 +29,7 @@ from saq.integration.integration_loader import get_valid_integration_dirs, load_
 from saq.modules.context import AnalysisModuleContext
 from saq.monitor import reset_emitter
 from saq.permissions.user import add_user_permission
+from saq.remediation.target import reset_observable_remediation_interface_registry
 from saq.util.uuid import storage_dir_from_uuid
 from tests.saq.helpers import reset_unittest_logging, start_api_server, stop_api_server, initialize_unittest_logging
 from tests.saq.test_util import create_test_context
@@ -236,6 +237,9 @@ def global_function_setup(request):
 
     # make a deep copy of the current configuration
     config_copy = copy.deepcopy(get_config())
+
+    # reset the observable remediation interface registry
+    reset_observable_remediation_interface_registry()
 
     yield
 
