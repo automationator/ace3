@@ -123,7 +123,10 @@ class GUIAlert(Alert):
     def icon(self) -> str:
         if self.icon_configuration:
             if self.icon_configuration.blueprint_file_location:
-                return url_for(self.icon_configuration.blueprint_file_location.name, filename=self.icon_configuration.blueprint_file_location.path)
+                try:
+                    return url_for(self.icon_configuration.blueprint_file_location.name, filename=self.icon_configuration.blueprint_file_location.path)
+                except Exception as e:
+                    logging.error(f"error getting icon for {self.alert_type}: {e}")
             elif self.icon_configuration.url:
                 return self.icon_configuration.url
 
