@@ -446,8 +446,7 @@
 
 <!-- remediation selection dialog -->
 <div class="modal fade" id="remediation-selection-modal" tabindex="-1" role="dialog" aria-labelledby="remediation-selection-label" aria-hidden="true">
-    <form onsubmit="return remove_remediation_targets();">
-    <div class="modal-dialog modal-lg" style="width: 95%">
+    <div class="modal-dialog modal-xl" style="width: 95%">
         <div class="modal-content" style="word-break: break-word">
             <div class="modal-header">
                 <h1 class="modal-title fs-5">Remediation Selection</h1>
@@ -456,15 +455,14 @@
             <div class="modal-body" id="remediation-selection-body" style="word-wrap: break-word">
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Nevermind</button>
                 <button type="button" class="btn btn-outline-primary" onclick="stop_remediation()">Stop</button>
                 <button type="button" class="btn btn-outline-primary" onclick="restore_remediation_targets()">Restore</button>
-                <button type="submit" class="btn btn-outline-primary">Remove</button>
-                <button type="button" class="btn btn-outline-primary" onclick="delete_remediation()">Delete</button>
+                <button type="button" class="btn btn-outline-danger" onclick="remove_remediation_targets()">Remediate</button>
+                <button type="button" class="btn btn-outline-primary" onclick="delete_remediation()">Clear</button>
             </div>
         </div>
     </div>
-    </form>
 </div>
 
 <div class="modal fade" id="remediation-modal" tabindex="-1" role="dialog" aria-labelledby="remediation-label" aria-hidden="true">

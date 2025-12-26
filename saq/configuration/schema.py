@@ -362,6 +362,15 @@ class GitRepoConfig(BaseModel):
     branch: str = Field(..., description="The branch to use for the repo.")
     ssh_key_path: Optional[str] = Field(default=None, description="The path to an ssh key to use for the repo.")
 
+class RemediatorConfig(BaseModel):
+    name: str = Field(..., description="The name of the remediator.")
+    display_name: str = Field(..., description="The display name of the remediator.")
+    description: str = Field(..., description="The description of the remediator.")
+    observable_type: str = Field(..., description="The observable type the remediator works on.")
+    python_module: str = Field(..., description="The module of the remediator.")
+    python_class: str = Field(..., description="The class of the remediator.")
+    thread_count: int = Field(default=1, description="The maximum number of threads for the remediator.")
+
 class ACEConfig(BaseModel):
     global_settings: GlobalConfig = Field(alias="global")
     llm: Optional[LLMConfig] = None
@@ -436,6 +445,7 @@ class ACEConfig(BaseModel):
         self.__api_query_defaults: Optional[dict[str, APIQueryDefaultsConfig]] = None
         self.__hunt_types: Optional[dict[str, HuntTypeConfig]] = None
         self.__git_repos: Optional[dict[str, GitRepoConfig]] = None
+        self.__remediators: Optional[dict[str, RemediatorConfig]] = None
 
     def resolve_all_values(self):
         self.__raw.resolve_all_values()
@@ -475,6 +485,7 @@ class ACEConfig(BaseModel):
         self.load_hunt_type_configs()
         self.load_api_query_defaults_config()
         self.load_git_repo_configs()
+        self.load_remediator_configs()
     #
     # integrations
     #
@@ -923,3 +934,36 @@ class ACEConfig(BaseModel):
             raise ValueError(f"git repo config for {name} not found")
 
         return self.__git_repos[name]
+
+    #
+    # remediators
+    #
+
+    @property
+    def remediators(self) -> list[RemediatorConfig]:
+        if self.__remediators is None:
+            self._raise_raw_data_error()
+
+        return self.__remediators.values()
+    
+    def load_remediator_configs(self):
+        self.__remediators = {}
+
+        for key, value in self.raw._data.items():
+            if not key.startswith("remediator_"):
+                continue
+
+            remediator_config = RemediatorConfig.model_validate(value)
+            self.add_remediator_config(remediator_config.name, remediator_config)
+    
+    def add_remediator_config(self, name: str, remediator_config: RemediatorConfig):
+        self.__remediators[name] = remediator_config
+
+    def get_remediator_config(self, name: str) -> RemediatorConfig:
+        if self.__remediators is None:
+            self._raise_raw_data_error()
+
+        if name not in self.__remediators:
+            raise ValueError(f"remediator config for {name} not found")
+
+        return self.__remediators[name]

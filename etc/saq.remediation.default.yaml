@@ -1,16 +1,12 @@
 service_remediation:
   name: remediation
-  python_module: saq.remediation
+  python_module: saq.remediation.service
   python_class: RemediationService
   description: Handles requests for removing and/or restoring emails, files, accounts, etc...
   enabled: true
   instance_types: [ANY]
-  max_threads: 10
-  batch_size: 20
-  delay_minutes: 5
-  lock_timeout_seconds: 60
-  request_wait_time: 20
-  unchecked_types: []
+  lock_timeout_seconds: 300
+  delay_time_seconds: 60
 
 analysis_module_automated_remediation:
   name: automated_remediation

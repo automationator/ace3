@@ -578,6 +578,14 @@ analysis_mode_test_queues:
   #module_groups: [cache]
 
 remediator_test:
+  name: test
+  display_name: Test Remediator
+  description: This is a test remediator.
+  observable_type: test
+  python_module: tests.saq.remediation.test_remediator
+  python_class: TestRemediator
+  thread_count: 1
+
   client_id: test
   tenant_id: test
   thumbprint: test

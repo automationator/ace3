@@ -18,7 +18,7 @@ from saq.util import create_timedelta, parse_event_time
 if TYPE_CHECKING:
     from saq.analysis.analysis import Analysis
     from saq.modules.base_module import AnalysisModule
-    from saq.remediation import RemediationTarget
+    from saq.remediation.target import RemediationTarget
 
 class Observable(BaseNode):
     """Represents a piece of information discovered in an analysis that can itself be analyzed."""

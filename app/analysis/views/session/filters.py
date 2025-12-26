@@ -62,9 +62,9 @@ def create_filter(filter_name: str, inverted: bool):
         'Observable': TypeValueFilter(Observable.type, Observable.value, options=VALID_OBSERVABLE_TYPES, inverted=inverted),
         'Owner': SelectFilter(Owner.display_name, nullable=True, inverted=inverted),
         'Queue': SelectFilter(GUIAlert.queue, inverted=inverted),
-        'Remediated By': SelectFilter(RemediatedBy.display_name, nullable=True, inverted=inverted),
-        'Remediated Date': DateRangeFilter(GUIAlert.removal_time, inverted=inverted),
-        'Remediation Status': BoolFilter(Remediation.successful, nullable=True, option_names=REMEDIATION_STATUS_GUI, inverted=inverted),
+        #'Remediated By': SelectFilter(RemediatedBy.display_name, nullable=True, inverted=inverted),
+        #'Remediated Date': DateRangeFilter(GUIAlert.removal_time, inverted=inverted),
+        #'Remediation Status': BoolFilter(Remediation.status, nullable=True, option_names=REMEDIATION_STATUS_GUI, inverted=inverted),
         'Tag': AutoTextFilter(Tag.name, case_sensitive=False, wildcardable=True, inverted=inverted),
     }[filter_name]
 
@@ -80,9 +80,9 @@ def getFilters():
         'Observable': TypeValueFilter(Observable.type, Observable.value, options=VALID_OBSERVABLE_TYPES),
         'Owner': SelectFilter(Owner.display_name, nullable=True),
         'Queue': SelectFilter(GUIAlert.queue),
-        'Remediated By': SelectFilter(RemediatedBy.display_name, nullable=True),
-        'Remediated Date': DateRangeFilter(GUIAlert.removal_time),
-        'Remediation Status': BoolFilter(Remediation.successful, nullable=True, option_names=REMEDIATION_STATUS_GUI),
+        #'Remediated By': SelectFilter(RemediatedBy.display_name, nullable=True),
+        #'Remediated Date': DateRangeFilter(GUIAlert.removal_time),
+        #'Remediation Status': BoolFilter(Remediation.status, nullable=True, option_names=REMEDIATION_STATUS_GUI),
         'Tag': AutoTextFilter(Tag.name, case_sensitive=False, wildcardable=True),
     }
 

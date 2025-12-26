@@ -756,7 +756,11 @@ SUMMARY_DETAIL_FORMAT_TXT = 'txt' # plain text display
 # messaging (TODO FIX ME)
 MESSAGE_TYPE_SLACK = "slack"
 
-REMEDIATION_STATUS_GUI = {'True': 'Attempted', 'False': 'Failed'}
+REMEDIATION_STATUS_GUI = {
+    'NEW': 'New',
+    'IN_PROGRESS': 'In Progress',
+    'COMPLETED': 'Completed',
+}
 
 # the list of tabs available in the gui
 # this is used in the navigation_tabs property of the [gui] configuration section

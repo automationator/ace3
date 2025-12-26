@@ -633,23 +633,42 @@ DROP TABLE IF EXISTS `remediation`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `remediation` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `type` varchar(24) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL DEFAULT 'email',
+  `type` varchar(24) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL,
+  `name` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL,
   `action` enum('remove','restore') NOT NULL DEFAULT 'remove' COMMENT 'The action that was taken, either the time was removed or it was restored.',
   `insert_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'The time the action occured.',
   `update_time` timestamp NULL DEFAULT NULL COMMENT 'Time the action was last attempted',
   `user_id` int(11) NOT NULL COMMENT 'The user who performed the action.',
-  `key` varchar(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL COMMENT 'The key to look up the item.  In the case of emails this is the message_id and the recipient email address.',
-  `restore_key` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NULL DEFAULT NULL COMMENT 'optional location used to restore the file from',
-  `result` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci COMMENT 'The result of the action.  This is free form data for the analyst to see, usually includes error codes and messages.',
+  `key` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL COMMENT 'The target to remediate.',
+  `restore_key` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NULL DEFAULT NULL COMMENT 'Metadata about the target that was used to restore the target.',
+  `result` enum('DELAYED','ERROR','FAILED','IGNORE','SUCCESS','CANCELLED') COMMENT 'The most recent result of the remediator that executed the remediation.',
   `comment` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci COMMENT 'Optional comment, additional free form data.',
-  `successful` tinyint(4) DEFAULT NULL COMMENT '1 - remediation worked, 0 - remediation didn’t work',
   `lock` varchar(36) DEFAULT NULL COMMENT 'Set to a UUID when an engine processes it. Defaults to NULL to indicate nothing is working on it.',
   `lock_time` datetime DEFAULT NULL,
   `status` enum('NEW','IN_PROGRESS','COMPLETED') NOT NULL DEFAULT 'NEW' COMMENT 'The current status of the remediation.\\\\n\\\\nNEW - needs to be processed\\\\nIN_PROGRESS - entry is currently being processed\\\\nCOMPLETED - entry completed successfully',
   PRIMARY KEY (`id`),
-  KEY `i_key` (`key`(767)),
   KEY `fk_user_id_idx` (`user_id`),
   CONSTRAINT `fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `remediation_history`
+--
+
+DROP TABLE IF EXISTS `remediation_history`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `remediation_history` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `remediation_id` int(11) NOT NULL,
+  `insert_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'The time the action occured.',
+  `result` enum('DELAYED','ERROR','FAILED','IGNORE','SUCCESS','CANCELLED') NOT NULL COMMENT 'The result of the remediator that executed the remediation.',
+  `message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci NOT NULL COMMENT 'The message of the remediation.',
+  `status` enum('NEW','IN_PROGRESS','COMPLETED') NOT NULL COMMENT 'The resulting status of the remediation.',
+  PRIMARY KEY (`id`, `remediation_id`),
+  KEY `i_remediation_id` (`remediation_id`),
+  CONSTRAINT `fk_remediation_history_remediation` FOREIGN KEY (`remediation_id`) REFERENCES `remediation` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

@@ -192,13 +192,13 @@ class MessageIDObservable(Observable):
                         targets[target] = RemediationTarget('email', target)
 
         # also get targets from remediation history
-        query = get_db().query(Remediation)
-        query = query.filter(Remediation.type == 'email')
-        query = query.filter(Remediation.key.like(f"{message_id}%"))
-        history = query.all()
-        for h in history:
-            if h.key not in targets:
-                targets[h.key] = RemediationTarget('email', h.key)
+        #query = get_db().query(Remediation)
+        #query = query.filter(Remediation.type == 'email')
+        #query = query.filter(Remediation.key.like(f"{message_id}%"))
+        #history = query.all()
+        #for h in history:
+            #if h.key not in targets:
+                #targets[h.key] = RemediationTarget('email', h.key)
 
         return list(targets.values())
 

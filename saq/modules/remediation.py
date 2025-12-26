@@ -1,12 +1,15 @@
 import logging
 from saq.analysis import Analysis
+from saq.analysis.observable import Observable
 from saq.constants import AnalysisExecutionResult
 from saq.environment import get_global_runtime_settings
 from saq.modules import AnalysisModule
-from saq.remediation import REMEDIATION_ACTION_REMOVE
-from saq.observables import create_observable
+from saq.remediation.target import get_observable_remediation_targets
+from saq.remediation.types import RemediationAction as RemediationActionType
 
 KEY_TARGETS = "targets"
+
+# TODO no reason this can't get the result of the remediation as well
 
 class RemediationAction(Analysis):
     def __init__(self, *args, **kwargs):
@@ -31,13 +34,13 @@ class AutomatedRemediationAnalyzer(AnalysisModule):
     def generated_analysis_type(self):
         return RemediationAction
 
-    def execute_analysis(self, observable) -> AnalysisExecutionResult:
+    def execute_analysis(self, observable: Observable) -> AnalysisExecutionResult:
         analysis = self.create_analysis(observable)
         assert isinstance(analysis, RemediationAction)
-        targets = create_observable(observable.type, observable.value).remediation_targets
+        targets = get_observable_remediation_targets(observable)
         for target in targets:
-            target.queue(REMEDIATION_ACTION_REMOVE, get_global_runtime_settings().automation_user_id)
-            analysis.targets.append({'type': target.type, 'value': target.value})
-            logging.info(f"Added auto-remediation entry for {target.type}|{target.value}")
+            target.queue_remediation(RemediationActionType.REMOVE, get_global_runtime_settings().automation_user_id)
+            analysis.targets.append({'name': target.remediator_name, 'type': target.observable_type, 'value': target.observable_value})
+            logging.info(f"added auto-remediation entry for {target.remediator_name} {target.observable_type} {target.observable_value}")
 
         return AnalysisExecutionResult.COMPLETED
