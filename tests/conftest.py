@@ -1,5 +1,6 @@
 
 import copy
+from dataclasses import dataclass
 import logging
 import os
 import os.path
@@ -59,13 +60,51 @@ def global_setup(request):
     # clean up the temp dir
     shutil.rmtree(get_temp_dir())
 
-def execute_global_db_setup(
-    existing_nodes: Optional[list] = None,
-    existing_email_archive_server: Optional[list] = None,
-    existing_unit_test_user: Optional[tuple] = None,
-    existing_automation_user: Optional[tuple] = None,
-    existing_db_config: Optional[list] = None):
+@dataclass
+class DatabaseResetInformation:
+    existing_nodes: Optional[list] = None
+    existing_email_archive_server: Optional[list] = None
+    existing_unit_test_user: Optional[tuple] = None
+    existing_automation_user: Optional[tuple] = None
+    existing_db_config: Optional[list] = None
 
+DATABASE_RESET_INFORMATION: Optional[DatabaseResetInformation] = None
+
+def record_database_reset_information():
+    global DATABASE_RESET_INFORMATION
+
+    with get_db_connection() as db:
+        cursor = db.cursor()
+        cursor.execute("SELECT id, name, location, company_id, last_update, is_primary, any_mode FROM nodes")
+        existing_nodes = cursor.fetchall()
+
+        cursor.execute("SELECT id, username, password_hash, email, omniscience, timezone, display_name, queue, enabled, apikey_hash, apikey_encrypted FROM users WHERE username = 'unittest'")
+        existing_unit_test_user = cursor.fetchone()
+
+        cursor.execute("SELECT id, username, password_hash, email, omniscience, timezone, display_name, queue, enabled, apikey_hash, apikey_encrypted FROM users WHERE username = 'ace'")
+        existing_automation_user = cursor.fetchone()
+
+        cursor.execute("SELECT `key`, `value` FROM `config`")
+        existing_db_config = cursor.fetchall()
+
+    # record email archive server configuration
+    with get_db_connection("email_archive") as db:
+        cursor = db.cursor()
+        cursor.execute("SELECT server_id, hostname FROM archive_server")
+        existing_email_archive_server = cursor.fetchall()
+
+    DATABASE_RESET_INFORMATION = DatabaseResetInformation(
+        existing_nodes=existing_nodes,
+        existing_email_archive_server=existing_email_archive_server,
+        existing_unit_test_user=existing_unit_test_user,
+        existing_automation_user=existing_automation_user,
+        existing_db_config=existing_db_config)
+
+def get_database_reset_information() -> DatabaseResetInformation:
+    assert DATABASE_RESET_INFORMATION is not None
+    return DATABASE_RESET_INFORMATION
+
+def execute_global_db_setup(database_reset_information: Optional[DatabaseResetInformation]=None):
     with get_db_connection() as db:
         cursor = db.cursor()
         cursor.execute("DELETE FROM alerts")
@@ -82,8 +121,8 @@ def execute_global_db_setup(
         cursor.execute("DELETE FROM company WHERE name != 'default'")
         #cursor.execute("DELETE FROM nodes WHERE is_local = 1")
         cursor.execute("DELETE FROM nodes")
-        if existing_nodes is not None:
-            for node in existing_nodes:
+        if database_reset_information is not None:
+            for node in database_reset_information.existing_nodes:
                 cursor.execute("INSERT INTO nodes (id, name, location, company_id, last_update, is_primary, any_mode) VALUES (%s, %s, %s, %s, %s, %s, %s)", node)
         #cursor.execute("UPDATE nodes SET is_primary = 0")
         cursor.execute("DELETE FROM locks")
@@ -111,16 +150,12 @@ def execute_global_db_setup(
         cursor.execute("DELETE FROM auth_user_permission")
         cursor.execute("DELETE FROM auth_group_permission")
 
-        if existing_automation_user is not None:
-            cursor.execute("INSERT INTO users (id, username, password_hash, email, omniscience, timezone, display_name, queue, enabled, apikey_hash, apikey_encrypted) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", existing_automation_user)
-            cursor.execute("INSERT INTO auth_user_permission (user_id, major, minor) VALUES (%s, %s, %s)", (existing_automation_user[0], "*", "*"))
-
-        if existing_unit_test_user is not None:
-            cursor.execute("INSERT INTO users (id, username, password_hash, email, omniscience, timezone, display_name, queue, enabled, apikey_hash, apikey_encrypted) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", existing_unit_test_user)
-            cursor.execute("INSERT INTO auth_user_permission (user_id, major, minor) VALUES (%s, %s, %s)", (existing_unit_test_user[0], "*", "*"))
-
-        if existing_db_config is not None:
-            for row in existing_db_config:
+        if database_reset_information is not None:
+            cursor.execute("INSERT INTO users (id, username, password_hash, email, omniscience, timezone, display_name, queue, enabled, apikey_hash, apikey_encrypted) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", database_reset_information.existing_automation_user)
+            cursor.execute("INSERT INTO auth_user_permission (user_id, major, minor) VALUES (%s, %s, %s)", (database_reset_information.existing_automation_user[0], "*", "*"))
+            cursor.execute("INSERT INTO users (id, username, password_hash, email, omniscience, timezone, display_name, queue, enabled, apikey_hash, apikey_encrypted) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", database_reset_information.existing_unit_test_user)
+            cursor.execute("INSERT INTO auth_user_permission (user_id, major, minor) VALUES (%s, %s, %s)", (database_reset_information.existing_unit_test_user[0], "*", "*"))
+            for row in database_reset_information.existing_db_config:
                 cursor.execute("INSERT INTO `config` (`key`, `value`) VALUES (%s, %s)", (row[0], row[1]))
 
         db.commit()
@@ -145,8 +180,8 @@ def execute_global_db_setup(
         cursor.execute("DELETE FROM archive_server")
         cursor.execute("DELETE FROM email_history")
 
-        if existing_email_archive_server is not None:
-            for row in existing_email_archive_server:
+        if database_reset_information is not None:
+            for row in database_reset_information.existing_email_archive_server:
                 cursor.execute("INSERT INTO archive_server (server_id, hostname) VALUES (%s, %s)", row)
 
         db.commit()
@@ -227,6 +262,9 @@ def execute_global_setup():
 
     initialize_unittest_logging()
 
+    # record current database settings so we can restore them prior to integration/system tests
+    record_database_reset_information()
+
 @pytest.fixture(autouse=True, scope="function")
 def global_function_setup(request):
 
@@ -265,25 +303,7 @@ def global_function_setup(request):
         os.mkdir(get_data_dir())
         initialize_data_dir()
 
-        with get_db_connection() as db:
-            cursor = db.cursor()
-            cursor.execute("SELECT id, name, location, company_id, last_update, is_primary, any_mode FROM nodes")
-            existing_nodes = cursor.fetchall()
-
-            cursor.execute("SELECT id, username, password_hash, email, omniscience, timezone, display_name, queue, enabled, apikey_hash, apikey_encrypted FROM users WHERE username = 'unittest'")
-            existing_unit_test_user = cursor.fetchone()
-
-            cursor.execute("SELECT id, username, password_hash, email, omniscience, timezone, display_name, queue, enabled, apikey_hash, apikey_encrypted FROM users WHERE username = 'ace'")
-            existing_automation_user = cursor.fetchone()
-
-            cursor.execute("SELECT `key`, `value` FROM `config`")
-            existing_db_config = cursor.fetchall()
-
-        # record email archive server configuration
-        with get_db_connection("email_archive") as db:
-            cursor = db.cursor()
-            cursor.execute("SELECT server_id, hostname FROM archive_server")
-            existing_email_archive_server = cursor.fetchall()
+        execute_global_db_setup(get_database_reset_information())
 
     # look at this garbage lol
     import ace_api
@@ -291,20 +311,15 @@ def global_function_setup(request):
     default_ssl_ca_path = ace_api.get_default_ssl_ca_path()
     default_api_key = ace_api.get_default_api_key()
 
+    logging.info("-------------------------------------------------")
+    logging.info("STARTING TEST: %s", request.node.name)
+    logging.info("-------------------------------------------------")
+
     yield
 
     ace_api.set_default_remote_host(default_remote_host)
     ace_api.set_default_ssl_ca_path(default_ssl_ca_path)
     ace_api.set_default_api_key(default_api_key)
-
-    # don't reset the database on tests marked as a unit test
-    if needs_full_reset(request):
-        execute_global_db_setup(
-            existing_nodes,
-            existing_email_archive_server,
-            existing_unit_test_user,
-            existing_automation_user,
-            existing_db_config)
 
     reset_unittest_logging()
 
