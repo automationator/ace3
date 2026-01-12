@@ -3,9 +3,8 @@ import logging
 from typing import TYPE_CHECKING
 from saq.analysis.observable import Observable
 from saq.analysis.presenter.observable_presenter import ObservablePresenter, register_observable_presenter
-from saq.constants import CONFIG_GLOBAL, CONFIG_GLOBAL_LOCAL_EMAIL_DOMAINS, F_EMAIL_ADDRESS, F_EMAIL_BODY, F_EMAIL_CONVERSATION, F_EMAIL_DELIVERY, F_EMAIL_HEADER, F_EMAIL_SUBJECT, F_EMAIL_X_MAILER, F_MESSAGE_ID, create_email_delivery, parse_email_conversation, parse_email_delivery
-from saq.database.model import Remediation
-from saq.database.pool import get_db, get_db_connection
+from saq.constants import F_EMAIL_ADDRESS, F_EMAIL_BODY, F_EMAIL_CONVERSATION, F_EMAIL_DELIVERY, F_EMAIL_HEADER, F_EMAIL_SUBJECT, F_EMAIL_X_MAILER, F_MESSAGE_ID, create_email_delivery, parse_email_conversation, parse_email_delivery
+from saq.database.pool import get_db_connection
 from saq.email import is_local_email_domain, normalize_email_address, normalize_message_id
 from saq.configuration.config import get_config
 from saq.gui import ObservableActionAddLocalEmailDomain
