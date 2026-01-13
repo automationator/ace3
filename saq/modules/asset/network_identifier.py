@@ -7,7 +7,7 @@ import iptools
 from pydantic import Field
 from saq.analysis import Analysis
 from saq.analysis.presenter.analysis_presenter import AnalysisPresenter, register_analysis_presenter
-from saq.constants import F_ASSET, F_IPV4, AnalysisExecutionResult
+from saq.constants import F_ASSET, F_IP, F_IPV4, AnalysisExecutionResult
 from saq.environment import get_base_dir
 from saq.modules import AnalysisModule
 from saq.modules.config import AnalysisModuleConfig
@@ -66,7 +66,7 @@ class NetworkIdentifier(AnalysisModule):
 
     @property
     def valid_observable_types(self):
-        return F_IPV4
+        return [ F_IP, F_IPV4 ]
     
     def __init__(self, *args, **kwargs):
         super(NetworkIdentifier, self).__init__(*args, **kwargs)
