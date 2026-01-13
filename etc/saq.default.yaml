@@ -1741,7 +1741,7 @@ analysis_module_alert_added_to_event:
   name: alert_added_to_event
   python_module: saq.modules.event
   python_class: AlertAddedToEventAnalyzer
-  enabled: true
+  enabled: false
 
 analysis_module_dhash:
   name: dhash
