@@ -98,9 +98,12 @@ F_HUNT = 'hunt'
 F_IDS_STREETNAME = 'ids_streetname'
 F_IMPHASH = 'imphash'
 F_INDICATOR = 'indicator'
+F_IP = 'ip'
 F_IPV4 = 'ipv4'
 F_IPV4_CONVERSATION = 'ipv4_conversation'
 F_IPV4_FULL_CONVERSATION = 'ipv4_full_conversation'
+F_IP_CONVERSATION = 'ip_conversation'
+F_IP_FULL_CONVERSATION = 'ip_full_conversation'
 F_JA3 = 'ja3'
 F_JA3S = 'ja3s'
 F_JARM_HASH = 'jarm_hash'
@@ -192,9 +195,12 @@ OBSERVABLE_DESCRIPTIONS = {
     F_IDS_STREETNAME: 'ids vendor name for a network attack or vulnerability',
     F_IMPHASH: 'hash of the imported functions of a PE file',
     F_INDICATOR: 'indicator id',
+    F_IP: 'IP address (version 4 or 6)',
     F_IPV4: 'IP address (version 4)',
     F_IPV4_CONVERSATION: 'two F_IPV4 that were communicating formatted as aaa.bbb.ccc.ddd_aaa.bbb.ccc.ddd',
     F_IPV4_FULL_CONVERSATION: 'two F_IPV4 that were communicating formatted as src_ipv4:src_port:dest_ipv4:dest_port',
+    F_IP_CONVERSATION: 'two F_IP that were communicating formatted as src_dst',
+    F_IP_FULL_CONVERSATION: 'two F_IP that were communicating formatted as src_ip!src_port!dest_ip!dest_port',
     F_MAC_ADDRESS: 'network card mac address',
     F_MD5: 'MD5 hash',
     F_MESSAGE_ID: 'email Message-ID',
@@ -292,9 +298,12 @@ VALID_OBSERVABLE_TYPES = sorted([
     F_HUNT,
     F_IMPHASH,
     F_INDICATOR,
+    F_IP,
     F_IPV4,
     F_IPV4_CONVERSATION,
     F_IPV4_FULL_CONVERSATION,
+    F_IP_CONVERSATION,
+    F_IP_FULL_CONVERSATION,
     F_MAC_ADDRESS,
     F_MD5,
     F_MESSAGE_ID,
@@ -354,13 +363,24 @@ HARDCOPY_SUBDIR = "hardcopies"
 # files are stored in subdirectories of the root analysis
 FILE_SUBDIR = "files"
 
+def parse_ip_full_conversation(f_ip_fc):
+    return f_ip_fc.split('!', 4)
+
+def create_ip_full_conversation(src, src_port, dst, dst_port):
+    return '{}!{}!{}!{}'.format(src.strip(), src_port, dst.strip(), dst_port)
+
 # utility functions to work with F_IPV4_FULL_CONVERSATION types
 def parse_ipv4_full_conversation(f_ipv4_fc):
     return f_ipv4_fc.split(':', 4)
 
-
 def create_ipv4_full_conversation(src, src_port, dst, dst_port):
     return '{}:{}:{}:{}'.format(src.strip(), src_port, dst.strip(), dst_port)
+
+def parse_ip_conversation(f_ip_c):
+    return f_ip_c.split('_', 2)
+
+def create_ip_conversation(src, dst):
+    return '{}_{}'.format(src.strip(), dst.strip())
 
 # utility functions to work with F_IPV4_CONVERSATION types
 def parse_ipv4_conversation(f_ipv4_c):

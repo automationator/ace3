@@ -14,6 +14,7 @@ from saq.observables.yara import YaraRuleObservable, YaraStringObservable
 
 from saq.observables.network.dns import FQDNObservable
 from saq.observables.network.http import UserAgentObservable, URIPathObservable, URLObservable
+from saq.observables.network.ip import IPObservable, IPConversationObservable, IPFullConversationObservable
 from saq.observables.network.ipv4 import IPv4Observable, IPv4ConversationObservable, IPv4FullConversationObservable
 from saq.observables.network.layer2 import MacAddressObservable
 
