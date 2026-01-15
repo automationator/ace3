@@ -10,7 +10,7 @@ import sys
 import csv
 import json
 import re
-from configparser import SafeConfigParser
+from configparser import ConfigParser
 from getpass import getpass
 
 sys.path.append('lib')
@@ -159,7 +159,7 @@ app = '-'
 
 if os.path.exists(config_path) and not args.ignore_config:
     # load the settings from the configuration file
-    config = SafeConfigParser()
+    config = ConfigParser()
     config.read(config_path)
     try:
         uri = config.get(args.enviro, 'uri')
