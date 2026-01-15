@@ -101,6 +101,8 @@ class QRCodeFilter:
 
 class QRCodeAnalyzerConfig(AnalysisModuleConfig):
     filter_path: Optional[str] = Field(default=None, description="Path to a list of strings to exclude from the results relative to ANALYST_DATA_DIR.")
+    pdf_first_pages: int = Field(default=3, description="Number of pages to scan from the beginning of a PDF.")
+    pdf_last_pages: int = Field(default=3, description="Number of pages to scan from the end of a PDF.")
 
 class QRCodeAnalyzer(AnalysisModule):
     @classmethod
@@ -118,6 +120,14 @@ class QRCodeAnalyzer(AnalysisModule):
     @property
     def qrcode_filter_path(self):
         return os.path.join(get_global_runtime_settings().analyst_data_dir, self.config.filter_path) if self.config.filter_path else None
+
+    @property
+    def pdf_first_pages(self):
+        return self.config.pdf_first_pages
+
+    @property
+    def pdf_last_pages(self):
+        return self.config.pdf_last_pages
 
     def execute_analysis(self, _file: FileObservable) -> AnalysisExecutionResult:
         from saq.modules.file_analysis.hash import FileHashAnalyzer
@@ -149,6 +159,25 @@ class QRCodeAnalyzer(AnalysisModule):
             if not target_file_paths:
                 logging.warning(f"conversion of {local_file_path} to png failed")
                 return AnalysisExecutionResult.COMPLETED
+
+            # Limit to first M and last N pages for QR code scanning
+            total_pages = len(target_file_paths)
+            first_n = self.pdf_first_pages
+            last_n = self.pdf_last_pages
+
+            if total_pages > first_n + last_n:
+                pages_to_scan = set(target_file_paths[:first_n] + target_file_paths[-last_n:])
+                pages_to_skip = [p for p in target_file_paths if p not in pages_to_scan]
+                target_file_paths = sorted(pages_to_scan)
+                # Clean up skipped page PNGs immediately
+                for skip_path in pages_to_skip:
+                    try:
+                        os.unlink(skip_path)
+                    except Exception as e:
+                        logging.error(f"unable to remove skipped page {skip_path}: {e}")
+                logging.info(f"PDF has {total_pages} pages, scanning first {first_n} and last {last_n} pages")
+            else:
+                logging.info(f"PDF has {total_pages} pages, scanning all pages")
 
             is_temp_files = True
         else:
