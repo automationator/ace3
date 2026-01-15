@@ -1,66 +1,25 @@
 #!/usr/bin/python3
 # vim: sw=4:ts=4:et
 
-import datetime
 import argparse
+import csv
+import datetime
+import json
 import logging
 import os.path
-import stat
-import sys
-import csv
-import json
 import re
-from configparser import ConfigParser
+import sys
 from getpass import getpass
 
-sys.path.append("lib")
 sys.path.append(".")
 
-import saq.splunk as splunklib
+from splunklib.results import Message
 
-
-# encryption support
-def encrypt_password(password):
-    from Crypto.Cipher import ARC4
-    from base64 import b64encode
-
-    memorized_password = getpass("Enter encryption password: ")
-    memorized_password_check = getpass("Re-enter encryption password: ")
-    if memorized_password != memorized_password_check:
-        logging.fatal("passwords do not match")
-        sys.exit(1)
-
-    cipher = ARC4.new(memorized_password)
-    return b64encode(cipher.encrypt(password))
-
-
-def decrypt_password(encrypted_password):
-    from Crypto.Cipher import ARC4
-    from base64 import b64decode
-
-    memorized_password = getpass("Enter encryption password: ")
-    cipher = ARC4.new(memorized_password)
-    return cipher.decrypt(b64decode(encrypted_password))
-
+from saq.configuration import initialize_configuration
+from saq.splunk import SplunkClient, create_timedelta
 
 parser = argparse.ArgumentParser()
 parser.add_argument("search", nargs=argparse.REMAINDER)
-parser.add_argument(
-    "-c",
-    "--config",
-    required=False,
-    default=None,
-    dest="config_path",
-    help="Path to optional configuration file.  Defaults to ~/.splunklib.ini",
-)
-parser.add_argument(
-    "--ignore-config",
-    required=False,
-    default=False,
-    action="store_true",
-    dest="ignore_config",
-    help="Ignore any configuration files.",
-)
 parser.add_argument(
     "-v",
     "--verbose",
@@ -164,10 +123,10 @@ parser.add_argument(
 parser.add_argument(
     "--enviro",
     action="store",
-    required=True,
-    default="production",
+    required=False,
+    default="default",
     dest="enviro",
-    help="Specify which splunk environment to query (default=production). These are the sections defined in your config file.",
+    help="Specify which splunk config to use (default=default). Maps to splunk_config_<name> sections in saq.yaml.",
 )
 
 # the options only apply in the default csv mode
@@ -200,23 +159,6 @@ parser.add_argument(
     help="Send output to a file.  Default is stdout.",
 )
 
-# save the given configuration to file for use later
-parser.add_argument(
-    "--save-config",
-    required=False,
-    default=False,
-    action="store_true",
-    dest="save_config",
-    help="Save the given configuration options to ~/.splunklib",
-)
-parser.add_argument(
-    "--encrypt",
-    required=False,
-    default=False,
-    action="store_true",
-    dest="encrypt_password",
-    help="Encrypt your splunk password with another password.",
-)
 
 parser.add_argument(
     "--search-file",
@@ -258,114 +200,44 @@ logging.basicConfig(
     level=logging_level,
 )
 
-# are we saving the configuration?
-if args.save_config:
-    config_path = os.path.join(os.path.expanduser("~"), ".splunklib.ini")
-    with open(config_path, "w") as fp:
-        fp.write("[production]\n")
-        if args.uri is not None:
-            fp.write("uri = {0}\n".format(args.uri))
-        if args.username is not None:
-            fp.write("username = {0}\n".format(args.username))
-        if args.password:
-            password = getpass("Enter password: ")
+# Initialize ACE configuration
+initialize_configuration()
 
-            if args.encrypt_password:
-                encrypted_password = encrypt_password(password)
-                logging.debug("encrypted_password = {0}".format(encrypted_password))
-                fp.write("encrypted_password = {0}\n".format(encrypted_password))
-            else:
-                fp.write("password = {0}\n".format(password))
-                logging.warning("saving PLAIN TEXT PASSWORD (use --encrypt option)")
+# Build kwargs for command-line overrides
+client_kwargs = {}
 
-        if args.max_result_count is not None:
-            fp.write("max_result_count = {0}\n".format(str(args.max_result_count)))
-
-    os.chmod(config_path, 0o600)  # sane permissions
-    logging.debug("updated configuration")
-    sys.exit(0)
-
-# do we have a configuration file?
-config_path = os.path.join(os.path.expanduser("~"), ".splunklib.ini")
-if args.config_path is not None:
-    config_path = args.config_path
-
-uri = None
-username = None
-encrypted_password = None
-password = None
-max_result_count = 1000
-proxy = None
-user_context = "-"
-app = "-"
-
-if os.path.exists(config_path) and not args.ignore_config:
-    # load the settings from the configuration file
-    config = ConfigParser()
-    config.read(config_path)
-    try:
-        uri = config.get(args.enviro, "uri")
-        username = config.get(args.enviro, "username")
-        proxy = config.get(args.enviro, "proxy")
-        user_context = config.get(args.enviro, "user_context")
-        app = config.get(args.enviro, "app")
-        if config.has_option(args.enviro, "encrypted_password"):
-            encrypted_password = config.get(args.enviro, "encrypted_password")
-        else:
-            if config.has_option(args.enviro, "password"):
-                # make sure permissions are sane
-                if os.stat(config_path).st_mode & stat.S_IROTH:
-                    sys.stderr.write(
-                        """
-*** HEY CLOWN ***
-your file permissions on {0} allow anyone to read your plain text splunk password!
-use the --save-config option with --encrypt to save your configuration with an encrypted password or chmod o-rwx this file
-so that other people cannot read it
-*** END CLOWN MESSAGE ***
-""".format(config_path)
-                    )
-
-                password = config.get(args.enviro, "password")
-
-        if config.has_option(args.enviro, "max_result_count"):
-            max_result_count = config.getint(args.enviro, "max_result_count")
-
-    except Exception as e:
-        logging.warning(
-            "invalid configuration file {0}: {1}".format(config_path, str(e))
-        )
-
-# command line options override configuration values
+# Handle URI override (parse host:port)
 if args.uri is not None:
-    uri = args.uri
+    if ":" in args.uri:
+        host, port = args.uri.rsplit(":", 1)
+        client_kwargs["host"] = host
+        client_kwargs["port"] = int(port)
+    else:
+        client_kwargs["host"] = args.uri
+
+# Handle username/password override
 if args.username is not None:
-    username = args.username
-if args.password:
-    password = getpass("Enter password: ")
+    client_kwargs["username"] = args.username
+    if args.password:
+        client_kwargs["password"] = getpass("Enter password: ")
+    else:
+        logging.fatal("--user requires --password")
+        sys.exit(1)
+
+# Handle proxy override
 if args.proxy is not None:
-    proxy = args.proxy
+    client_kwargs["proxies"] = {"http": args.proxy, "https": args.proxy}
+
+# Handle context overrides
 if args.user_context is not None:
-    user_context = args.user_context
+    client_kwargs["user_context"] = args.user_context
 if args.app is not None:
-    app = args.app
+    client_kwargs["app"] = args.app
 
-if encrypted_password is not None:
-    password = decrypt_password(encrypted_password)
-
-if args.max_result_count is not None:
-    max_result_count = args.max_result_count
+max_result_count = args.max_result_count
 
 # make sure we have what we need
 fatal = False
-if uri is None:
-    logging.fatal("missing uri")
-    fatal = True
-if username is None:
-    logging.fatal("missing username")
-    fatal = True
-if password is None:
-    logging.fatal("missing password")
-    fatal = True
 search_text = None
 if args.search_file:
     if os.path.isfile(args.search_file):
@@ -409,30 +281,25 @@ if args.end_time is not None:
     end_time = datetime.datetime.strptime(args.end_time, datetime_format)
 
 if args.relative_start_time is not None:
-    start_time = datetime.datetime.now() - splunklib.create_timedelta(
-        args.relative_start_time
-    )
+    start_time = datetime.datetime.now() - create_timedelta(args.relative_start_time)
 if args.relative_end_time is not None:
-    end_time = datetime.datetime.now() - splunklib.create_timedelta(
-        args.relative_end_time
-    )
+    end_time = datetime.datetime.now() - create_timedelta(args.relative_end_time)
 
 if start_time is not None and end_time is None:
     end_time = datetime.datetime.now()
 
 if start_time is None and "earliest" not in query.lower():
     logging.debug("defaulting to past 24 hours")
-    start_time = datetime.datetime.now() - splunklib.create_timedelta("00:24:00:00")
+    start_time = datetime.datetime.now() - create_timedelta("00:24:00:00")
     end_time = datetime.datetime.now()
 
-searcher = splunklib.SplunkQueryObject(
-    uri,
-    username,
-    password,
-    proxies={"http": proxy, "https": proxy} if proxy else {},
-    user_context=user_context,
-    app=app,
-)
+# Create Splunk client using ACE config with any command-line overrides
+try:
+    searcher = SplunkClient(args.enviro, **client_kwargs)
+except ValueError as e:
+    logging.fatal(f"Failed to load Splunk config '{args.enviro}': {e}")
+    logging.fatal("Make sure splunk_config_%s is defined in saq.yaml", args.enviro)
+    sys.exit(1)
 
 search_result = searcher.query(
     query,
@@ -447,21 +314,28 @@ output_fp = sys.stdout
 if args.output:
     output_fp = open(args.output, "w", encoding="utf-8")
 
+# Print any Splunk messages to stderr
+for item in search_result:
+    if isinstance(item, Message):
+        sys.stderr.write(f"[Splunk {item.type}] {item.message}\n")
+
+# Filter to just the result dictionaries
+results = [r for r in search_result if isinstance(r, dict)]
+
 # JSON output
 if args.json:
     data = {
         "search": query,
-        "username": username,
-        "uri": uri,
+        "enviro": args.enviro,
         "max_result_count": max_result_count,
-        "result": search_result,
+        "result": results,
     }
     json.dump(data, output_fp)
 
 # CSV output
 else:
     writer = csv.writer(output_fp)
-    for i in range(len(search_result)):
+    for i, result in enumerate(results):
         if i == 0 and args.headers:
-            writer.writerow(list(search_result[i].keys()))
-        writer.writerow(list(search_result[i].values()))
+            writer.writerow(list(result.keys()))
+        writer.writerow(list(result.values()))
