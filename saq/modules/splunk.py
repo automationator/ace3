@@ -32,6 +32,9 @@ class SplunkAPIAnalysis(BaseAPIAnalysis):
 
     @search_id.setter
     def search_id(self, value):
+        # Convert Job objects to their string name for JSON serialization
+        if value is not None and hasattr(value, 'name'):
+            value = value.name
         self.details['search_id'] = value
 
     @property
@@ -106,7 +109,7 @@ class SplunkAPIAnalyzer(BaseAPIAnalyzer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.timezone = get_splunk_config().timezone
+        self.timezone = get_splunk_config(self.config.api_name).timezone
         self.use_index_time = self.config.use_index_time
 
         self.splunk = SplunkClient(
@@ -172,8 +175,19 @@ class SplunkAPIAnalyzer(BaseAPIAnalyzer):
             running_start_time=self.analysis.running_start_time,
             end_time=self.analysis.end_time)
 
-        self.analysis.search_id, results = self.splunk.query_async(self.target_query, self.analysis.search_id, limit=self.max_result_count)
+        # If we have a stored search_id (job name string), retrieve the Job object
+        job = None
+        if self.analysis.search_id is not None:
+            try:
+                job = self.splunk.client.jobs[self.analysis.search_id]
+            except KeyError:
+                # Job no longer exists, will create a new one
+                job = None
 
+        job, results = self.splunk.query_async(self.target_query, job, limit=self.max_result_count)
+
+        # Store the job name (search_id setter converts Job to string)
+        self.analysis.search_id = job
         self.analysis.dispatch_state = self.splunk.dispatch_state
         self.analysis.start_time = self.splunk.start_time
         self.analysis.running_start_time = self.splunk.running_start_time
