@@ -1,8 +1,8 @@
 import base64
 import logging
-from datetime import datetime, date
 import uuid
 import warnings
+from datetime import date, datetime
 from typing import Optional
 
 import bcrypt
@@ -17,7 +17,6 @@ from sqlalchemy import (
     VARBINARY,
     BigInteger,
     Boolean,
-    Column,
     DateTime,
     Enum,
     ForeignKey,
@@ -27,7 +26,14 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.orm import aliased, reconstructor, relationship, validates
+from sqlalchemy.orm import (
+    Mapped,
+    aliased,
+    mapped_column,
+    reconstructor,
+    relationship,
+    validates,
+)
 from sqlalchemy.orm.session import Session
 from werkzeug.security import check_password_hash as werkzeug_check_password_hash
 
@@ -46,10 +52,6 @@ from saq.constants import (
 )
 from saq.crypto import decrypt_chunk
 from saq.database.meta import Base
-
-from sqlalchemy.orm import reconstructor, relationship, validates, aliased, mapped_column, Mapped
-from sqlalchemy.orm.session import Session
-
 from saq.database.pool import get_db, get_db_connection
 from saq.database.retry import execute_with_retry, retry
 from saq.database.util.sync import sync_observable
